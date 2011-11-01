@@ -1,0 +1,14 @@
+#Visual C++ files
+/ipch
+/Debug
+/Release
+/FastCraft-MinecraftSMPServer/Debug
+/FastCraft-MinecraftSMPServer/Release
+*.sdf
+*.suo
+*.opensdf
+*.exp
+*.sln
+*.vcxproj
+*.vcxproj.filters
+*.vcxproj.user
