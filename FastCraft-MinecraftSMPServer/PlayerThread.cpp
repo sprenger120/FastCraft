@@ -15,12 +15,12 @@ GNU General Public License for more details.
 
 #include "PlayerThread.h"
 
-PlayerThread::PlayerThread(int iThreadID) : 
+PlayerThread::PlayerThread() : 
 _sName(""),
-_sNickName(""),
-_sIP(""),
-_iThreadID(iThreadID),
-_Connection()
+	_sNickName(""),
+	_sIP(""),
+	_Connection(),
+	_fReady(false)
 {
 	_Flags.Crouched = false;
 	_Flags.Eating = false;
@@ -30,7 +30,12 @@ _Connection()
 
 	_fLoggedIn = false;
 	_fClear = true;
+
+	InstanceCounter++;
+	_iThreadID = InstanceCounter;
 }
+
+int PlayerThread::InstanceCounter = 0;
 
 void PlayerThread::ClearQueue() {
 	for (int x = 1;x<=_SendQueue.size();x++) {
@@ -40,9 +45,16 @@ void PlayerThread::ClearQueue() {
 
 PlayerThread::~PlayerThread() {
 	ClearQueue();
+	InstanceCounter--;
+}
+
+bool PlayerThread::Ready() {
+	return _fReady;
 }
 
 void PlayerThread::run() {
+	_fReady=true;
+
 	while (1) {
 		Thread::sleep(100);
 	}

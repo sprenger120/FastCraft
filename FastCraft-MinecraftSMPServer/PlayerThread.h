@@ -18,6 +18,7 @@ GNU General Public License for more details.
 #include <iostream>
 #include <Poco/Runnable.h>
 #include <Poco/Net/SocketStream.h>
+#include <Poco/Net/StreamSocket.h>
 #include <Poco/Thread.h>
 #include "Structs.h"
 #include <queue>
@@ -28,8 +29,8 @@ using Poco::Thread;
 using std::cout;
 using std::endl;
 
-class PlayerThread : public Poco::Runnable {
-	private:
+class PlayerThread: public Poco::Runnable {
+private:
 	PlayerFlags _Flags; //Burning,eating...
 	EntityCoordinates _Coordinates; //Coordinates
 	string _sName,_sNickName; //Minecraft.net Username and Ingame Nickname
@@ -37,25 +38,28 @@ class PlayerThread : public Poco::Runnable {
 
 	queue<string> _SendQueue;
 
-	Poco::Net::SocketStream _Connection;
-
-	const int _iThreadID;
+	Poco::Net::StreamSocket _Connection;
 
 	bool _fLoggedIn;
 	bool _fClear;
+	bool _fReady;
 
 	void ClearQueue();
-private:
+
+	int _iThreadID;
+	static int InstanceCounter;
+public:
 	//De- / Constructor
-	PlayerThread(int);
+	PlayerThread();
 	~PlayerThread();
+	bool Ready();
 
 	virtual void run(); // Thread Main
 
 	void Disconnect(); //Clear Player object
 	void Connect(Poco::Net::SocketStream&,string); //Manage New Player connection | clear if necessary
 	bool isConnected(); //Returns true if a player is assigned to this thread
-	
+
 	void Kick(); //Kicks player
 	void Ban(int); //Bans player (int = Expiration, -1 for permanent ban)
 	void Ban(string,int); //Bans player with reason (int = Expiration, -1 for permanent ban)
@@ -66,7 +70,7 @@ private:
 	string getUsername(); //Returns Player Name - not the edited nikname
 	string getNickname(); //Gets actual Username thats shown in chat
 	string getIP(); //Returns actual IP of player
-	
+
 	//Queue
 	void appendQueue(std::string&); //Adds a job for the sending queue
 };
