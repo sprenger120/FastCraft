@@ -14,3 +14,27 @@ GNU General Public License for more details.
 */
 #include "NetworkHandler.h" 
 
+NetworkHandler::NetworkHandler(PlayerThread* PlayerThread,SettingsHandler* Settings):
+_pPlayerThreads(PlayerThread),
+	_pSettings(Settings),
+	_sIP(""),
+	_fReady(false)
+{
+}
+
+NetworkHandler::~NetworkHandler() {
+}
+
+bool NetworkHandler::Ready() {
+	return _fReady;
+}
+
+void NetworkHandler::run() {
+	cout<<"networkthread started"<<"\n";
+
+	_fReady=true;
+	while(1) {
+		Thread::sleep(100);
+	}
+
+}

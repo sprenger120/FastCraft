@@ -18,23 +18,32 @@ GNU General Public License for more details.
 
 #include <iostream>
 #include <Poco/Net/StreamSocket.h>
-#include <vector>
+#include <Poco/Runnable.h>
+#include <Poco/Thread.h>
+
+#include "PlayerThread.h"
+#include "SettingsHandler.h"
 
 using Poco::Net::StreamSocket;
 using std::string;
 using std::cout;
-using std::vector;
+using Poco::Thread;
 
-class NetworkHandler {
+class NetworkHandler : public Poco::Runnable {
 private:
-	vector<StreamSocket> _vConnections;
-	string sIP;
+	PlayerThread* _pPlayerThreads;
+	SettingsHandler* _pSettings;
+
+	string _sIP;
+	bool _fReady;
 public:
 	//De- /constructor
-	NetworkHandler();
+	NetworkHandler(PlayerThread*,SettingsHandler*);
 	~NetworkHandler();
+	bool Ready();
 
 
+	virtual void run(); //Thread Main
 
 };
 #endif
