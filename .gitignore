@@ -2,8 +2,8 @@
 /ipch
 /Debug
 /Release
-/FastCraft-MinecraftSMPServer/Debug
-/FastCraft-MinecraftSMPServer/Release
+/FastCraft/Debug
+/FastCraft/Release
 *.sdf
 *.suo
 *.opensdf
