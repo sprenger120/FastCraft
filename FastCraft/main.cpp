@@ -17,9 +17,6 @@ GNU General Public License for more details.
 #include <string>
 
 #include <Poco/Thread.h>
-#include <Poco/ThreadPool.h>
-#include <Poco/Net/ServerSocket.h>
-#include <Poco/NumberFormatter.h>
 
 #include "NetworkHandler.h"
 #include "SettingsHandler.h"
@@ -31,40 +28,28 @@ using std::endl;
 using Poco::Thread;
 
 int main() {
-	int x;
 	SettingsHandler Settings;
 
 	//Informations
 	cout<<"--- FAST CRAFT v. "<<Settings.getFastCraftVersion()<<" for Minecraft "<<Settings.getSupportedMCVersion()<<" ---"<<"\n";
 	cout<<"Running on *:"<<Settings.getPort()<<" with "<<Settings.getMaxClients()<<" player slots"<<endl;
 
-	//Player Threads
-	PlayerThread* aPlayers = new PlayerThread[Settings.getMaxClients()];
-	Poco::ThreadPool PlayerThreadPool(1,Settings.getMaxClients());
-
-	for (x=0;x<=Settings.getMaxClients()-1;x++) {
-		PlayerThreadPool.defaultPool().start(aPlayers[x]);
-		
-		//Wait for thread become ready
-		while (! aPlayers[x].Ready() ) {}
-	}
-
 
 	//Start Network Thread
-	NetworkHandler NetworkHandler(aPlayers,&Settings);
+	NetworkHandler NetworkHandler(&Settings);
 	Thread threadNetworkHandler("NetworkHandler");
-
 	threadNetworkHandler.start(NetworkHandler);
-
 	while(! NetworkHandler.Ready()) {}
 
-	cout<<"Ready"<<endl;
+
+	cout<<"Ready."<<"\n"<<endl;
 
 
 
+	while (1) {
+		Thread::sleep(100);
+	}
 
-	//Release Player Objects
-	delete [] aPlayers;	
 
 	return 1;
 }
