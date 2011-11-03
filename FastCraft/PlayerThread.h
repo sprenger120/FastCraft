@@ -21,6 +21,7 @@ GNU General Public License for more details.
 #include <Poco/Net/StreamSocket.h>
 #include <Poco/Thread.h>
 #include "Structs.h"
+#include "SettingsHandler.h"
 #include <queue>
 
 using std::string;
@@ -36,31 +37,42 @@ private:
 	string _sName,_sNickName; //Minecraft.net Username and Ingame Nickname
 	string _sIP; //IP
 
-	queue<string> _SendQueue;
+	char _sBuffer[1024];
+	string _sOutputBuffer;
+
+	queue<QueueJob> _SendQueue;
 
 	Poco::Net::StreamSocket _Connection;
+	SettingsHandler* _pSettings;
+	bool _fSettingsHandlerSet;
 
-	bool _fLoggedIn;
-	bool _fClear;
-	bool _fReady;
+	bool _fLoggedIn; //Set to true if handshake is done (username known)
+	bool _fAssigned;//true if a player is assigned to that thread
+	bool _fReady; //true if thread is ready
 
 	void ClearQueue();
+	bool ProcessQueue(); //Returns true if connection is closed
 
 	int _iThreadID;
 	static int InstanceCounter;
+	static int PlayerCount;
 public:
 	//De- / Constructor
 	PlayerThread();
 	~PlayerThread();
+
+	//Management
+	void setSettingsHandler(SettingsHandler*);
 	bool Ready();
 
 	virtual void run(); // Thread Main
 
 	void Disconnect(); //Clear Player object
-	void Connect(Poco::Net::SocketStream&,string); //Manage New Player connection | clear if necessary
-	bool isConnected(); //Returns true if a player is assigned to this thread
+	void Connect(Poco::Net::StreamSocket&,string); //Manage New Player connection | clear if necessary
+	bool isAssigned(); //Returns true if a player is assigned to this thread
 
-	void Kick(); //Kicks player
+	void Kick(); //Kicks player without reason
+	void Kick(string); //Kick with reason
 	void Ban(int); //Bans player (int = Expiration, -1 for permanent ban)
 	void Ban(string,int); //Bans player with reason (int = Expiration, -1 for permanent ban)
 
@@ -72,7 +84,7 @@ public:
 	string getIP(); //Returns actual IP of player
 
 	//Queue
-	void appendQueue(std::string&); //Adds a job for the sending queue
+	void appendQueue(QueueJob&); //Adds a job for the sending queue
 };
 
 #endif
