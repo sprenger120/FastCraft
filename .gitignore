@@ -4,6 +4,7 @@
 /Release
 /FastCraft/Debug
 /FastCraft/Release
+/FastCraft/LineCounter.au3
 *.sdf
 *.suo
 *.opensdf
