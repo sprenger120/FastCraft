@@ -17,9 +17,7 @@ GNU General Public License for more details.
 #define _FASTCRAFTHEADER_NETWORKNHANDLER
 
 #include <iostream>
-#include <Poco/Net/StreamSocket.h>
 #include <Poco/Runnable.h>
-#include <Poco/Thread.h>
 
 #include "PlayerThread.h"
 #include "SettingsHandler.h"
@@ -31,19 +29,20 @@ using Poco::Thread;
 
 class NetworkHandler : public Poco::Runnable {
 private:
-	PlayerThread* _pPlayerThreads;
 	SettingsHandler* _pSettings;
+	PlayerThread* _aPlayers;
 
 	string _sIP;
 	bool _fReady;
+	const int _iMaxClients;
 public:
 	//De- /constructor
-	NetworkHandler(PlayerThread*,SettingsHandler*);
+	NetworkHandler(SettingsHandler*);
 	~NetworkHandler();
 	bool Ready();
 
 
 	virtual void run(); //Thread Main
-
 };
+
 #endif
