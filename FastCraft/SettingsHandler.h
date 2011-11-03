@@ -16,8 +16,21 @@ GNU General Public License for more details.
 #ifndef _FASTCRAFTHEADER_SETTINGSNHANDLER
 #define _FASTCRAFTHEADER_SETTINGSNHANDLER
 #include <iostream>
+using std::string;
 
 class SettingsHandler {
+private:
+	//Network
+	short _iPort;
+	int _iMaxClients;
+	
+	//Version
+	string _sSupportedMCVersion;
+	string _sFastcraftVersion;
+	int _iSupportedProtocolVersion;
+
+	//Server Info
+	string _sServerDescription;
 public:
 	//De- / constructor 
 	SettingsHandler(); //Read configuration
@@ -30,10 +43,13 @@ public:
 		int getMaxClients(); //Returns maximal allowed parallel connected clients
 		
 		//Version
-		std::string getSupportedMCVersion(); //Returns accepted Minecraft Version (Text)
-		std::string getFastCraftVersion(); //Returns actual FastCraft Version (Text)
+		string getSupportedMCVersion(); //Returns accepted Minecraft Version (Text)
+		string getFastCraftVersion(); //Returns actual FastCraft Version (Text)
 
 		int getSupportedProtocolVersion(); //Returns actual supported minecraft protocol version
+
+		//Server Info
+		string getServerDescription();
 };
 
 

@@ -14,10 +14,26 @@ GNU General Public License for more details.
 */
 
 #include "SettingsHandler.h"
+#include <string>
 
+SettingsHandler::SettingsHandler():
+_sSupportedMCVersion(""),
+_sFastcraftVersion(""),
+_sServerDescription("")
+{
+	_iPort = 25565;
+	_iMaxClients = 16;
+	
+	_sSupportedMCVersion.assign("1.8.1");
+	_sFastcraftVersion.assign("0.0.1");
 
-SettingsHandler::SettingsHandler() {
+	_iSupportedProtocolVersion = 17;
 
+	_sServerDescription.assign("FastCraft "+_sFastcraftVersion+" Server"); 
+
+	if (_sServerDescription.length() > 34) {
+		_sServerDescription.resize(34);
+	}
 }
 
 SettingsHandler::~SettingsHandler() {
@@ -26,22 +42,25 @@ SettingsHandler::~SettingsHandler() {
 
 
 short SettingsHandler::getPort() {
-	return 25565; 
+	return _iPort; 
 }
 
 int SettingsHandler::getMaxClients() {
-	return 2;
+	return _iMaxClients;
 }
 
-
-std::string SettingsHandler::getSupportedMCVersion() {
-	return "1.8.1";
+string SettingsHandler::getSupportedMCVersion() {
+	return _sSupportedMCVersion;
 }
 
-std::string SettingsHandler::getFastCraftVersion() {
-	return "0.0.1";
+string SettingsHandler::getFastCraftVersion() {
+	return _sFastcraftVersion;
 }
 
 int SettingsHandler::getSupportedProtocolVersion() {
-	return 17; //Minecraft 1.8
+	return _iSupportedProtocolVersion; //Minecraft 1.8.1
+}
+
+string SettingsHandler::getServerDescription() {
+	return _sServerDescription;
 }
