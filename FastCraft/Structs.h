@@ -16,6 +16,7 @@ GNU General Public License for more details.
 #ifndef _FASTCRAFTHEADER_STRUCTS
 #define _FASTCRAFTHEADER_STRUCTS
 //Various Data Container 
+#include <iostream>
 
 struct PlayerFlags {
 	bool OnFire;
@@ -44,6 +45,11 @@ struct BlockCoordinates {
 struct ChunkCoordinates {
 	int X;
 	int Z;
+};
+
+struct QueueJob {
+	std::string Data;
+	int Special;
 };
 
 #endif
