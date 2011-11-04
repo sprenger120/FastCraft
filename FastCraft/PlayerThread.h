@@ -38,7 +38,7 @@ private:
 	string _sIP; //IP
 
 	char _sBuffer[1024];
-	string _sOutputBuffer;
+	string _sTemp;
 
 	queue<QueueJob> _SendQueue;
 
@@ -46,7 +46,7 @@ private:
 	SettingsHandler* _pSettings;
 	bool _fSettingsHandlerSet;
 
-	bool _fLoggedIn; //Set to true if handshake is done (username known)
+	char _iLoginProgress; //Set to true if handshake is done (username known)
 	bool _fAssigned;//true if a player is assigned to that thread
 	bool _fReady; //true if thread is ready
 
@@ -67,7 +67,7 @@ public:
 
 	virtual void run(); // Thread Main
 
-	void Disconnect(); //Clear Player object
+	void Disconnect(bool = false); //Clear Player object
 	void Connect(Poco::Net::StreamSocket&,string); //Manage New Player connection | clear if necessary
 	bool isAssigned(); //Returns true if a player is assigned to this thread
 

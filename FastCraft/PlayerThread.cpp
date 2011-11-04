@@ -19,13 +19,14 @@ GNU General Public License for more details.
 #include <Poco/Timespan.h>
 #include <Poco/NumberFormatter.h>
 #include <Poco/Net/NetException.h>
+#include "TCPHelper.h"
 
 PlayerThread::PlayerThread() : 
 _sName(""),
 	_sNickName(""),
 	_sIP(""),
 	_Connection(),
-	_sOutputBuffer(""),
+	_sTemp(""),
 	_fReady(false),
 	_fSettingsHandlerSet(false)
 {
@@ -35,7 +36,7 @@ _sName(""),
 	_Flags.Riding = false;
 	_Flags.Sprinting = false;
 
-	_fLoggedIn = false;
+	_iLoginProgress = 0;
 	_fAssigned = false;
 
 	InstanceCounter++;
@@ -62,6 +63,7 @@ bool PlayerThread::Ready() {
 
 void PlayerThread::run() {
 	_fReady=true;
+	int iProtocolVer;
 
 	if (!_fSettingsHandlerSet) {
 		while(!_fSettingsHandlerSet) { Thread::sleep(100); }
@@ -75,61 +77,109 @@ void PlayerThread::run() {
 
 		if (ProcessQueue()) {continue;} //Queue Processor has closed connection
 
+
+		_sBuffer[0]=0xF0; //Set to a unused packet id 
+
 		try {
 			_Connection.receiveBytes(_sBuffer,1);
 		}catch(Poco::Net::InvalidSocketException) {
-			Disconnect();
+			Disconnect(true);
+			continue;
 		}catch(Poco::TimeoutException) {
 			if (_sName.compare("") == 0) { //Handshake isn't done
-				cout<<"Player:"<<_sIP<<" timed out"<<"\n";
-				continue;
+				cout<<_sIP<<" timed out."<<"\n";
+			}else{
+				cout<<"Player:"<<_sName<<" timed out"<<"\n";
 			}
-			cout<<"Player:"<<_sName<<" timed out"<<"\n";
+
 			Disconnect();
+			continue;
 		}
 
 
 		switch ((unsigned char)_sBuffer[0]) {
-			/*case 0x2: //Handshake
-			PlayerCount++;
+		/*case 0x1: //Login
+			iProtocolVer = TCPHelper::readInt(_Connection);
+			
+			if (iProtocolVer > _pSettings->getSupportedProtocolVersion()) {
+				Kick("Outdated server!");
+				continue;
+			}
+			
+			if (iProtocolVer < _pSettings->getSupportedProtocolVersion()) {
+				Kick("Outdated client!");
+				continue;
+			}
+
+
+			TCPHelper::readString16(_Connection); //Username (already known)
+			_Connection.receiveBytes(_sBuffer,16); //Unused fields
+
+			//Answer
+			_sTemp.assign(""); //Clar
+			_sTemp.append<int>(1,0x1); //packet id
+			_
+
+
+
 			break;
 			*/
+		case 0x2: //Handshake
+			if (_iLoginProgress != FC_AUTHSTEP_CONNECTEDONLY) {
+				Kick("False login order!");
+				continue;
+			}
+			_sName = _sNickName = TCPHelper::readString16(_Connection);
+
+			cout<<_sName<<" joined ("<<_sIP<<")"<<endl;
+			PlayerCount++;
+			_iLoginProgress=FC_AUTHSTEP_HANDSHAKE;
+
+			//Send response (Connection Hash)
+			_sTemp.assign("");
+			_sTemp.append<int>(1,0x02); 
+
+			TextHandler::packString16(_sTemp,string("-"));
+			_Connection.sendBytes(_sTemp.c_str(),_sTemp.length());
+			break;
 		case 0xFE: //Server List Ping
-			_sOutputBuffer.assign("");
-
-			_sOutputBuffer.assign(_pSettings->getServerDescription()); //Server Description
-			_sOutputBuffer.append<int>(1,0xA7);
-
-			Poco::NumberFormatter::append(_sOutputBuffer,PlayerCount); //Player count
-			_sOutputBuffer.append<int>(1,0xA7);
-
-			Poco::NumberFormatter::append(_sOutputBuffer,_pSettings->getMaxClients()); //player slots
-
-	
-			_sOutputBuffer.append("§");
-			Kick(_sOutputBuffer);
+			_sTemp.assign("");
+			_sTemp.assign(_pSettings->getServerDescription()); //Server Description
+			_sTemp.append<int>(1,0xA7);
+			Poco::NumberFormatter::append(_sTemp,PlayerCount); //Player count
+			_sTemp.append<int>(1,0xA7);
+			Poco::NumberFormatter::append(_sTemp,_pSettings->getMaxClients()); //player slots
+			_sTemp.append("§");
+			Kick(_sTemp);
+			break;
+		case 0xF0: //if unused packed id not changed -> connection aborted
+			Disconnect();
 			break;
 		default: 
+			Kick("Unknown packet!");
 			cout<<"Unknown packet received! 0x"<<std::hex<<int(_sBuffer[0])<<endl;
-			Disconnect();
 			break;
 		}
 
 	}
 }
 
-void PlayerThread::Disconnect() {
+void PlayerThread::Disconnect(bool fKicked) {
 	_Flags.Crouched = false;
 	_Flags.Eating = false;
 	_Flags.OnFire = false;
 	_Flags.Riding = false;
 	_Flags.Sprinting = false;
 
-	if (_fLoggedIn) {
+	if (_iLoginProgress >= FC_AUTHSTEP_HANDSHAKE) {
 		PlayerCount--;
 	}
 
-	_fLoggedIn = false;
+	if (_sName.compare("") !=0 && !fKicked) { // If names is known
+		cout<<_sName<<" left server."<<"\n"; 
+	}
+
+	_iLoginProgress = FC_AUTHSTEP_NOTCONNECTED;
 	_fAssigned = false;
 
 	_sName.assign("");
@@ -137,16 +187,16 @@ void PlayerThread::Disconnect() {
 	_sIP.assign("");
 	ClearQueue();
 	_Connection.close();
-
 }
 
 
 void PlayerThread::Connect(Poco::Net::StreamSocket& Sock,string IP) {
 	_fAssigned=true;
+	_iLoginProgress = FC_AUTHSTEP_CONNECTEDONLY;
 	_sIP.assign(IP);
 
 	_Connection = Sock; 
-	_Connection.setReceiveTimeout( Poco::Timespan( 1000* 2000) );
+	_Connection.setReceiveTimeout( Poco::Timespan( 1000 * 5000) );
 }
 
 bool PlayerThread::isAssigned() {
@@ -165,6 +215,10 @@ void PlayerThread::Kick(string sReason) {
 	TextHandler::packString16(qJob.Data,sReason);
 	qJob.Special = FC_JOB_CLOSECONN;
 
+	if (_sName.compare("") !=0) { // If names is known
+		cout<<_sName<<" was kicked for: "<<sReason<<"\n"; 
+	}
+
 	appendQueue(qJob);
 }
 
@@ -175,6 +229,10 @@ void PlayerThread::Kick() {
 	qJob.Data.append<int>(1,0xFF);
 	qJob.Data.append<int>(2,0x0);
 	qJob.Special = FC_JOB_CLOSECONN;
+
+	if (_sName.compare("") !=0) { // If names is known
+		cout<<_sName<<" was kicked"<<"\n"; 
+	}
 
 	appendQueue(qJob);
 }
@@ -191,7 +249,7 @@ bool PlayerThread::ProcessQueue() {
 	switch(qJob.Special) {
 	case FC_JOB_CLOSECONN:
 		Thread::sleep(200); 
-		Disconnect();
+		Disconnect(true);
 		return true;
 	default:
 		cout<<"unknown job!"<<"\n";
