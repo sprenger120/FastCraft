@@ -16,7 +16,13 @@ GNU General Public License for more details.
 #ifndef _FASTCRAFTHEADER_CONSTANTS
 #define _FASTCRAFTHEADER_CONSTANTS
 
-#define FC_JOB_CLOSECONN			1
+#define FC_JOB_CLOSECONN				1
 
+//Authentification steps
+#define FC_AUTHSTEP_NOTCONNECTED		0
+#define FC_AUTHSTEP_CONNECTEDONLY		1
+#define FC_AUTHSTEP_HANDSHAKE			2
+#define FC_AUTHSTEP_VERIFY				3
+#define FC_AUTHSTEP_DONE				4
 
 #endif
