@@ -21,6 +21,7 @@ GNU General Public License for more details.
 #include "NetworkHandler.h"
 #include "SettingsHandler.h"
 #include "PlayerThread.h"
+#include "EntityProvider.h"
 
 using std::cout;
 using std::string;
@@ -34,9 +35,11 @@ int main() {
 	cout<<"--- FAST CRAFT v. "<<Settings.getFastCraftVersion()<<" for Minecraft "<<Settings.getSupportedMCVersion()<<" ---"<<"\n";
 	cout<<"Running on *:"<<Settings.getPort()<<" with "<<Settings.getMaxClients()<<" player slots"<<endl;
 
+	EntityProvider EntityProvider;
+
 
 	//Start Network Thread
-	NetworkHandler NetworkHandler(&Settings);
+	NetworkHandler NetworkHandler(&Settings,&EntityProvider);
 	Thread threadNetworkHandler("NetworkHandler");
 	threadNetworkHandler.start(NetworkHandler);
 	while(! NetworkHandler.Ready()) {}
