@@ -25,4 +25,10 @@ GNU General Public License for more details.
 #define FC_AUTHSTEP_VERIFY				3
 #define FC_AUTHSTEP_DONE				4
 
+//Entitys
+#define FC_ENTITY_PLAYER				1
+
+//Properties
+#define FC_SERVMODE_SURVIVAL			0
+#define FC_SERVMODE_CREATIVE			1
 #endif
