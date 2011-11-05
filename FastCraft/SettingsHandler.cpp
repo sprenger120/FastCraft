@@ -14,6 +14,7 @@ GNU General Public License for more details.
 */
 
 #include "SettingsHandler.h"
+#include "Constants.h"
 #include <string>
 
 SettingsHandler::SettingsHandler():
@@ -21,19 +22,29 @@ _sSupportedMCVersion(""),
 _sFastcraftVersion(""),
 _sServerDescription("")
 {
+	//Network
 	_iPort = 25565;
 	_iMaxClients = 16;
 	
+	//Version
 	_sSupportedMCVersion.assign("1.8.1");
 	_sFastcraftVersion.assign("0.0.1");
-
 	_iSupportedProtocolVersion = 17;
 
+
+	//Server Info
 	_sServerDescription.assign("FastCraft "+_sFastcraftVersion+" Server"); 
 
 	if (_sServerDescription.length() > 34) {
 		_sServerDescription.resize(34);
 	}
+
+	_iServerMode = FC_SERVMODE_SURVIVAL;
+	_iDifficulty = 1;
+
+	//MapInfo
+	_iMapSeed = 0;
+	_iWorldHeight = 128;
 }
 
 SettingsHandler::~SettingsHandler() {
@@ -63,4 +74,20 @@ int SettingsHandler::getSupportedProtocolVersion() {
 
 string SettingsHandler::getServerDescription() {
 	return _sServerDescription;
+}
+
+int SettingsHandler::getServerMode() {
+	return _iServerMode;
+}
+
+char SettingsHandler::getDifficulty() {
+	return _iDifficulty;
+}
+
+long long SettingsHandler::getMapSeed() {
+	return _iMapSeed;
+}
+
+unsigned char SettingsHandler::getWorldHeight() {
+	return _iWorldHeight;
 }

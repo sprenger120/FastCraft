@@ -31,6 +31,12 @@ private:
 
 	//Server Info
 	string _sServerDescription;
+	int _iServerMode;
+	char _iDifficulty;
+	
+	//Map Info
+	long long _iMapSeed;
+	unsigned char _iWorldHeight;
 public:
 	//De- / constructor 
 	SettingsHandler(); //Read configuration
@@ -50,6 +56,13 @@ public:
 
 		//Server Info
 		string getServerDescription();
+		int getServerMode(); //false for survival, true for creative
+		char getDifficulty();
+
+
+		//Map Info
+		long long getMapSeed();
+		unsigned char getWorldHeight();
 };
 
 
