@@ -37,6 +37,7 @@ _sName(""),
 	_Flags.Sprinting = false;
 
 	_iLoginProgress = 0;
+	_iEntityID=0;
 	_fAssigned = false;
 
 	InstanceCounter++;
@@ -63,7 +64,7 @@ bool PlayerThread::Ready() {
 
 void PlayerThread::run() {
 	_fReady=true;
-	int iProtocolVer;
+	int iTemp;
 
 	if (!_fSettingsHandlerSet) {
 		while(!_fSettingsHandlerSet) { Thread::sleep(100); }
@@ -78,7 +79,7 @@ void PlayerThread::run() {
 		if (ProcessQueue()) {continue;} //Queue Processor has closed connection
 
 
-		_sBuffer[0]=0xF0; //Set to a unused packet id 
+		_sBuffer[0] = 240; //Set to a unused packet id 
 
 		try {
 			_Connection.receiveBytes(_sBuffer,1);
@@ -97,20 +98,19 @@ void PlayerThread::run() {
 		}
 
 
-		switch ((unsigned char)_sBuffer[0]) {
-		/*case 0x1: //Login
-			iProtocolVer = TCPHelper::readInt(_Connection);
+		switch (_sBuffer[0]) {
+		case 0x1: //Login
+			iTemp = TCPHelper::readInt(_Connection); //Protocol Version
 			
-			if (iProtocolVer > _pSettings->getSupportedProtocolVersion()) {
+			if (iTemp > _pSettings->getSupportedProtocolVersion()) {
 				Kick("Outdated server!");
 				continue;
 			}
 			
-			if (iProtocolVer < _pSettings->getSupportedProtocolVersion()) {
+			if (iTemp < _pSettings->getSupportedProtocolVersion()) {
 				Kick("Outdated client!");
 				continue;
 			}
-
 
 			TCPHelper::readString16(_Connection); //Username (already known)
 			_Connection.receiveBytes(_sBuffer,16); //Unused fields
@@ -118,12 +118,18 @@ void PlayerThread::run() {
 			//Answer
 			_sTemp.assign(""); //Clar
 			_sTemp.append<int>(1,0x1); //packet id
-			_
+			TextHandler::Append(_sTemp,_iEntityID); //EntityID
+			_sTemp.append<int>(2,0); //unused
 
+			TextHandler::Append(_sTemp,_pSettings->getMapSeed());//MapSeed 
+			TextHandler::Append(_sTemp,_pSettings->getServerMode()); //ServerMode
+			_sTemp.append<char>(1,0); //Default Dimension
+			TextHandler::Append(_sTemp,_pSettings->getDifficulty()); //Difficulty
+			_sTemp.append<char>(1,_pSettings->getWorldHeight()); //WorldHeight
+			_sTemp.append<char>(1,_pSettings->getMaxClients()); //Max Players
 
-
+			_Connection.sendBytes(_sTemp.c_str(),_sTemp.length());		
 			break;
-			*/
 		case 0x2: //Handshake
 			if (_iLoginProgress != FC_AUTHSTEP_CONNECTEDONLY) {
 				Kick("False login order!");
@@ -131,9 +137,9 @@ void PlayerThread::run() {
 			}
 			_sName = _sNickName = TCPHelper::readString16(_Connection);
 
-			cout<<_sName<<" joined ("<<_sIP<<")"<<endl;
 			PlayerCount++;
 			_iLoginProgress=FC_AUTHSTEP_HANDSHAKE;
+			_iEntityID = _pEntityProvider->Add(FC_ENTITY_PLAYER); //Got a new entity id
 
 			//Send response (Connection Hash)
 			_sTemp.assign("");
@@ -141,6 +147,9 @@ void PlayerThread::run() {
 
 			TextHandler::packString16(_sTemp,string("-"));
 			_Connection.sendBytes(_sTemp.c_str(),_sTemp.length());
+
+
+			cout<<_sName<<" joined ("<<_sIP<<") EID:"<<_iEntityID<<endl;
 			break;
 		case 0xFE: //Server List Ping
 			_sTemp.assign("");
@@ -177,6 +186,8 @@ void PlayerThread::Disconnect(bool fKicked) {
 
 	if (_sName.compare("") !=0 && !fKicked) { // If names is known
 		cout<<_sName<<" left server."<<"\n"; 
+		_pEntityProvider->Remove(_iEntityID);
+		_iEntityID = 0;
 	}
 
 	_iLoginProgress = FC_AUTHSTEP_NOTCONNECTED;
@@ -263,7 +274,8 @@ void PlayerThread::appendQueue(QueueJob& Job) {
 	_SendQueue.push(Job);
 }
 
-void PlayerThread::setSettingsHandler(SettingsHandler* settings) {
+void PlayerThread::secondConstructor(SettingsHandler* settings,EntityProvider* EProv) {
 	_pSettings = settings;
+	_pEntityProvider = EProv;
 	_fSettingsHandlerSet=true;
 }

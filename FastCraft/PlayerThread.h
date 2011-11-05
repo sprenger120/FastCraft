@@ -21,6 +21,7 @@ GNU General Public License for more details.
 #include <Poco/Net/StreamSocket.h>
 #include <Poco/Thread.h>
 #include "Structs.h"
+#include "EntityProvider.h"
 #include "SettingsHandler.h"
 #include <queue>
 
@@ -36,14 +37,16 @@ private:
 	EntityCoordinates _Coordinates; //Coordinates
 	string _sName,_sNickName; //Minecraft.net Username and Ingame Nickname
 	string _sIP; //IP
+	int _iEntityID;
 
-	char _sBuffer[1024];
+	unsigned char _sBuffer[1024];
 	string _sTemp;
 
 	queue<QueueJob> _SendQueue;
 
 	Poco::Net::StreamSocket _Connection;
 	SettingsHandler* _pSettings;
+	EntityProvider* _pEntityProvider;
 	bool _fSettingsHandlerSet;
 
 	char _iLoginProgress; //Set to true if handshake is done (username known)
@@ -62,7 +65,7 @@ public:
 	~PlayerThread();
 
 	//Management
-	void setSettingsHandler(SettingsHandler*);
+	void secondConstructor(SettingsHandler*,EntityProvider*);
 	bool Ready();
 
 	virtual void run(); // Thread Main
