@@ -52,4 +52,8 @@ struct QueueJob {
 	int Special;
 };
 
+struct EntityType {
+	int EntityID;
+	char Type;
+};
 #endif
