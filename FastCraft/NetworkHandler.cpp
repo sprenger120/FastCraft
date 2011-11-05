@@ -17,7 +17,7 @@ GNU General Public License for more details.
 #include <Poco/ThreadPool.h>
 
 
-NetworkHandler::NetworkHandler(SettingsHandler* Settings):
+NetworkHandler::NetworkHandler(SettingsHandler* Settings,EntityProvider* EProvider):
 	_pSettings(Settings),
 	_sIP(""),
 	_fReady(false),
@@ -36,7 +36,7 @@ NetworkHandler::NetworkHandler(SettingsHandler* Settings):
 		while (! _aPlayers[x].Ready() ) {}
 		
 		//give a settingshandler object pointer to thread
-		_aPlayers[x].setSettingsHandler(Settings);
+		_aPlayers[x].secondConstructor(Settings,EProvider);
 	}
 
 }

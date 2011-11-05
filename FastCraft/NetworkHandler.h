@@ -21,6 +21,7 @@ GNU General Public License for more details.
 
 #include "PlayerThread.h"
 #include "SettingsHandler.h"
+#include "EntityProvider.h"
 
 using Poco::Net::StreamSocket;
 using std::string;
@@ -37,7 +38,7 @@ private:
 	const int _iMaxClients;
 public:
 	//De- /constructor
-	NetworkHandler(SettingsHandler*);
+	NetworkHandler(SettingsHandler*,EntityProvider*);
 	~NetworkHandler();
 	bool Ready();
 
