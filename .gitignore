@@ -13,3 +13,5 @@
 *.vcxproj
 *.vcxproj.filters
 *.vcxproj.user
+
+/Docs
