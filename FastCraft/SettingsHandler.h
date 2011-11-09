@@ -13,21 +13,24 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 */
 
+/*
+* This class reads the server and map configuration. It also provide accessors for given server properties.
+* If the configuration file doesn't exists it will be created.
+* Syntax errors will be shown.
+*/
+
 #ifndef _FASTCRAFTHEADER_SETTINGSNHANDLER
 #define _FASTCRAFTHEADER_SETTINGSNHANDLER
 #include <iostream>
+
 using std::string;
 
 class SettingsHandler {
 private:
 	//Network
-	short _iPort;
+	int _iPort;
 	int _iMaxClients;
 	
-	//Version
-	string _sSupportedMCVersion;
-	string _sFastcraftVersion;
-	int _iSupportedProtocolVersion;
 
 	//Server Info
 	string _sServerDescription;
@@ -43,16 +46,14 @@ public:
 	~SettingsHandler(); //Save configuration
 
 	//Property Accessors
-
 		//Network
 		short getPort(); //Returns port that FastCraft binds
 		int getMaxClients(); //Returns maximal allowed parallel connected clients
 		
 		//Version
-		string getSupportedMCVersion(); //Returns accepted Minecraft Version (Text)
-		string getFastCraftVersion(); //Returns actual FastCraft Version (Text)
-
-		int getSupportedProtocolVersion(); //Returns actual supported minecraft protocol version
+		static string getSupportedMCVersion(); //Returns accepted Minecraft Version (Text)
+		static string getFastCraftVersion(); //Returns actual FastCraft Version (Text)
+		static int getSupportedProtocolVersion(); //Returns actual supported minecraft protocol version 
 
 		//Server Info
 		string getServerDescription();
