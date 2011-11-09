@@ -28,7 +28,7 @@ int EntityProvider::Add(char iType) {
 	_iCount++;
 
 	if (iIndex > 0) {
-		for(int x=0;x <= _vEntitys.size()-1;x++) {
+		for(unsigned int x=0;x <= _vEntitys.size()-1;x++) {
 			if (_vEntitys[x].EntityID == 0) { //Free place
 				_vEntitys[x].EntityID = _iCount;
 				_vEntitys[x].Type = iType;
@@ -46,7 +46,7 @@ int EntityProvider::Add(char iType) {
 
 void EntityProvider::Remove(int iEntityID) {
 	if (_vEntitys.size() > 0) {
-		for(int x=0;x <= _vEntitys.size()-1;x++) {
+		for(unsigned int x=0;x <= _vEntitys.size()-1;x++) {
 			if (_vEntitys[x].EntityID == iEntityID) {
 				_vEntitys[x].EntityID = 0;
 				_vEntitys[x].Type = 0;
@@ -57,11 +57,12 @@ void EntityProvider::Remove(int iEntityID) {
 
 char EntityProvider::getType(int iEntityID) {
 	if (_vEntitys.size() > 0) {
-		for(int x=0;x <= _vEntitys.size()-1;x++) {
+		for(unsigned int x=0;x <= _vEntitys.size()-1;x++) {
 			if (_vEntitys[x].EntityID == iEntityID) {
 				return _vEntitys[x].Type;
 			}
 		}
+		return 0;
 	}else{
 		return 0;
 	}
