@@ -31,4 +31,9 @@ GNU General Public License for more details.
 //Properties
 #define FC_SERVMODE_SURVIVAL			0
 #define FC_SERVMODE_CREATIVE			1
+
+#define FC_DIFFICULTY_PEACEFUL			0
+#define FC_DIFFICULTY_EASY				1
+#define FC_DIFFICULTY_NORMAL			2
+#define FC_DIFFICULTY_HARD				3
 #endif
