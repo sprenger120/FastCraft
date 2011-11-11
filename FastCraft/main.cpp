@@ -29,30 +29,23 @@ using std::endl;
 using Poco::Thread;
 
 int main() {
-	SettingsHandler Settings;
-
-	//Informations
-	cout<<"--- FAST CRAFT v. "<<Settings.getFastCraftVersion()<<" for Minecraft "<<Settings.getSupportedMCVersion()<<" ---"<<"\n";
+	cout<<"--- FAST CRAFT v. "<<SettingsHandler::getFastCraftVersion()<<" for Minecraft "<<SettingsHandler::getSupportedMCVersion()<<" ---"<<"\n";
+	SettingsHandler Settings; //Load configuration
 	cout<<"Running on *:"<<Settings.getPort()<<" with "<<Settings.getMaxClients()<<" player slots"<<endl;
 
-	EntityProvider EntityProvider;
-
-
+	
 	//Start Network Thread
-	NetworkHandler NetworkHandler(&Settings,&EntityProvider);
-	Thread threadNetworkHandler("NetworkHandler");
+	NetworkHandler NetworkHandler(&Settings);
+	Poco::Thread threadNetworkHandler("NetworkHandler");
 	threadNetworkHandler.start(NetworkHandler);
-	while(! NetworkHandler.Ready()) {}
 
 
 	cout<<"Ready."<<"\n"<<endl;
 
 
-
 	while (1) {
-		Thread::sleep(100);
+	Thread::sleep(100);
 	}
-
 
 	return 1;
 }
