@@ -17,6 +17,7 @@ GNU General Public License for more details.
 #include <string>
 
 #include <Poco/Thread.h>
+#include <Poco/Exception.h>
 
 #include "NetworkHandler.h"
 #include "SettingsHandler.h"
@@ -29,14 +30,22 @@ using std::endl;
 using Poco::Thread;
 
 int main() {
-	cout<<"--- FAST CRAFT v. "<<SettingsHandler::getFastCraftVersion()<<" for Minecraft "<<SettingsHandler::getSupportedMCVersion()<<" ---"<<"\n";
-	SettingsHandler Settings; //Load configuration
-	cout<<"Running on *:"<<Settings.getPort()<<" with "<<Settings.getMaxClients()<<" player slots"<<endl;
+	SettingsHandler* pSettingHandler;
 
+	cout<<"--- FAST CRAFT v. "<<SettingsHandler::getFastCraftVersion()<<" for Minecraft "<<SettingsHandler::getSupportedMCVersion()<<" ---"<<"\n";
 	
+	try {
+		pSettingHandler = new SettingsHandler; //Load configuration
+	} catch (Poco::RuntimeException) {
+		Thread::sleep(3000);
+		return 1;
+	}
+	cout<<"Running on *:"<<pSettingHandler->getPort()<<" with "<<pSettingHandler->getMaxClients()<<" player slots"<<endl;
+
+
 	//Start Network Thread
-	NetworkHandler NetworkHandler(&Settings);
-	Poco::Thread threadNetworkHandler("NetworkHandler");
+	NetworkHandler NetworkHandler(pSettingHandler);
+	Thread threadNetworkHandler("NetworkHandler");
 	threadNetworkHandler.start(NetworkHandler);
 
 
@@ -44,8 +53,10 @@ int main() {
 
 
 	while (1) {
-	Thread::sleep(100);
+		Thread::sleep(100);
 	}
+
+	delete pSettingHandler;
 
 	return 1;
 }
