@@ -17,7 +17,6 @@ GNU General Public License for more details.
 
 #include <iostream>
 #include <Poco/Runnable.h>
-#include <Poco/Net/SocketStream.h>
 #include <Poco/Net/StreamSocket.h>
 #include <Poco/Thread.h>
 #include "Structs.h"
@@ -47,31 +46,22 @@ private:
 	Poco::Net::StreamSocket _Connection;
 	SettingsHandler* _pSettings;
 	EntityProvider* _pEntityProvider;
-	bool _fSettingsHandlerSet;
 
-	char _iLoginProgress; //Set to true if handshake is done (username known)
+	char _iLoginProgress;
 	bool _fAssigned;//true if a player is assigned to that thread
-	bool _fReady; //true if thread is ready
-
-	void ClearQueue();
-	bool ProcessQueue(); //Returns true if connection is closed
 
 	int _iThreadID;
 	static int InstanceCounter;
 	static int PlayerCount;
 public:
 	//De- / Constructor
-	PlayerThread();
+	PlayerThread(SettingsHandler*,EntityProvider*);
 	~PlayerThread();
-
-	//Management
-	void secondConstructor(SettingsHandler*,EntityProvider*);
-	bool Ready();
 
 	virtual void run(); // Thread Main
 
 	void Disconnect(bool = false); //Clear Player object
-	void Connect(Poco::Net::StreamSocket&,string); //Manage New Player connection | clear if necessary
+	void Connect(Poco::Net::StreamSocket&); //Manage New Player connection | clear if necessary
 	bool isAssigned(); //Returns true if a player is assigned to this thread
 
 	void Kick(); //Kicks player without reason
@@ -88,6 +78,10 @@ public:
 
 	//Queue
 	void appendQueue(QueueJob&); //Adds a job for the sending queue
+private:
+	bool isNameSet(); //returns true if name is set
+	void ClearQueue(); //Clear send queue
+	void ProcessQueue(); //Returns true if connection is closed
 };
 
 #endif

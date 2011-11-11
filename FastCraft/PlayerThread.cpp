@@ -21,14 +21,12 @@ GNU General Public License for more details.
 #include <Poco/Net/NetException.h>
 #include "TCPHelper.h"
 
-PlayerThread::PlayerThread() : 
-_sName(""),
+PlayerThread::PlayerThread(SettingsHandler* pSettingsHandler,EntityProvider* pEntityProvider) : 
+	_sName(""),
 	_sNickName(""),
 	_sIP(""),
 	_Connection(),
-	_sTemp(""),
-	_fReady(false),
-	_fSettingsHandlerSet(false)
+	_sTemp("")
 {
 	_Flags.Crouched = false;
 	_Flags.Eating = false;
@@ -39,6 +37,9 @@ _sName(""),
 	_iLoginProgress = 0;
 	_iEntityID=0;
 	_fAssigned = false;
+
+	_pSettings = pSettingsHandler;
+	_pEntityProvider = pEntityProvider;
 
 	InstanceCounter++;
 	_iThreadID = InstanceCounter;
@@ -58,17 +59,9 @@ PlayerThread::~PlayerThread() {
 	InstanceCounter--;
 }
 
-bool PlayerThread::Ready() {
-	return _fReady;
-}
 
 void PlayerThread::run() {
-	_fReady=true;
 	int iTemp;
-
-	if (!_fSettingsHandlerSet) {
-		while(!_fSettingsHandlerSet) { Thread::sleep(100); }
-	}
 
 	while (1) {
 		if (!isAssigned()) {
@@ -76,10 +69,12 @@ void PlayerThread::run() {
 			continue;
 		} 
 
-		if (ProcessQueue()) {continue;} //Queue Processor has closed connection
+		ProcessQueue();
+
+		if (!isAssigned()) {continue;} //Connection was closed by queue processor 
 
 
-		_sBuffer[0] = 240; //Set to a unused packet id 
+		_sBuffer[0] = 240; //Set to a unused packet id  (used for connection aborting indentifying)
 
 		try {
 			_Connection.receiveBytes(_sBuffer,1);
@@ -87,10 +82,10 @@ void PlayerThread::run() {
 			Disconnect(true);
 			continue;
 		}catch(Poco::TimeoutException) {
-			if (_sName.compare("") == 0) { //Handshake isn't done
-				cout<<_sIP<<" timed out."<<"\n";
-			}else{
+			if (isNameSet()) { //Handshake isn't done
 				cout<<"Player:"<<_sName<<" timed out"<<"\n";
+			}else{
+				cout<<_sIP<<" timed out."<<"\n";	
 			}
 
 			Disconnect();
@@ -139,7 +134,7 @@ void PlayerThread::run() {
 
 			PlayerCount++;
 			_iLoginProgress=FC_AUTHSTEP_HANDSHAKE;
-			_iEntityID = _pEntityProvider->Add(FC_ENTITY_PLAYER); //Got a new entity id
+			_iEntityID = _pEntityProvider->Add(FC_ENTITY_PLAYER); //Fetch a new entity id
 
 			//Send response (Connection Hash)
 			_sTemp.assign("");
@@ -147,7 +142,6 @@ void PlayerThread::run() {
 
 			TextHandler::packString16(_sTemp,string("-"));
 			_Connection.sendBytes(_sTemp.c_str(),_sTemp.length());
-
 
 			cout<<_sName<<" joined ("<<_sIP<<") EID:"<<_iEntityID<<endl;
 			break;
@@ -174,24 +168,32 @@ void PlayerThread::run() {
 }
 
 void PlayerThread::Disconnect(bool fKicked) {
-	_Flags.Crouched = false;
-	_Flags.Eating = false;
-	_Flags.OnFire = false;
-	_Flags.Riding = false;
-	_Flags.Sprinting = false;
-
-	if (_iLoginProgress >= FC_AUTHSTEP_HANDSHAKE) {
+	if (isNameSet()) {
 		PlayerCount--;
 	}
 
-	if (_sName.compare("") !=0 && !fKicked) { // If names is known
+	if (isNameSet() && !fKicked) { // If names is known
 		cout<<_sName<<" left server."<<"\n"; 
 		_pEntityProvider->Remove(_iEntityID);
 		_iEntityID = 0;
 	}
 
+	_Flags.Crouched = false;
+	_Flags.Eating = false;
+	_Flags.OnFire = false;
+	_Flags.Riding = false;
+	_Flags.Sprinting = false;
+	_Coordinates.OnGround = false;
+	_Coordinates.Pitch = 0.0F;
+	_Coordinates.Stance = 0.0;
+	_Coordinates.X = 0.0;
+	_Coordinates.Y = 0.0;
+	_Coordinates.Yaw = 0.0F;
+	_Coordinates.Z = 0.0;
+
 	_iLoginProgress = FC_AUTHSTEP_NOTCONNECTED;
 	_fAssigned = false;
+	_iEntityID = 0;
 
 	_sName.assign("");
 	_sNickName.assign("");
@@ -201,17 +203,30 @@ void PlayerThread::Disconnect(bool fKicked) {
 }
 
 
-void PlayerThread::Connect(Poco::Net::StreamSocket& Sock,string IP) {
+void PlayerThread::Connect(Poco::Net::StreamSocket& Sock) {
 	_fAssigned=true;
 	_iLoginProgress = FC_AUTHSTEP_CONNECTEDONLY;
-	_sIP.assign(IP);
-
+	
 	_Connection = Sock; 
 	_Connection.setReceiveTimeout( Poco::Timespan( 1000 * 5000) );
+
+	_sIP.assign(_Connection.peerAddress().toString());
 }
 
 bool PlayerThread::isAssigned() {
 	return _fAssigned;
+}
+
+string PlayerThread::getUsername() {
+	return _sName;
+}
+
+string PlayerThread::getNickname() {
+	return _sNickName;
+}
+
+string PlayerThread::getIP() {
+	return _sIP;
 }
 
 int PlayerThread::getThreadID() {
@@ -226,7 +241,7 @@ void PlayerThread::Kick(string sReason) {
 	TextHandler::packString16(qJob.Data,sReason);
 	qJob.Special = FC_JOB_CLOSECONN;
 
-	if (_sName.compare("") !=0) { // If names is known
+	if (isNameSet()) { // If names is known
 		cout<<_sName<<" was kicked for: "<<sReason<<"\n"; 
 	}
 
@@ -248,9 +263,9 @@ void PlayerThread::Kick() {
 	appendQueue(qJob);
 }
 
-bool PlayerThread::ProcessQueue() {
+void PlayerThread::ProcessQueue() {
 	QueueJob qJob;
-	if (_SendQueue.size() == 0) {return false;}
+	if (_SendQueue.size() == 0) {return;}
 
 	qJob = _SendQueue.front();
 	_SendQueue.pop();
@@ -261,21 +276,17 @@ bool PlayerThread::ProcessQueue() {
 	case FC_JOB_CLOSECONN:
 		Thread::sleep(200); 
 		Disconnect(true);
-		return true;
+		break;
 	default:
-		cout<<"unknown job!"<<"\n";
+		cout<<"INTERNAL SERVER ERROR: Unknown job ID: ("<<qJob.Special<<") !"<<"\n";
 		break;
 	}
-
-	return false;
 }
 
 void PlayerThread::appendQueue(QueueJob& Job) {
 	_SendQueue.push(Job);
 }
 
-void PlayerThread::secondConstructor(SettingsHandler* settings,EntityProvider* EProv) {
-	_pSettings = settings;
-	_pEntityProvider = EProv;
-	_fSettingsHandlerSet=true;
+bool PlayerThread::isNameSet() {
+	return _iLoginProgress >= FC_AUTHSTEP_HANDSHAKE;
 }
