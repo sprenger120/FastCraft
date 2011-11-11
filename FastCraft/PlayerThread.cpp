@@ -33,6 +33,13 @@ PlayerThread::PlayerThread(SettingsHandler* pSettingsHandler,EntityProvider* pEn
 	_Flags.OnFire = false;
 	_Flags.Riding = false;
 	_Flags.Sprinting = false;
+	_Coordinates.OnGround = false;
+	_Coordinates.Pitch = 0.0F;
+	_Coordinates.Stance = 0.0;
+	_Coordinates.X = 0.0;
+	_Coordinates.Y = 0.0;
+	_Coordinates.Yaw = 0.0F;
+	_Coordinates.Z = 0.0;
 
 	_iLoginProgress = 0;
 	_iEntityID=0;
