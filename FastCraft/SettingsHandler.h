@@ -31,15 +31,25 @@ private:
 	int _iPort;
 	int _iMaxClients;
 	
-
 	//Server Info
 	string _sServerDescription;
 	int _iServerMode;
 	char _iDifficulty;
+	bool _fOnlineMode;
+	bool _fWhitelist;
 	
 	//Map Info
-	long long _iMapSeed;
 	unsigned char _iWorldHeight;
+	bool _fAllowNeather;
+	string _sMainMapName;
+
+	//Spawning
+	bool _fSpawnPeacefulAnimals;
+	bool _fSpawnHostileAnimals;
+
+	//Player
+	int _iViewDistance;
+	bool _fPVP;
 public:
 	//De- / constructor 
 	SettingsHandler(); //Read configuration
@@ -59,12 +69,22 @@ public:
 		string getServerDescription();
 		int getServerMode(); //false for survival, true for creative
 		char getDifficulty();
-
+		bool isOnlineModeActivated(); //returns true if name verification is required
+		bool isWhitelistActivated();
 
 		//Map Info
 		long long getMapSeed();
 		unsigned char getWorldHeight();
-};
+		bool isNeatherAllowed(); 
+		string getMainWorldName();
 
+		//Spawning
+		bool isPeacefulAnimalSpawningActivated();
+		bool isHostileAnimalSpawningActivated();
+
+		//Player
+		int getViewDistance();
+		bool isPVPActivated();
+};
 
 #endif
