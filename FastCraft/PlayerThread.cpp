@@ -285,7 +285,7 @@ void PlayerThread::ProcessQueue() {
 		Disconnect(true);
 		break;
 	default:
-		cout<<"INTERNAL SERVER ERROR: Unknown job ID: ("<<qJob.Special<<") !"<<"\n";
+		cout<<"***INTERNAL SERVER ERROR: Unknown job ID: ("<<qJob.Special<<") !"<<"\n";
 		break;
 	}
 }
