@@ -13,74 +13,46 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 */
 #include "NetworkHandler.h" 
+#include "SettingsHandler.h"
+#include "TextHandler.h"
 #include <Poco/Net/ServerSocket.h>
-#include <Poco/ThreadPool.h>
 
-
-NetworkHandler::NetworkHandler(SettingsHandler* Settings,EntityProvider* EProvider):
-	_pSettings(Settings),
-	_sIP(""),
-	_fReady(false),
-	_iMaxClients(Settings->getMaxClients())
+NetworkHandler::NetworkHandler(SettingsHandler* Settings):
+_PlayerPool(Settings),
+	_ServerFullMsg("Server full!")
 {
-	Poco::Net::StreamSocket fakeStrm;
+	_iPort =  Settings->getPort();
 
-	//Create player threads
-	_aPlayers = new PlayerThread[_iMaxClients];
-	Poco::ThreadPool PlayerThreadPool(1,_iMaxClients);
+	//Prepare Kick message
+	string sTemp("");
 
-	for (int x=0;x<=_iMaxClients-1;x++) {
-		PlayerThreadPool.defaultPool().start(_aPlayers[x]);
-		
-		//Wait for thread become ready
-		while (! _aPlayers[x].Ready() ) {}
-		
-		//give a settingshandler object pointer to thread
-		_aPlayers[x].secondConstructor(Settings,EProvider);
-	}
+	sTemp.append<unsigned char>(1,0xFF);
+	TextHandler::packString16(sTemp,_ServerFullMsg);
 
+	_ServerFullMsg.assign(sTemp);
 }
 
 NetworkHandler::~NetworkHandler() {
-	delete [] _aPlayers; //Delete objects
-}
-
-bool NetworkHandler::Ready() {
-	return _fReady;
 }
 
 void NetworkHandler::run() {
-	int x;
-	bool _fFull=true;
-
-	Poco::Net::ServerSocket ServerSock(_pSettings->getPort());
+	Poco::Net::ServerSocket ServerSock(_iPort);
 	Poco::Net::StreamSocket StrmSock;
 
 	ServerSock.setBlocking(true);
-		
-	_fReady=true;	
+
 
 	while(1) {
-		_fFull = true;
-
 		ServerSock.listen(); //Wait
 		StrmSock = ServerSock.acceptConnection(); //Ooh a new player
-		_sIP = StrmSock.peerAddress().toString(); //get ip
-		
-		for (x=0;x<=_pSettings->getMaxClients()-1;x++) { //search free thread
-			
-			if (! _aPlayers[x].isAssigned() ) { 
-				_aPlayers[x].Connect(StrmSock,_sIP); //Connect
-				_fFull = false;
-				break;
-			}
 
-		}
-		
-		if (_fFull) {
-			cout<<"server full!"<<endl;
+		if (!_PlayerPool.isAnySlotFree()) { //There is no free slot
+			StrmSock.sendBytes(_ServerFullMsg.c_str(),_ServerFullMsg.length());
+			Thread::sleep(100); //Wait a moment 
 			StrmSock.close();
+			continue;
 		}
-	}
 
+		_PlayerPool.Assign(StrmSock);
+	}
 }

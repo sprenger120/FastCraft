@@ -18,10 +18,7 @@ GNU General Public License for more details.
 
 #include <iostream>
 #include <Poco/Runnable.h>
-
-#include "PlayerThread.h"
-#include "SettingsHandler.h"
-#include "EntityProvider.h"
+#include "PlayerPool.h"
 
 using Poco::Net::StreamSocket;
 using std::string;
@@ -30,18 +27,15 @@ using Poco::Thread;
 
 class NetworkHandler : public Poco::Runnable {
 private:
-	SettingsHandler* _pSettings;
-	PlayerThread* _aPlayers;
-
+	short _iPort;
 	string _sIP;
-	bool _fReady;
-	const int _iMaxClients;
+	string _ServerFullMsg;
+	
+	PlayerPool _PlayerPool;
 public:
 	//De- /constructor
-	NetworkHandler(SettingsHandler*,EntityProvider*);
+	NetworkHandler(SettingsHandler*);
 	~NetworkHandler();
-	bool Ready();
-
 
 	virtual void run(); //Thread Main
 };
