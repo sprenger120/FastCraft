@@ -22,8 +22,13 @@ GNU General Public License for more details.
 #define FC_AUTHSTEP_NOTCONNECTED		0
 #define FC_AUTHSTEP_CONNECTEDONLY		1
 #define FC_AUTHSTEP_HANDSHAKE			2
-#define FC_AUTHSTEP_VERIFY				3
-#define FC_AUTHSTEP_DONE				4
+#define FC_AUTHSTEP_VERIFYDONE			3
+#define FC_AUTHSTEP_TIME				4
+#define FC_AUTHSTEP_PRECHUNKS			5
+#define FC_AUTHSTEP_SPAWNPOS			6
+#define FC_AUTHSTEP_INVENTORY			7
+#define FC_AUTHSTEP_USERPOS				8
+#define FC_AUTHSTEP_DONE				9
 
 //Entitys
 #define FC_ENTITY_PLAYER				1
