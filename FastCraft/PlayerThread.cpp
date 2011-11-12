@@ -163,7 +163,9 @@ void PlayerThread::run() {
 			_sTemp.append<char>(1,_pSettings->getWorldHeight()); //WorldHeight
 			_sTemp.append<char>(1,_pSettings->getMaxClients()); //Max Players
 
-			_Connection.sendBytes(_sTemp.c_str(),_sTemp.length());		
+			_Connection.sendBytes(_sTemp.c_str(),_sTemp.length());	
+
+			setAuthStep(FC_AUTHSTEP_VERIFYDONE); 
 			break;
 		case 0x2: //Handshake
 			if (_iLoginProgress != FC_AUTHSTEP_CONNECTEDONLY) {
@@ -173,7 +175,7 @@ void PlayerThread::run() {
 			_sName = _sNickName = TCPHelper::readString16(_Connection);
 
 			PlayerCount++;
-			_iLoginProgress=FC_AUTHSTEP_HANDSHAKE;
+			setAuthStep(FC_AUTHSTEP_HANDSHAKE);
 			_iEntityID = _pEntityProvider->Add(FC_ENTITY_PLAYER); //Fetch a new entity id
 
 			//Send response (Connection Hash)
@@ -237,7 +239,8 @@ void PlayerThread::Disconnect(bool fKicked) {
 	_Coordinates.Yaw = 0.0F;
 	_Coordinates.Z = 0.0;
 
-	_iLoginProgress = FC_AUTHSTEP_NOTCONNECTED;
+	setAuthStep(FC_AUTHSTEP_NOTCONNECTED);
+
 	_fAssigned = false;
 	_iEntityID = 0;
 
@@ -250,8 +253,12 @@ void PlayerThread::Disconnect(bool fKicked) {
 
 
 void PlayerThread::Connect(Poco::Net::StreamSocket& Sock) {
+	if (_fAssigned) {
+		cout<<"***INTERNAL WARNING: PlayerPool tryed to assign an already assigned player thread"<<"\n";
+		Disconnect();
+	}
 	_fAssigned=true;
-	_iLoginProgress = FC_AUTHSTEP_CONNECTEDONLY;
+	setAuthStep(FC_AUTHSTEP_CONNECTEDONLY);
 	
 	_Connection = Sock; 
 	_Connection.setReceiveTimeout( Poco::Timespan( 1000 * 5000) );
@@ -347,4 +354,8 @@ void PlayerThread::generateConnectionHash() {
 	StringStream>>sHash;
 	
 	_sConnectionHash.assign(sHash);
+}
+
+void PlayerThread::setAuthStep(char iMode) {
+	_iLoginProgress = iMode;
 }

@@ -92,6 +92,7 @@ private:
 	void ClearQueue(); //Clear send queue
 	void ProcessQueue(); //Returns true if connection is closed
 	void generateConnectionHash(); //Generate a new connection hash
+	void setAuthStep(char);
 };
 
 #endif
