@@ -19,6 +19,9 @@ GNU General Public License for more details.
 #include <Poco/Timespan.h>
 #include <Poco/NumberFormatter.h>
 #include <Poco/Net/NetException.h>
+#include <sstream>
+#include <istream>
+#include <ctime>
 #include "TCPHelper.h"
 
 PlayerThread::PlayerThread(SettingsHandler* pSettingsHandler,EntityProvider* pEntityProvider) : 
@@ -26,7 +29,10 @@ PlayerThread::PlayerThread(SettingsHandler* pSettingsHandler,EntityProvider* pEn
 	_sNickName(""),
 	_sIP(""),
 	_Connection(),
-	_sTemp("")
+	_sTemp(""),
+	_Web_Session("session.minecraft.net"),
+	_Web_Response(),
+	_sConnectionHash("")
 {
 	_Flags.Crouched = false;
 	_Flags.Eating = false;
@@ -45,11 +51,15 @@ PlayerThread::PlayerThread(SettingsHandler* pSettingsHandler,EntityProvider* pEn
 	_iEntityID=0;
 	_fAssigned = false;
 
+	_iLastConnHash = InstanceCounter+10;
+
 	_pSettings = pSettingsHandler;
 	_pEntityProvider = pEntityProvider;
 
 	InstanceCounter++;
 	_iThreadID = InstanceCounter;
+
+	std::srand(time(NULL));
 }
 
 int PlayerThread::InstanceCounter = 0;
@@ -117,6 +127,29 @@ void PlayerThread::run() {
 			TCPHelper::readString16(_Connection); //Username (already known)
 			_Connection.receiveBytes(_sBuffer,16); //Unused fields
 
+			//Check premium 
+			if (_pSettings->isOnlineModeActivated()) {
+				string sPath("/game/checkserver.jsp?user=");
+				sPath.append(_sName);
+				sPath.append("&serverId=");
+				sPath.append(_sConnectionHash);
+
+				Poco::Net::HTTPRequest Request ( 
+					Poco::Net::HTTPRequest::HTTP_GET, 
+					sPath,
+					Poco::Net::HTTPMessage::HTTP_1_1);
+
+				_Web_Session.sendRequest(Request);
+				std::istream &is = _Web_Session.receiveResponse(_Web_Response);
+				string sErg;
+				is>>sErg;
+				
+				if (sErg.compare("YES") != 0) {
+					Kick("Failed to verify username!");
+					continue;
+				}
+			}
+
 			//Answer
 			_sTemp.assign(""); //Clar
 			_sTemp.append<int>(1,0x1); //packet id
@@ -147,9 +180,15 @@ void PlayerThread::run() {
 			_sTemp.assign("");
 			_sTemp.append<int>(1,0x02); 
 
-			TextHandler::packString16(_sTemp,string("-"));
+			if (_pSettings->isOnlineModeActivated()) {
+				generateConnectionHash();
+				cout<<_sConnectionHash<<"\n";
+				TextHandler::packString16(_sTemp,_sConnectionHash);
+			}else{
+				TextHandler::packString16(_sTemp,string("-"));
+			}
+			
 			_Connection.sendBytes(_sTemp.c_str(),_sTemp.length());
-
 			cout<<_sName<<" joined ("<<_sIP<<") EID:"<<_iEntityID<<endl;
 			break;
 		case 0xFE: //Server List Ping
@@ -296,4 +335,16 @@ void PlayerThread::appendQueue(QueueJob& Job) {
 
 bool PlayerThread::isNameSet() {
 	return _iLoginProgress >= FC_AUTHSTEP_HANDSHAKE;
+}
+
+void PlayerThread::generateConnectionHash() {
+	_iLastConnHash += std::rand();
+	_iLastConnHash <<=1;
+
+	std::stringstream StringStream;
+	string sHash;
+	StringStream<<std::hex<<_iLastConnHash;
+	StringStream>>sHash;
+	
+	_sConnectionHash.assign(sHash);
 }

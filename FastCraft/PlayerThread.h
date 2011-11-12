@@ -19,6 +19,9 @@ GNU General Public License for more details.
 #include <Poco/Runnable.h>
 #include <Poco/Net/StreamSocket.h>
 #include <Poco/Thread.h>
+#include <Poco/Net/HTTPClientSession.h>
+#include <Poco/Net/HTTPRequest.h>
+#include <Poco/Net/HTTPResponse.h>
 #include "Structs.h"
 #include "EntityProvider.h"
 #include "SettingsHandler.h"
@@ -37,9 +40,11 @@ private:
 	string _sName,_sNickName; //Minecraft.net Username and Ingame Nickname
 	string _sIP; //IP
 	int _iEntityID;
+	string _sConnectionHash;
 
 	unsigned char _sBuffer[1024];
 	string _sTemp;
+	long long _iLastConnHash;
 
 	queue<QueueJob> _SendQueue;
 
@@ -53,6 +58,10 @@ private:
 	int _iThreadID;
 	static int InstanceCounter;
 	static int PlayerCount;
+
+	//Verification
+	Poco::Net::HTTPClientSession _Web_Session;
+	Poco::Net::HTTPResponse _Web_Response;
 public:
 	//De- / Constructor
 	PlayerThread(SettingsHandler*,EntityProvider*);
@@ -82,6 +91,7 @@ private:
 	bool isNameSet(); //returns true if name is set
 	void ClearQueue(); //Clear send queue
 	void ProcessQueue(); //Returns true if connection is closed
+	void generateConnectionHash(); //Generate a new connection hash
 };
 
 #endif
