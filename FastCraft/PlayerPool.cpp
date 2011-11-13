@@ -19,7 +19,8 @@ GNU General Public License for more details.
 PlayerPool::PlayerPool(SettingsHandler* pSettingsHandler):
 _vPlayerThreads(0),
 _ThreadPool("PlayerThreads",1,pSettingsHandler->getMaxClients()),
-_EntityProvider()
+_EntityProvider(),
+_ServerTime()
 {
 	int iSlotCount = pSettingsHandler->getMaxClients();
 
@@ -27,7 +28,7 @@ _EntityProvider()
 
 	//Create Threads
 	for (int x=0;x<=_vPlayerThreads.size()-1;x++) {
-		_vPlayerThreads[x] = new PlayerThread(pSettingsHandler,&_EntityProvider);
+		_vPlayerThreads[x] = new PlayerThread(pSettingsHandler,&_EntityProvider,&_ServerTime);
 
 		_ThreadPool.defaultPool().start(*_vPlayerThreads[x]);
 	}

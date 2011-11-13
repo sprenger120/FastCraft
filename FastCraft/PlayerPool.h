@@ -25,6 +25,7 @@ GNU General Public License for more details.
 #include "PlayerThread.h"
 #include "SettingsHandler.h"
 #include "EntityProvider.h"
+#include "ServerTime.h"
 
 using std::vector;
 
@@ -32,6 +33,7 @@ class PlayerPool {
 private:
 	EntityProvider _EntityProvider;
 	Poco::ThreadPool _ThreadPool;
+	ServerTime _ServerTime;
 	vector<PlayerThread*> _vPlayerThreads;
 public:
 	PlayerPool(SettingsHandler*); //Constructor

@@ -24,7 +24,7 @@ GNU General Public License for more details.
 #include <ctime>
 #include "TCPHelper.h"
 
-PlayerThread::PlayerThread(SettingsHandler* pSettingsHandler,EntityProvider* pEntityProvider) : 
+PlayerThread::PlayerThread(SettingsHandler* pSettingsHandler,EntityProvider* pEntityProvider,ServerTime* pServerTime) : 
 	_sName(""),
 	_sNickName(""),
 	_sIP(""),
@@ -55,6 +55,7 @@ PlayerThread::PlayerThread(SettingsHandler* pSettingsHandler,EntityProvider* pEn
 
 	_pSettings = pSettingsHandler;
 	_pEntityProvider = pEntityProvider;
+	_pServerTime = pServerTime;
 
 	InstanceCounter++;
 	_iThreadID = InstanceCounter;

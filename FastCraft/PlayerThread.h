@@ -25,6 +25,7 @@ GNU General Public License for more details.
 #include "Structs.h"
 #include "EntityProvider.h"
 #include "SettingsHandler.h"
+#include "ServerTime.h"
 #include <queue>
 
 using std::string;
@@ -51,6 +52,7 @@ private:
 	Poco::Net::StreamSocket _Connection;
 	SettingsHandler* _pSettings;
 	EntityProvider* _pEntityProvider;
+	ServerTime* _pServerTime;
 
 	char _iLoginProgress;
 	bool _fAssigned;//true if a player is assigned to that thread
@@ -64,7 +66,7 @@ private:
 	Poco::Net::HTTPResponse _Web_Response;
 public:
 	//De- / Constructor
-	PlayerThread(SettingsHandler*,EntityProvider*);
+	PlayerThread(SettingsHandler*,EntityProvider*,ServerTime*);
 	~PlayerThread();
 
 	virtual void run(); // Thread Main
