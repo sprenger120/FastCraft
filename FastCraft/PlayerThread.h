@@ -34,29 +34,38 @@ using Poco::Thread;
 using std::cout;
 using std::endl;
 
+struct TimeJobs {
+	long long LastTimeSend;
+};
+
 class PlayerThread: public Poco::Runnable {
 private:
+	//Player specific data
 	PlayerFlags _Flags; //Burning,eating...
 	EntityCoordinates _Coordinates; //Coordinates
 	string _sName,_sNickName; //Minecraft.net Username and Ingame Nickname
 	string _sIP; //IP
 	int _iEntityID;
-	string _sConnectionHash;
+	char _iLoginProgress;
 
+	//TCP stuff
+	Poco::Net::StreamSocket _Connection;
 	unsigned char _sBuffer[1024];
 	string _sTemp;
-	long long _iLastConnHash;
-
 	queue<QueueJob> _SendQueue;
 
-	Poco::Net::StreamSocket _Connection;
+	//Connection Hash
+	string _sConnectionHash;
+	long long _iLastConnHash;
+
+	//Class pointer
 	SettingsHandler* _pSettings;
 	EntityProvider* _pEntityProvider;
 	ServerTime* _pServerTime;
 
-	char _iLoginProgress;
+	//Thread specific
 	bool _fAssigned;//true if a player is assigned to that thread
-
+	long long _iThreadTicks;
 	int _iThreadID;
 	static int InstanceCounter;
 	static int PlayerCount;
@@ -64,6 +73,9 @@ private:
 	//Verification
 	Poco::Net::HTTPClientSession _Web_Session;
 	Poco::Net::HTTPResponse _Web_Response;
+
+	//Time jobs
+	TimeJobs _TimeJobs;
 public:
 	//De- / Constructor
 	PlayerThread(SettingsHandler*,EntityProvider*,ServerTime*);
@@ -95,6 +107,10 @@ private:
 	void ProcessQueue(); //Returns true if connection is closed
 	void generateConnectionHash(); //Generate a new connection hash
 	void setAuthStep(char);
+	char getAuthStep();
+	void sendTime();//Sends time if required
+	long long getTicks();
+	void IncrementTicks();
 };
 
 #endif

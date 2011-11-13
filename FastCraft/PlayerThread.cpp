@@ -21,7 +21,6 @@ GNU General Public License for more details.
 #include <Poco/Net/NetException.h>
 #include <sstream>
 #include <istream>
-#include <ctime>
 #include "TCPHelper.h"
 
 PlayerThread::PlayerThread(SettingsHandler* pSettingsHandler,EntityProvider* pEntityProvider,ServerTime* pServerTime) : 
@@ -30,9 +29,10 @@ PlayerThread::PlayerThread(SettingsHandler* pSettingsHandler,EntityProvider* pEn
 	_sIP(""),
 	_Connection(),
 	_sTemp(""),
+	_SendQueue(),
+	_sConnectionHash(""),
 	_Web_Session("session.minecraft.net"),
-	_Web_Response(),
-	_sConnectionHash("")
+	_Web_Response()
 {
 	_Flags.Crouched = false;
 	_Flags.Eating = false;
@@ -46,21 +46,25 @@ PlayerThread::PlayerThread(SettingsHandler* pSettingsHandler,EntityProvider* pEn
 	_Coordinates.Y = 0.0;
 	_Coordinates.Yaw = 0.0F;
 	_Coordinates.Z = 0.0;
+	_TimeJobs.LastTimeSend = 0;
 
-	_iLoginProgress = 0;
+
 	_iEntityID=0;
-	_fAssigned = false;
-
+	setAuthStep(FC_AUTHSTEP_NOTCONNECTED);
+	
 	_iLastConnHash = InstanceCounter+10;
 
 	_pSettings = pSettingsHandler;
 	_pEntityProvider = pEntityProvider;
 	_pServerTime = pServerTime;
 
+	_fAssigned = false;
+	_iThreadTicks = 0;
+
 	InstanceCounter++;
 	_iThreadID = InstanceCounter;
 
-	std::srand(time(NULL));
+	std::srand(InstanceCounter);
 }
 
 int PlayerThread::InstanceCounter = 0;
@@ -87,12 +91,13 @@ void PlayerThread::run() {
 			continue;
 		} 
 
+		sendTime();
+		IncrementTicks();
 		ProcessQueue();
 
 		if (!isAssigned()) {continue;} //Connection was closed by queue processor 
 
-
-		_sBuffer[0] = 240; //Set to a unused packet id  (used for connection aborting indentifying)
+		_sBuffer[0] = 0xF0; //Set to a unused packet id  (used for connection aborting indentifying)
 
 		try {
 			_Connection.receiveBytes(_sBuffer,1);
@@ -113,6 +118,11 @@ void PlayerThread::run() {
 
 		switch (_sBuffer[0]) {
 		case 0x1: //Login
+			if (getAuthStep() != FC_AUTHSTEP_HANDSHAKE) {
+				Kick("False login order!");
+				continue;
+			}
+			
 			iTemp = TCPHelper::readInt(_Connection); //Protocol Version
 			
 			if (iTemp > _pSettings->getSupportedProtocolVersion()) {
@@ -166,10 +176,10 @@ void PlayerThread::run() {
 
 			_Connection.sendBytes(_sTemp.c_str(),_sTemp.length());	
 
-			setAuthStep(FC_AUTHSTEP_VERIFYDONE); 
+			setAuthStep(FC_AUTHSTEP_TIME); 
 			break;
 		case 0x2: //Handshake
-			if (_iLoginProgress != FC_AUTHSTEP_CONNECTEDONLY) {
+			if (getAuthStep() != FC_AUTHSTEP_CONNECTEDONLY) {
 				Kick("False login order!");
 				continue;
 			}
@@ -185,7 +195,6 @@ void PlayerThread::run() {
 
 			if (_pSettings->isOnlineModeActivated()) {
 				generateConnectionHash();
-				cout<<_sConnectionHash<<"\n";
 				TextHandler::packString16(_sTemp,_sConnectionHash);
 			}else{
 				TextHandler::packString16(_sTemp,string("-"));
@@ -193,6 +202,22 @@ void PlayerThread::run() {
 			
 			_Connection.sendBytes(_sTemp.c_str(),_sTemp.length());
 			cout<<_sName<<" joined ("<<_sIP<<") EID:"<<_iEntityID<<endl;
+			break;
+		case 0xb:
+			if (getAuthStep() < FC_AUTHSTEP_USERPOS) {
+				cout<<"0x0b"<<"\n";
+				_Connection.receiveBytes(_sBuffer,33); 
+				continue;
+			}
+
+			break;
+		case 0xd: //Client Pos Update
+			if (getAuthStep() < FC_AUTHSTEP_USERPOS) {
+				cout<<"0x0d"<<"\n";
+				_Connection.receiveBytes(_sBuffer,41); 
+				continue;
+			}
+
 			break;
 		case 0xFE: //Server List Ping
 			_sTemp.assign("");
@@ -219,12 +244,11 @@ void PlayerThread::run() {
 void PlayerThread::Disconnect(bool fKicked) {
 	if (isNameSet()) {
 		PlayerCount--;
+		_pEntityProvider->Remove(_iEntityID);
 	}
 
 	if (isNameSet() && !fKicked) { // If names is known
 		cout<<_sName<<" left server."<<"\n"; 
-		_pEntityProvider->Remove(_iEntityID);
-		_iEntityID = 0;
 	}
 
 	_Flags.Crouched = false;
@@ -239,6 +263,7 @@ void PlayerThread::Disconnect(bool fKicked) {
 	_Coordinates.Y = 0.0;
 	_Coordinates.Yaw = 0.0F;
 	_Coordinates.Z = 0.0;
+	_TimeJobs.LastTimeSend = 0;
 
 	setAuthStep(FC_AUTHSTEP_NOTCONNECTED);
 
@@ -255,7 +280,7 @@ void PlayerThread::Disconnect(bool fKicked) {
 
 void PlayerThread::Connect(Poco::Net::StreamSocket& Sock) {
 	if (_fAssigned) {
-		cout<<"***INTERNAL WARNING: PlayerPool tryed to assign an already assigned player thread"<<"\n";
+		cout<<"***INTERNAL SERVER WARNING: PlayerPool tryed to assign an already assigned player thread"<<"\n";
 		Disconnect();
 	}
 	_fAssigned=true;
@@ -263,6 +288,7 @@ void PlayerThread::Connect(Poco::Net::StreamSocket& Sock) {
 	
 	_Connection = Sock; 
 	_Connection.setReceiveTimeout( Poco::Timespan( 1000 * 5000) );
+	_Connection.setBlocking(true);
 
 	_sIP.assign(_Connection.peerAddress().toString());
 }
@@ -327,12 +353,15 @@ void PlayerThread::ProcessQueue() {
 	_Connection.sendBytes(qJob.Data.c_str(),qJob.Data.length());
 
 	switch(qJob.Special) {
+	case FC_JOB_NO:
+		break;
 	case FC_JOB_CLOSECONN:
 		Thread::sleep(200); 
 		Disconnect(true);
 		break;
 	default:
 		cout<<"***INTERNAL SERVER ERROR: Unknown job ID: ("<<qJob.Special<<") !"<<"\n";
+		Disconnect(true);
 		break;
 	}
 }
@@ -359,4 +388,43 @@ void PlayerThread::generateConnectionHash() {
 
 void PlayerThread::setAuthStep(char iMode) {
 	_iLoginProgress = iMode;
+}
+
+char PlayerThread::getAuthStep() {
+	return _iLoginProgress;
+}
+
+void PlayerThread::sendTime() {
+	if (getAuthStep() < FC_AUTHSTEP_TIME) {return;}
+	if (getAuthStep() == FC_AUTHSTEP_TIME) { //Increment authstep
+		setAuthStep(FC_AUTHSTEP_PRECHUNKS);
+	}
+
+
+	if (_TimeJobs.LastTimeSend + FC_INTERVAL_TIMESEND > getTicks()) {
+		if (_TimeJobs.LastTimeSend != 0) {
+			return;
+		}
+	}
+
+	//Add send job
+	QueueJob Job;
+
+	Job.Data.assign("");
+	Job.Special = FC_JOB_NO;
+
+	Job.Data.append<char>(1,0x4);
+	TextHandler::Append(Job.Data,_pServerTime->getTime());
+
+	appendQueue(Job);
+	
+	_TimeJobs.LastTimeSend = getTicks();
+}
+
+long long PlayerThread::getTicks() {
+	return _iThreadTicks;
+}
+
+void PlayerThread::IncrementTicks() {
+	_iThreadTicks++;
 }
