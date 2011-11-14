@@ -12,20 +12,22 @@ but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 */
+
 /*
 * This class handles player thread assignment and slot management.
 */
-
 #ifndef _FASTCRAFTHEADER_PLAYERPOOL
 #define _FASTCRAFTHEADER_PLAYERPOOL
 #include <iostream>
 #include <vector>
 #include <Poco/Net/StreamSocket.h>
 #include <Poco/ThreadPool.h>
-#include "PlayerThread.h"
-#include "SettingsHandler.h"
 #include "EntityProvider.h"
 #include "ServerTime.h"
+
+class SettingsHandler;
+class PlayerThread;
+
 
 using std::vector;
 

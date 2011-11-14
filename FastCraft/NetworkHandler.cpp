@@ -16,6 +16,12 @@ GNU General Public License for more details.
 #include "SettingsHandler.h"
 #include "TextHandler.h"
 #include <Poco/Net/ServerSocket.h>
+#include <Poco/Net/StreamSocket.h>
+#include <Poco/Thread.h>
+
+using Poco::Net::StreamSocket;
+using std::cout;
+using Poco::Thread;
 
 NetworkHandler::NetworkHandler(SettingsHandler* Settings):
 _PlayerPool(Settings),

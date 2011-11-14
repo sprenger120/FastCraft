@@ -12,33 +12,32 @@ but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 */
+
 #ifndef _FASTCRAFTHEADER_PLAYERTHREAD
 #define _FASTCRAFTHEADER_PLAYERTHREAD
-
 #include <iostream>
-#include <Poco/Runnable.h>
-#include <Poco/Net/StreamSocket.h>
-#include <Poco/Thread.h>
+#include <Poco/NumberFormatter.h>
 #include <Poco/Net/HTTPClientSession.h>
 #include <Poco/Net/HTTPRequest.h>
 #include <Poco/Net/HTTPResponse.h>
-#include "Structs.h"
-#include "EntityProvider.h"
-#include "SettingsHandler.h"
-#include "ServerTime.h"
+#include <Poco/Runnable.h>
+#include <Poco/Net/StreamSocket.h>
 #include <queue>
+#include "Structs.h"
+
+class SettingsHandler;
+class EntityProvider;
+class ServerTime;
+class PlayerPool;
 
 using std::string;
 using std::queue;
-using Poco::Thread;
-using std::cout;
-using std::endl;
 
 struct TimeJobs {
 	long long LastTimeSend;
 };
 
-class PlayerThread: public Poco::Runnable {
+class PlayerThread : public Poco::Runnable {
 private:
 	//Player specific data
 	PlayerFlags _Flags; //Burning,eating...
@@ -62,6 +61,7 @@ private:
 	SettingsHandler* _pSettings;
 	EntityProvider* _pEntityProvider;
 	ServerTime* _pServerTime;
+	PlayerPool* _pPoolMaster;
 
 	//Thread specific
 	bool _fAssigned;//true if a player is assigned to that thread
@@ -78,7 +78,7 @@ private:
 	TimeJobs _TimeJobs;
 public:
 	//De- / Constructor
-	PlayerThread(SettingsHandler*,EntityProvider*,ServerTime*);
+	PlayerThread(SettingsHandler*,EntityProvider*,ServerTime*,PlayerPool*);
 	~PlayerThread();
 
 	virtual void run(); // Thread Main

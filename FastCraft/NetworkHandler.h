@@ -18,12 +18,12 @@ GNU General Public License for more details.
 
 #include <iostream>
 #include <Poco/Runnable.h>
+#include <string>
 #include "PlayerPool.h"
 
-using Poco::Net::StreamSocket;
+class SettingsHandler;
+
 using std::string;
-using std::cout;
-using Poco::Thread;
 
 class NetworkHandler : public Poco::Runnable {
 private:

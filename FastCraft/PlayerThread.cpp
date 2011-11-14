@@ -15,16 +15,28 @@ GNU General Public License for more details.
 
 #include "PlayerThread.h"
 #include "TextHandler.h"
+#include "EntityProvider.h"
+#include "SettingsHandler.h"
+#include "ServerTime.h"
+#include "TCPHelper.h"
+#include "PlayerPool.h"
 #include "Constants.h"
-#include <Poco/Timespan.h>
-#include <Poco/NumberFormatter.h>
-#include <Poco/Net/NetException.h>
 #include <sstream>
 #include <istream>
-#include "TCPHelper.h"
+#include <Poco/Timespan.h>
+#include <Poco/Net/NetException.h>
+#include <Poco/Thread.h>
 
-PlayerThread::PlayerThread(SettingsHandler* pSettingsHandler,EntityProvider* pEntityProvider,ServerTime* pServerTime) : 
-	_sName(""),
+using Poco::Thread;
+using std::cout;
+using std::endl;
+
+PlayerThread::PlayerThread(SettingsHandler* pSettingsHandler,
+	EntityProvider* pEntityProvider,
+	ServerTime* pServerTime,
+	PlayerPool* pPoolMaster
+	) : 
+_sName(""),
 	_sNickName(""),
 	_sIP(""),
 	_Connection(),
@@ -51,12 +63,13 @@ PlayerThread::PlayerThread(SettingsHandler* pSettingsHandler,EntityProvider* pEn
 
 	_iEntityID=0;
 	setAuthStep(FC_AUTHSTEP_NOTCONNECTED);
-	
+
 	_iLastConnHash = InstanceCounter+10;
 
 	_pSettings = pSettingsHandler;
 	_pEntityProvider = pEntityProvider;
 	_pServerTime = pServerTime;
+	_pPoolMaster = pPoolMaster;
 
 	_fAssigned = false;
 	_iThreadTicks = 0;
@@ -106,15 +119,16 @@ void PlayerThread::run() {
 			continue;
 		}catch(Poco::TimeoutException) {
 			if (isNameSet()) { //Handshake isn't done
-				cout<<"Player:"<<_sName<<" timed out"<<"\n";
+				cout<<"Player:"<<_sName<<" timed out."<<"\n";
 			}else{
 				cout<<_sIP<<" timed out."<<"\n";	
 			}
 
-			Disconnect();
+			Disconnect(true);
 			continue;
 		}
 
+		cout<<std::hex<<int(_sBuffer[0])<<"\n";
 
 		switch (_sBuffer[0]) {
 		case 0x1: //Login
@@ -122,14 +136,14 @@ void PlayerThread::run() {
 				Kick("False login order!");
 				continue;
 			}
-			
+
 			iTemp = TCPHelper::readInt(_Connection); //Protocol Version
-			
+
 			if (iTemp > _pSettings->getSupportedProtocolVersion()) {
 				Kick("Outdated server!");
 				continue;
 			}
-			
+
 			if (iTemp < _pSettings->getSupportedProtocolVersion()) {
 				Kick("Outdated client!");
 				continue;
@@ -154,7 +168,7 @@ void PlayerThread::run() {
 				std::istream &is = _Web_Session.receiveResponse(_Web_Response);
 				string sErg;
 				is>>sErg;
-				
+
 				if (sErg.compare("YES") != 0) {
 					Kick("Failed to verify username!");
 					continue;
@@ -199,13 +213,12 @@ void PlayerThread::run() {
 			}else{
 				TextHandler::packString16(_sTemp,string("-"));
 			}
-			
+
 			_Connection.sendBytes(_sTemp.c_str(),_sTemp.length());
 			cout<<_sName<<" joined ("<<_sIP<<") EID:"<<_iEntityID<<endl;
 			break;
 		case 0xb:
 			if (getAuthStep() < FC_AUTHSTEP_USERPOS) {
-				cout<<"0x0b"<<"\n";
 				_Connection.receiveBytes(_sBuffer,33); 
 				continue;
 			}
@@ -213,7 +226,6 @@ void PlayerThread::run() {
 			break;
 		case 0xd: //Client Pos Update
 			if (getAuthStep() < FC_AUTHSTEP_USERPOS) {
-				cout<<"0x0d"<<"\n";
 				_Connection.receiveBytes(_sBuffer,41); 
 				continue;
 			}
@@ -241,13 +253,13 @@ void PlayerThread::run() {
 	}
 }
 
-void PlayerThread::Disconnect(bool fKicked) {
+void PlayerThread::Disconnect(bool fNoLeaveMessage) {
 	if (isNameSet()) {
 		PlayerCount--;
 		_pEntityProvider->Remove(_iEntityID);
 	}
 
-	if (isNameSet() && !fKicked) { // If names is known
+	if (isNameSet() && !fNoLeaveMessage) { // If names is known
 		cout<<_sName<<" left server."<<"\n"; 
 	}
 
@@ -285,7 +297,7 @@ void PlayerThread::Connect(Poco::Net::StreamSocket& Sock) {
 	}
 	_fAssigned=true;
 	setAuthStep(FC_AUTHSTEP_CONNECTEDONLY);
-	
+
 	_Connection = Sock; 
 	_Connection.setReceiveTimeout( Poco::Timespan( 1000 * 5000) );
 	_Connection.setBlocking(true);
@@ -336,7 +348,7 @@ void PlayerThread::Kick() {
 	qJob.Data.append<int>(2,0x0);
 	qJob.Special = FC_JOB_CLOSECONN;
 
-	if (_sName.compare("") !=0) { // If names is known
+	if (isNameSet()) { // If names is known
 		cout<<_sName<<" was kicked"<<"\n"; 
 	}
 
@@ -382,7 +394,7 @@ void PlayerThread::generateConnectionHash() {
 	string sHash;
 	StringStream<<std::hex<<_iLastConnHash;
 	StringStream>>sHash;
-	
+
 	_sConnectionHash.assign(sHash);
 }
 
@@ -417,7 +429,7 @@ void PlayerThread::sendTime() {
 	TextHandler::Append(Job.Data,_pServerTime->getTime());
 
 	appendQueue(Job);
-	
+
 	_TimeJobs.LastTimeSend = getTicks();
 }
 

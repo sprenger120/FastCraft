@@ -18,6 +18,7 @@ GNU General Public License for more details.
 
 #include <vector>
 #include "Structs.h"
+
 using std::vector;
 
 class EntityProvider {

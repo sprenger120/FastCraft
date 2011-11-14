@@ -14,6 +14,10 @@ GNU General Public License for more details.
 */
 
 #include "PlayerPool.h"
+#include "PlayerThread.h"
+#include "SettingsHandler.h"
+
+
 #include <Poco/Thread.h>
 
 PlayerPool::PlayerPool(SettingsHandler* pSettingsHandler):
@@ -28,7 +32,7 @@ _ServerTime()
 
 	//Create Threads
 	for (int x=0;x<=_vPlayerThreads.size()-1;x++) {
-		_vPlayerThreads[x] = new PlayerThread(pSettingsHandler,&_EntityProvider,&_ServerTime);
+		_vPlayerThreads[x] = new PlayerThread(pSettingsHandler,&_EntityProvider,&_ServerTime,this);
 
 		_ThreadPool.defaultPool().start(*_vPlayerThreads[x]);
 	}
