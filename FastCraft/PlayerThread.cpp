@@ -102,7 +102,7 @@ void PlayerThread::run() {
 			continue;
 		} 
 
-		//sendTime();
+		sendTime();
 		IncrementTicks();
 		ProcessQueue();
 
@@ -129,7 +129,7 @@ void PlayerThread::run() {
 			continue;
 		}
 
-		cout<<std::hex<<int(_sBuffer[0])<<"\n";
+		cout<<"Package recovered:"<<std::hex<<int(_sBuffer[0])<<"\n";
 
 		switch (_sBuffer[0]) {
 		case 0x1: //Login
@@ -358,24 +358,26 @@ void PlayerThread::Kick() {
 
 void PlayerThread::ProcessQueue() {
 	QueueJob qJob;
-	if (_SendQueue.size() == 0) {return;}
+	while (1) {
+		if (_SendQueue.size() == 0) {return;}
 
-	qJob = _SendQueue.front();
-	_SendQueue.pop();
+		qJob = _SendQueue.front();
+		_SendQueue.pop();
 
-	_Connection.sendBytes(qJob.Data.c_str(),qJob.Data.length());
+		_Connection.sendBytes(qJob.Data.c_str(),qJob.Data.length());
 
-	switch(qJob.Special) {
-	case FC_JOB_NO:
-		break;
-	case FC_JOB_CLOSECONN:
-		Thread::sleep(200); 
-		Disconnect(true);
-		break;
-	default:
-		cout<<"***INTERNAL SERVER ERROR: Unknown job ID: ("<<qJob.Special<<") !"<<"\n";
-		Disconnect(true);
-		break;
+		switch(qJob.Special) {
+		case FC_JOB_NO:
+			break;
+		case FC_JOB_CLOSECONN:
+			Thread::sleep(200); 
+			Disconnect(true);
+			break;
+		default:
+			cout<<"***INTERNAL SERVER ERROR: Unknown job ID: ("<<qJob.Special<<") !"<<"\n";
+			Disconnect(true);
+			break;
+		}
 	}
 }
 
@@ -394,7 +396,7 @@ void PlayerThread::generateConnectionHash() {
 	StringStream<<std::hex<< Random::uInt64();;
 	_sConnectionHash.clear();
 
-	
+
 	while (!StringStream.eof()) {
 		std::getline(StringStream,sTemp);
 		_sConnectionHash.append(sTemp);
