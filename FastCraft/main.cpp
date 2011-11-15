@@ -18,7 +18,6 @@ GNU General Public License for more details.
 
 #include <Poco/Thread.h>
 #include <Poco/Exception.h>
-
 #include "NetworkHandler.h"
 #include "SettingsHandler.h"
 #include "PlayerThread.h"

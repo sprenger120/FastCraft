@@ -21,6 +21,7 @@ GNU General Public License for more details.
 #include "TCPHelper.h"
 #include "PlayerPool.h"
 #include "Constants.h"
+#include "Random.h"
 #include <sstream>
 #include <istream>
 #include <Poco/Timespan.h>
@@ -64,8 +65,6 @@ _sName(""),
 	_iEntityID=0;
 	setAuthStep(FC_AUTHSTEP_NOTCONNECTED);
 
-	_iLastConnHash = InstanceCounter+10;
-
 	_pSettings = pSettingsHandler;
 	_pEntityProvider = pEntityProvider;
 	_pServerTime = pServerTime;
@@ -77,7 +76,6 @@ _sName(""),
 	InstanceCounter++;
 	_iThreadID = InstanceCounter;
 
-	std::srand(InstanceCounter);
 }
 
 int PlayerThread::InstanceCounter = 0;
@@ -104,7 +102,7 @@ void PlayerThread::run() {
 			continue;
 		} 
 
-		sendTime();
+		//sendTime();
 		IncrementTicks();
 		ProcessQueue();
 
@@ -115,7 +113,7 @@ void PlayerThread::run() {
 		try {
 			_Connection.receiveBytes(_sBuffer,1);
 		}catch(Poco::Net::InvalidSocketException) {
-			Disconnect(true);
+			Disconnect();
 			continue;
 		}catch(Poco::TimeoutException) {
 			if (isNameSet()) { //Handshake isn't done
@@ -125,6 +123,9 @@ void PlayerThread::run() {
 			}
 
 			Disconnect(true);
+			continue;
+		}catch(Poco::Net::ConnectionAbortedException) {
+			Disconnect();
 			continue;
 		}
 
@@ -387,15 +388,17 @@ bool PlayerThread::isNameSet() {
 }
 
 void PlayerThread::generateConnectionHash() {
-	_iLastConnHash += std::rand();
-	_iLastConnHash <<=1;
-
 	std::stringstream StringStream;
-	string sHash;
-	StringStream<<std::hex<<_iLastConnHash;
-	StringStream>>sHash;
+	string sTemp("");
 
-	_sConnectionHash.assign(sHash);
+	StringStream<<std::hex<< Random::uInt64();;
+	_sConnectionHash.clear();
+
+	
+	while (!StringStream.eof()) {
+		std::getline(StringStream,sTemp);
+		_sConnectionHash.append(sTemp);
+	}
 }
 
 void PlayerThread::setAuthStep(char iMode) {

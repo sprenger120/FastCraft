@@ -55,7 +55,6 @@ private:
 
 	//Connection Hash
 	string _sConnectionHash;
-	long long _iLastConnHash;
 
 	//Class pointer
 	SettingsHandler* _pSettings;
