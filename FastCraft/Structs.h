@@ -17,6 +17,7 @@ GNU General Public License for more details.
 #define _FASTCRAFTHEADER_STRUCTS
 //Various Data Container 
 #include <iostream>
+#include "Constants.h"
 
 struct PlayerFlags {
 	bool OnFire;
@@ -55,5 +56,14 @@ struct QueueJob {
 struct EntityType {
 	int EntityID;
 	char Type;
+};
+
+struct MapChunk {
+	int X;
+	int Z;
+	char Blocks[FC_CHUNK_BLOCKCOUNT];
+	char Metadata[FC_CHUNK_NIBBLECOUNT];
+	char BlockLight[FC_CHUNK_NIBBLECOUNT];
+	char SkyLight[FC_CHUNK_NIBBLECOUNT];
 };
 #endif
