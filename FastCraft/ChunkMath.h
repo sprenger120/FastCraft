@@ -26,6 +26,7 @@ public:
 	static BlockCoordinates toBlockCoords(ChunkCoordinates);
 
 	static int toIndex(int,short,int); //Only for full chunks
+	static bool isIndexInBound(int);
 };
 
 #endif
