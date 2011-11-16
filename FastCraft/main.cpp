@@ -22,6 +22,7 @@ GNU General Public License for more details.
 #include "SettingsHandler.h"
 #include "PlayerThread.h"
 #include "EntityProvider.h"
+#include "ChunkProvider.h"
 
 using std::cout;
 using std::string;
@@ -32,7 +33,7 @@ int main() {
 	SettingsHandler* pSettingHandler;
 
 	cout<<"--- FAST CRAFT v. "<<SettingsHandler::getFastCraftVersion()<<" for Minecraft "<<SettingsHandler::getSupportedMCVersion()<<" ---"<<"\n";
-	
+
 	try {
 		pSettingHandler = new SettingsHandler; //Load configuration
 	} catch (Poco::RuntimeException) {
@@ -47,6 +48,14 @@ int main() {
 	Thread threadNetworkHandler("NetworkHandler");
 	threadNetworkHandler.start(NetworkHandler);
 
+	try {
+		ChunkProvider ChunkProvider(500);//Reserve memory for 500 chunks
+		ChunkProvider.generateMap(0,0,10,10);
+	} catch (Poco::RuntimeException& err) {
+		cout<<"Generating failed:"<<err.message()<<endl;
+		Thread::sleep(3000);
+		return 1;
+	}
 
 	cout<<"Ready."<<"\n"<<endl;
 
