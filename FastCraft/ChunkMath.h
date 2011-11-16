@@ -22,10 +22,10 @@ private:
 	ChunkMath();
 	~ChunkMath();
 public:
-	ChunkCoordinates toChunkCoords(BlockCoordinates);
-	BlockCoordinates toBlockCoords(ChunkCoordinates);
+	static ChunkCoordinates toChunkCoords(BlockCoordinates);
+	static BlockCoordinates toBlockCoords(ChunkCoordinates);
 
-	int toIndex(int,short,int); //Only for full chunks
+	static int toIndex(int,short,int); //Only for full chunks
 };
 
 #endif
