@@ -66,4 +66,9 @@ struct MapChunk {
 	char BlockLight[FC_CHUNK_NIBBLECOUNT];
 	char SkyLight[FC_CHUNK_NIBBLECOUNT];
 };
+
+struct Block {
+	char BlockID;
+	char Metadata;
+};
 #endif
