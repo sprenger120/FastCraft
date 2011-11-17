@@ -47,7 +47,7 @@ int ChunkMath::toIndex(int x,short y,int z) {
 }
 
 bool ChunkMath::isIndexInBound(int index) {
-	if (index > FC_CHUNK_BLOCKCOUNT) {
+	if (index > (FC_CHUNK_BLOCKCOUNT-1) || index < 0) {
 		return false;
 	}else{
 		return true;
