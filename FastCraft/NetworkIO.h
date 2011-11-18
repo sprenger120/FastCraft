@@ -17,6 +17,8 @@ GNU General Public License for more details.
 #define _FASTCRAFTHEADER_NETWORKIO
 #include <Poco/Net/StreamSocket.h>
 #include <string>
+#include <queue>
+#include "Structs.h"
 
 using Poco::Net::StreamSocket;
 using std::string;
@@ -26,7 +28,11 @@ class NetworkIO {
 private:
 	StreamSocket _Connection;
 	string _sBuffer;
-	char _charBuffer[1024];
+	char _charBuffer[4096];
+
+	QueueJob _Job;
+
+	std::queue<QueueJob>* _pSendQueue;
 
 	bool _fConnected;
 	const int _iTimeout;
@@ -34,8 +40,7 @@ private:
 	static int _iReadTraffic;
 	static int _iWriteTraffic;
 public:
-	NetworkIO(); //Init NetworkIO without connection
-	NetworkIO(StreamSocket&); //Init NetworkIO with connection
+	NetworkIO(std::queue<QueueJob>*); //Init NetworkIO without connection
 	~NetworkIO();
 
 	//Write part
@@ -57,8 +62,9 @@ public:
 	float readFloat();
 	double readDouble();
 	string readString();
+	void read(int); 
 
-	void Flush();
+	void Flush(int = FC_JOB_NO); 
 
 	//Connection adding / closing
 	bool isConnected();

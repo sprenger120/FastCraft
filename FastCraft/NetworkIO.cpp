@@ -23,22 +23,13 @@ GNU General Public License for more details.
 using Poco::RuntimeException;
 using std::memcpy;
 
-NetworkIO::NetworkIO() : 
+NetworkIO::NetworkIO(std::queue<QueueJob>* p) : 
 _Connection(),
 	_sBuffer(""),
 	_fConnected(false),
-	_iTimeout(10) //10 seconds
+	_iTimeout(10), //10 seconds
+	_pSendQueue(p)
 {
-}
-
-NetworkIO::NetworkIO(StreamSocket& Sock) :
-_Connection(Sock),
-	_sBuffer(""),
-	_fConnected(false),
-	_iTimeout(10) //10 seconds
-{
-	_Connection.setReceiveTimeout( Poco::Timespan( 1000 * 5000) );
-	_Connection.setBlocking(true);
 }
 
 NetworkIO::~NetworkIO() {
@@ -249,8 +240,27 @@ string NetworkIO::readString() {
 	return sOutput;
 }
 
+void NetworkIO::read(int iLenght) {
+	if (!exceptionSaveReading(iLenght)) {
+		throw RuntimeException("Connection aborted");
+	}
+}
+
 bool NetworkIO::exceptionSaveReading(int iLenght) {
 	int iReadedLenght;
+	
+	if (iLenght == 0) { 
+		return true;
+	}
+
+	if (iLenght < 0) { 
+		return false;
+	}
+
+	if (iLenght > 4096) {
+		return false;
+	}
+	
 	try {
 		iReadedLenght = _Connection.receiveBytes(_charBuffer,iLenght);
 	}catch(Poco::Net::ConnectionAbortedException) {
@@ -261,7 +271,7 @@ bool NetworkIO::exceptionSaveReading(int iLenght) {
 		return false;
 	}
 
-	if (iReadedLenght != iLenght) { 
+	if (iReadedLenght != iLenght || iReadedLenght == 0) { 
 		return false;
 	}
 
@@ -270,8 +280,11 @@ bool NetworkIO::exceptionSaveReading(int iLenght) {
 	return true;
 }
 
-void NetworkIO::Flush() {
-	_Connection.sendBytes(_sBuffer.c_str(),_sBuffer.length());
+void NetworkIO::Flush(int iSpecial) {
+	_Job.Data.assign(_sBuffer);
+	_Job.Special = iSpecial;
+	_pSendQueue->push(_Job);
+
 	_sBuffer.clear();
 }
 
