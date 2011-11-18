@@ -14,7 +14,6 @@ GNU General Public License for more details.
 */
 #include "NetworkHandler.h" 
 #include "SettingsHandler.h"
-#include "TextHandler.h"
 #include <Poco/Net/ServerSocket.h>
 #include <Poco/Net/StreamSocket.h>
 #include <Poco/Thread.h>
@@ -25,17 +24,12 @@ using Poco::Thread;
 
 NetworkHandler::NetworkHandler(SettingsHandler* Settings):
 _PlayerPool(Settings),
-	_ServerFullMsg("Server full!")
+	_ServerFullMsg("")
 {
 	_iPort =  Settings->getPort();
 
-	//Prepare Kick message
-	string sTemp("");
-
-	sTemp.append<unsigned char>(1,0xFF);
-	TextHandler::packString16(sTemp,_ServerFullMsg);
-
-	_ServerFullMsg.assign(sTemp);
+	_ServerFullMsg.append<unsigned char>(1,0xFF);
+	_ServerFullMsg.append<char>(2,0);
 }
 
 NetworkHandler::~NetworkHandler() {
