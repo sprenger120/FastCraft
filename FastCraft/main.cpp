@@ -23,11 +23,28 @@ GNU General Public License for more details.
 #include "PlayerThread.h"
 #include "EntityProvider.h"
 #include "ChunkProvider.h"
+#include "NetworkIO.h"
+#include <Poco/NumberFormatter.h>
 
 using std::cout;
 using std::string;
+using std::wstring;
 using std::endl;
 using Poco::Thread;
+
+std::wstring s2ws(const std::string& s)
+{
+	//http://codereview.stackexchange.com/questions/419/converting-between-stdwstring-and-stdstring
+    int len;
+    int slength = (int)s.length() + 1;
+    len = MultiByteToWideChar(CP_ACP, 0, s.c_str(), slength, 0, 0); 
+    wchar_t* buf = new wchar_t[len];
+    MultiByteToWideChar(CP_ACP, 0, s.c_str(), slength, buf, len);
+    std::wstring r(buf);
+    delete[] buf;
+    return r;
+}
+
 
 int main() {
 	SettingsHandler* pSettingHandler;
@@ -59,9 +76,17 @@ int main() {
 
 	cout<<"Ready."<<"\n"<<endl;
 
+	std::wstring sConsole(L"");
+	string sTemp("");
 
-	while (1) {
-		Thread::sleep(100);
+	while (1) {		
+		sTemp.clear();
+		Poco::NumberFormatter::append(sTemp,NetworkIO::getIOTraffic());
+
+		sConsole.assign(L"Fastcraft | IO: " + s2ws(sTemp) + L" Bytes");
+		SetConsoleTitle(sConsole.c_str());
+
+		Thread::sleep(1000);
 	}
 
 	delete pSettingHandler;
