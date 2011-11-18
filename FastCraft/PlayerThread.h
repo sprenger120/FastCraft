@@ -24,6 +24,7 @@ GNU General Public License for more details.
 #include <Poco/Net/StreamSocket.h>
 #include <queue>
 #include "Structs.h"
+#include "NetworkIO.h"
 
 class SettingsHandler;
 class EntityProvider;
@@ -49,9 +50,9 @@ private:
 
 	//TCP stuff
 	Poco::Net::StreamSocket _Connection;
-	unsigned char _sBuffer[1024];
 	string _sTemp;
 	queue<QueueJob> _SendQueue;
+	NetworkIO _Network;
 
 	//Connection Hash
 	string _sConnectionHash;

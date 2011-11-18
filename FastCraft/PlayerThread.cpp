@@ -45,7 +45,8 @@ _sName(""),
 	_SendQueue(),
 	_sConnectionHash(""),
 	_Web_Session("session.minecraft.net"),
-	_Web_Response()
+	_Web_Response(),
+	_Network(&_SendQueue)
 {
 	_Flags.Crouched = false;
 	_Flags.Eating = false;
@@ -75,7 +76,6 @@ _sName(""),
 
 	InstanceCounter++;
 	_iThreadID = InstanceCounter;
-
 }
 
 int PlayerThread::InstanceCounter = 0;
@@ -95,6 +95,7 @@ PlayerThread::~PlayerThread() {
 
 void PlayerThread::run() {
 	int iTemp;
+	unsigned char iPacket;
 
 	while (1) {
 		if (!isAssigned()) {
@@ -102,156 +103,140 @@ void PlayerThread::run() {
 			continue;
 		} 
 
-		sendTime();
-		IncrementTicks();
-		ProcessQueue();
-
 		if (!isAssigned()) {continue;} //Connection was closed by queue processor 
 
-		_sBuffer[0] = 0xF0; //Set to a unused packet id  (used for connection aborting indentifying)
-
 		try {
-			_Connection.receiveBytes(_sBuffer,1);
-		}catch(Poco::Net::InvalidSocketException) {
-			Disconnect();
-			continue;
-		}catch(Poco::TimeoutException) {
-			if (isNameSet()) { //Handshake isn't done
-				cout<<"Player:"<<_sName<<" timed out."<<"\n";
-			}else{
-				cout<<_sIP<<" timed out."<<"\n";	
-			}
 
-			Disconnect(true);
-			continue;
-		}catch(Poco::Net::ConnectionAbortedException) {
-			Disconnect();
-			continue;
-		}
+			sendTime();
+			IncrementTicks();
+			ProcessQueue();
 
-		cout<<"Package recovered:"<<std::hex<<int(_sBuffer[0])<<"\n";
+			iPacket = _Network.readByte();
 
-		switch (_sBuffer[0]) {
-		case 0x1: //Login
-			if (getAuthStep() != FC_AUTHSTEP_HANDSHAKE) {
-				Kick("False login order!");
-				continue;
-			}
+			cout<<"Package recovered:"<<std::hex<<int(iPacket)<<"\n";
 
-			iTemp = TCPHelper::readInt(_Connection); //Protocol Version
-
-			if (iTemp > _pSettings->getSupportedProtocolVersion()) {
-				Kick("Outdated server!");
-				continue;
-			}
-
-			if (iTemp < _pSettings->getSupportedProtocolVersion()) {
-				Kick("Outdated client!");
-				continue;
-			}
-
-			TCPHelper::readString16(_Connection); //Username (already known)
-			_Connection.receiveBytes(_sBuffer,16); //Unused fields
-
-			//Check premium 
-			if (_pSettings->isOnlineModeActivated()) {
-				string sPath("/game/checkserver.jsp?user=");
-				sPath.append(_sName);
-				sPath.append("&serverId=");
-				sPath.append(_sConnectionHash);
-
-				Poco::Net::HTTPRequest Request ( 
-					Poco::Net::HTTPRequest::HTTP_GET, 
-					sPath,
-					Poco::Net::HTTPMessage::HTTP_1_1);
-
-				_Web_Session.sendRequest(Request);
-				std::istream &is = _Web_Session.receiveResponse(_Web_Response);
-				string sErg;
-				is>>sErg;
-
-				if (sErg.compare("YES") != 0) {
-					Kick("Failed to verify username!");
+			switch (iPacket) {
+			case 0x1: //Login
+				//Check login order
+				if (getAuthStep() != FC_AUTHSTEP_HANDSHAKE) {
+					Kick("False login order!");
 					continue;
 				}
+
+				//Check minecraft version
+				iTemp = _Network.readInt(); //Protocol Version
+
+				if (iTemp > _pSettings->getSupportedProtocolVersion()) {
+					Kick("Outdated server!");
+					continue;
+				}
+
+				if (iTemp < _pSettings->getSupportedProtocolVersion()) {
+					Kick("Outdated client!");
+					continue;
+				}
+
+				_Network.readString(); //Username (already known)	
+				_Network.read(16);
+
+				//Check premium 
+				if (_pSettings->isOnlineModeActivated()) {
+					string sPath("/game/checkserver.jsp?user=");
+					sPath.append(_sName);
+					sPath.append("&serverId=");
+					sPath.append(_sConnectionHash);
+
+					Poco::Net::HTTPRequest Request ( 
+						Poco::Net::HTTPRequest::HTTP_GET, 
+						sPath,
+						Poco::Net::HTTPMessage::HTTP_1_1);
+
+					_Web_Session.sendRequest(Request);
+					std::istream &is = _Web_Session.receiveResponse(_Web_Response);
+					string sErg;
+					is>>sErg;
+
+					if (sErg.compare("YES") != 0) {
+						Kick("Failed to verify username!");
+						continue;
+					}
+				}
+
+				//Answer
+				_Network.addByte(0x1);
+				_Network.addInt(_iEntityID);
+				_Network.addString("");
+				_Network.addInt64(1234568);
+				_Network.addInt(_pSettings->getServerMode());
+				_Network.addByte(0);
+				_Network.addByte(_pSettings->getDifficulty());
+				_Network.addByte(_pSettings->getWorldHeight());
+				_Network.addByte(_pSettings->getMaxClients());
+
+				_Network.Flush();
+
+				setAuthStep(FC_AUTHSTEP_TIME); 
+				break;
+			case 0x2: //Handshake
+				//Check login order
+				if (getAuthStep() != FC_AUTHSTEP_CONNECTEDONLY) {
+					Kick("False login order!");
+					continue;
+				}
+				_sName = _sNickName = _Network.readString();
+
+				PlayerCount++;
+				setAuthStep(FC_AUTHSTEP_HANDSHAKE);
+				_iEntityID = _pEntityProvider->Add(FC_ENTITY_PLAYER); //Fetch a new entity id
+
+				//Send response (Connection Hash)
+				_Network.addByte(0x02);
+
+				if (_pSettings->isOnlineModeActivated()) {
+					generateConnectionHash();
+					_Network.addString(_sConnectionHash);
+				}else{
+					_Network.addString("-");
+				}
+				_Network.Flush();
+
+				cout<<_sName<<" joined ("<<_sIP<<") EID:"<<_iEntityID<<endl;
+				break;
+			case 0xb:
+				if (getAuthStep() < FC_AUTHSTEP_USERPOS) {
+					_Network.read(33);
+					continue;
+				}
+
+				break;
+			case 0xd: //Client Pos Update
+				if (getAuthStep() < FC_AUTHSTEP_USERPOS) {
+					_Network.read(41);
+					continue;
+				}
+
+				break;
+			case 0xFE: //Server List Ping
+				_sTemp.clear();
+				_sTemp.assign(_pSettings->getServerDescription()); //Server Description
+				_sTemp.append("§");
+				Poco::NumberFormatter::append(_sTemp,PlayerCount); //Player count
+				_sTemp.append("§");
+				Poco::NumberFormatter::append(_sTemp,_pSettings->getMaxClients()); //player slots
+				_sTemp.append("§");
+				Kick(_sTemp);
+				break;
+			default: 
+				Kick("Unknown packet!");
+				cout<<"Unknown packet received! 0x"<<std::hex<<int(iPacket)<<endl;
+				break;
 			}
-
-			//Answer
-			_sTemp.assign(""); //Clar
-			_sTemp.append<int>(1,0x1); //packet id
-			TextHandler::Append(_sTemp,_iEntityID); //EntityID
-			_sTemp.append<int>(2,0); //unused
-
-			TextHandler::Append(_sTemp,_pSettings->getMapSeed());//MapSeed 
-			TextHandler::Append(_sTemp,_pSettings->getServerMode()); //ServerMode
-			_sTemp.append<char>(1,0); //Default Dimension
-			TextHandler::Append(_sTemp,_pSettings->getDifficulty()); //Difficulty
-			_sTemp.append<char>(1,_pSettings->getWorldHeight()); //WorldHeight
-			_sTemp.append<char>(1,_pSettings->getMaxClients()); //Max Players
-
-			_Connection.sendBytes(_sTemp.c_str(),_sTemp.length());	
-
-			setAuthStep(FC_AUTHSTEP_TIME); 
-			break;
-		case 0x2: //Handshake
-			if (getAuthStep() != FC_AUTHSTEP_CONNECTEDONLY) {
-				Kick("False login order!");
-				continue;
-			}
-			_sName = _sNickName = TCPHelper::readString16(_Connection);
-
-			PlayerCount++;
-			setAuthStep(FC_AUTHSTEP_HANDSHAKE);
-			_iEntityID = _pEntityProvider->Add(FC_ENTITY_PLAYER); //Fetch a new entity id
-
-			//Send response (Connection Hash)
-			_sTemp.assign("");
-			_sTemp.append<int>(1,0x02); 
-
-			if (_pSettings->isOnlineModeActivated()) {
-				generateConnectionHash();
-				TextHandler::packString16(_sTemp,_sConnectionHash);
-			}else{
-				TextHandler::packString16(_sTemp,string("-"));
-			}
-
-			_Connection.sendBytes(_sTemp.c_str(),_sTemp.length());
-			cout<<_sName<<" joined ("<<_sIP<<") EID:"<<_iEntityID<<endl;
-			break;
-		case 0xb:
-			if (getAuthStep() < FC_AUTHSTEP_USERPOS) {
-				_Connection.receiveBytes(_sBuffer,33); 
-				continue;
-			}
-
-			break;
-		case 0xd: //Client Pos Update
-			if (getAuthStep() < FC_AUTHSTEP_USERPOS) {
-				_Connection.receiveBytes(_sBuffer,41); 
-				continue;
-			}
-
-			break;
-		case 0xFE: //Server List Ping
-			_sTemp.assign("");
-			_sTemp.assign(_pSettings->getServerDescription()); //Server Description
-			_sTemp.append<int>(1,0xA7);
-			Poco::NumberFormatter::append(_sTemp,PlayerCount); //Player count
-			_sTemp.append<int>(1,0xA7);
-			Poco::NumberFormatter::append(_sTemp,_pSettings->getMaxClients()); //player slots
-			_sTemp.append("§");
-			Kick(_sTemp);
-			break;
-		case 0xF0: //if unused packed id not changed -> connection aborted
+		} catch (Poco::RuntimeException) {
 			Disconnect();
-			break;
-		default: 
-			Kick("Unknown packet!");
-			cout<<"Unknown packet received! 0x"<<std::hex<<int(_sBuffer[0])<<endl;
-			break;
 		}
 
 	}
+
 }
 
 void PlayerThread::Disconnect(bool fNoLeaveMessage) {
@@ -287,7 +272,7 @@ void PlayerThread::Disconnect(bool fNoLeaveMessage) {
 	_sNickName.assign("");
 	_sIP.assign("");
 	ClearQueue();
-	_Connection.close();
+	_Network.closeConnection();
 }
 
 
@@ -300,8 +285,8 @@ void PlayerThread::Connect(Poco::Net::StreamSocket& Sock) {
 	setAuthStep(FC_AUTHSTEP_CONNECTEDONLY);
 
 	_Connection = Sock; 
-	_Connection.setReceiveTimeout( Poco::Timespan( 1000 * 5000) );
-	_Connection.setBlocking(true);
+	_Network.newConnection(Sock);
+
 
 	_sIP.assign(_Connection.peerAddress().toString());
 }
@@ -327,33 +312,24 @@ int PlayerThread::getThreadID() {
 }
 
 void PlayerThread::Kick(string sReason) {
-	QueueJob qJob;
+	_Network.addByte(0xFF);
+	_Network.addString(sReason);
+	_Network.Flush(FC_JOB_CLOSECONN);
 
-	qJob.Data.assign("");
-	qJob.Data.append<int>(1,0xFF);
-	TextHandler::packString16(qJob.Data,sReason);
-	qJob.Special = FC_JOB_CLOSECONN;
 
 	if (isNameSet()) { // If names is known
 		cout<<_sName<<" was kicked for: "<<sReason<<"\n"; 
 	}
-
-	appendQueue(qJob);
 }
 
 void PlayerThread::Kick() {
-	QueueJob qJob;
-
-	qJob.Data.assign("");
-	qJob.Data.append<int>(1,0xFF);
-	qJob.Data.append<int>(2,0x0);
-	qJob.Special = FC_JOB_CLOSECONN;
+	_Network.addByte(0xFF);
+	_Network.addString("");
+	_Network.Flush(FC_JOB_CLOSECONN);
 
 	if (isNameSet()) { // If names is known
 		cout<<_sName<<" was kicked"<<"\n"; 
 	}
-
-	appendQueue(qJob);
 }
 
 void PlayerThread::ProcessQueue() {
@@ -424,16 +400,10 @@ void PlayerThread::sendTime() {
 		}
 	}
 
-	//Add send job
-	QueueJob Job;
 
-	Job.Data.assign("");
-	Job.Special = FC_JOB_NO;
-
-	Job.Data.append<char>(1,0x4);
-	TextHandler::Append(Job.Data,_pServerTime->getTime());
-
-	appendQueue(Job);
+	_Network.addByte(0x4);
+	_Network.addInt64(_pServerTime->getTime());
+	_Network.Flush();
 
 	_TimeJobs.LastTimeSend = getTicks();
 }
