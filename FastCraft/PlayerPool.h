@@ -27,7 +27,7 @@ GNU General Public License for more details.
 
 class SettingsHandler;
 class PlayerThread;
-
+class ChunkProvider;
 
 using std::vector;
 
@@ -37,6 +37,7 @@ private:
 	Poco::ThreadPool _ThreadPool;
 	ServerTime _ServerTime;
 	vector<PlayerThread*> _vPlayerThreads;
+	ChunkProvider* _pChunkProvider;
 public:
 	PlayerPool(SettingsHandler*); //Constructor
 	~PlayerPool(); //Destructor

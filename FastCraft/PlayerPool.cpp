@@ -16,9 +16,10 @@ GNU General Public License for more details.
 #include "PlayerPool.h"
 #include "PlayerThread.h"
 #include "SettingsHandler.h"
-
+#include "ChunkProvider.h"
 
 #include <Poco/Thread.h>
+#include <Poco/Exception.h>
 
 PlayerPool::PlayerPool(SettingsHandler* pSettingsHandler):
 _vPlayerThreads(0),
@@ -26,13 +27,21 @@ _ThreadPool("PlayerThreads",1,pSettingsHandler->getMaxClients()),
 _EntityProvider(),
 _ServerTime()
 {
+	//Create ChunkProvider obj
+	try {
+		_pChunkProvider = new ChunkProvider(500);//Reserve memory for 500 chunks
+		_pChunkProvider->generateMap(0,0,10,10);
+	} catch (Poco::RuntimeException& err) {
+		throw Poco::RuntimeException("Chunk generation failed");
+	}
+
 	int iSlotCount = pSettingsHandler->getMaxClients();
 
 	_vPlayerThreads.resize(iSlotCount); //Resize to slot count
 
 	//Create Threads
 	for (int x=0;x<=_vPlayerThreads.size()-1;x++) {
-		_vPlayerThreads[x] = new PlayerThread(pSettingsHandler,&_EntityProvider,&_ServerTime,this);
+		_vPlayerThreads[x] = new PlayerThread(pSettingsHandler,&_EntityProvider,&_ServerTime,this,_pChunkProvider);
 
 		_ThreadPool.defaultPool().start(*_vPlayerThreads[x]);
 	}
