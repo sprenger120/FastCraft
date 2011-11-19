@@ -237,13 +237,16 @@ void NetworkIO::read(int iLenght) {
 }
 
 bool NetworkIO::exceptionSaveReading(int iLenght) {
-	int iReadedLenght;
+	int iReadedLenght = 0;
+	bool fUnderflow = false;
 	
 	if (iLenght == 0) { 
+		std::cout<<"NETWORKIO: recv lenght zero"<<"\n";
 		return true;
 	}
 
 	if (iLenght < 0) { 
+		std::cout<<"NETWORKIO: recv lenght lower than zero"<<"\n";
 		return false;
 	}
 
@@ -251,22 +254,40 @@ bool NetworkIO::exceptionSaveReading(int iLenght) {
 		return false;
 	}
 	
-	try {
-		iReadedLenght = _Connection.receiveBytes(_charBuffer,iLenght);
-	}catch(Poco::Net::ConnectionAbortedException) {
-		return false;
-	}catch(Poco::Net::InvalidSocketException) {
-		return false;
-	}catch(Poco::TimeoutException) {
-		return false;
+
+	while ( iReadedLenght < iLenght) {
+		try {
+			switch(fUnderflow) {
+			case false:
+				iReadedLenght = _Connection.receiveBytes(_charBuffer,iLenght);
+				break;
+			case true:
+				iReadedLenght += _Connection.receiveBytes(&_charBuffer[iReadedLenght-1], iLenght - iReadedLenght);
+				break;
+			}
+		}catch(Poco::Net::ConnectionAbortedException) {
+			std::cout<<"NETWORKIO: connection aborted"<<"\n";
+			return false;
+		}catch(Poco::Net::InvalidSocketException) {
+			std::cout<<"NETWORKIO: invalid socket"<<"\n";
+			return false;
+		}catch(Poco::TimeoutException) {
+			std::cout<<"NETWORKIO: timeout"<<"\n";
+			return false;
+		}
+		if (iReadedLenght != iLenght) {
+			std::cout<<"underflow: r:"<<iReadedLenght<<" l:"<<iLenght<<"\n";
+			fUnderflow = true;
+		}
 	}
 
-	if (iReadedLenght != iLenght || iReadedLenght == 0) { 
-		return false;
+	if (fUnderflow) {
+		std::cout<<"solved"<<"\n";
+		std::cout<<"r:"<<iReadedLenght<<" l:"<<iLenght<<"\n";
 	}
 
+	
 	_iReadTraffic += iLenght;
-
 	return true;
 }
 
