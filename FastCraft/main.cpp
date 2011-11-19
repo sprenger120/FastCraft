@@ -24,6 +24,7 @@ GNU General Public License for more details.
 #include "EntityProvider.h"
 #include "ChunkProvider.h"
 #include "NetworkIO.h"
+#include "PlayerThread.h"
 #include <Poco/NumberFormatter.h>
 
 using std::cout;
@@ -81,9 +82,13 @@ int main() {
 
 	while (1) {		
 		sTemp.clear();
-		Poco::NumberFormatter::append(sTemp,NetworkIO::getIOTraffic());
+		Poco::NumberFormatter::append(sTemp,double(NetworkIO::getIOTraffic()) / 1024.0 / 1024.0,4);
+		sTemp.append(" MB | Player: ");
+		Poco::NumberFormatter::append(sTemp,PlayerThread::getConnectedPlayers());
+		sTemp.append("/");
+		Poco::NumberFormatter::append(sTemp,pSettingHandler->getMaxClients());
 
-		sConsole.assign(L"Fastcraft | IO: " + s2ws(sTemp) + L" Bytes");
+		sConsole.assign(L"Fastcraft | IO: " + s2ws(sTemp));
 		SetConsoleTitle(sConsole.c_str());
 
 		Thread::sleep(1000);
