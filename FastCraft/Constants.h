@@ -44,6 +44,7 @@ GNU General Public License for more details.
 
 //Interval
 #define FC_INTERVAL_TIMESEND			10
+#define FC_INTERVAL_KEEPACTIVE			20
 
 //Map Constants
 #define FC_CHUNK_BLOCKCOUNT				32768
