@@ -124,3 +124,7 @@ int ChunkProvider::getFreeChunkSlot() {
 	}
 	return -1;
 }
+
+void ChunkProvider::sendChunks(PlayerThread* pPlayerThread) {
+	cout<<"plah"<<"\n";
+}

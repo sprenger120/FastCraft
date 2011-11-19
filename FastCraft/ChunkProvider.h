@@ -37,8 +37,7 @@ public:
 		);
 
 
-	//Generates pre chunks based on player position and add it to its send queue
-	void generatePreChunks(PlayerThread*); 
+	void sendChunks(PlayerThread*); 
 private:
 	void ClearChunk(int);
 	int getChunkIndexByCoords(int,int); //Returns -1 if chunk wasnt found
