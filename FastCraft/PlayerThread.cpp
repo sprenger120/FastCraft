@@ -14,14 +14,13 @@ GNU General Public License for more details.
 */
 
 #include "PlayerThread.h"
-#include "TextHandler.h"
 #include "EntityProvider.h"
 #include "SettingsHandler.h"
 #include "ServerTime.h"
-#include "TCPHelper.h"
 #include "PlayerPool.h"
 #include "Constants.h"
 #include "Random.h"
+#include "ChunkProvider.h"
 #include <sstream>
 #include <istream>
 #include <Poco/Timespan.h>
@@ -36,7 +35,8 @@ using std::endl;
 PlayerThread::PlayerThread(SettingsHandler* pSettingsHandler,
 	EntityProvider* pEntityProvider,
 	ServerTime* pServerTime,
-	PlayerPool* pPoolMaster
+	PlayerPool* pPoolMaster,
+	ChunkProvider* pChunkProvider
 	) : 
 _sName(""),
 	_sNickName(""),
@@ -71,6 +71,7 @@ _sName(""),
 	_pEntityProvider = pEntityProvider;
 	_pServerTime = pServerTime;
 	_pPoolMaster = pPoolMaster;
+	_pChunkProvider = pChunkProvider;
 
 	_fAssigned = false;
 	_iThreadTicks = 0;
@@ -118,15 +119,32 @@ void PlayerThread::run() {
 				_Network.addByte(0x0);
 				_Network.addInt(iKeepActive_LastID);
 				_Network.Flush();
-				cout<<"server sent:"<<"\n";
 			}
 			sendTime();
 			IncrementTicks();
 			ProcessQueue();
 
+			if (getAuthStep() >= FC_AUTHSTEP_PRECHUNKS) {
+				sendClientPosition();
+			}
+
+			if (getAuthStep() == FC_AUTHSTEP_PRECHUNKS) {
+				_Coordinates.OnGround = true;
+				_Coordinates.Pitch = 0.0F;
+				_Coordinates.Yaw = 0.0F;
+				_Coordinates.Stance = 50.0;
+				_Coordinates.Y = 50.0;
+				_Coordinates.X = 10.0;
+				_Coordinates.Z = 10.0;
+				sendClientPosition();
+
+				_pChunkProvider->sendChunks(this);
+				setAuthStep(FC_AUTHSTEP_SPAWNPOS);
+			}
+
 			iPacket = _Network.readByte();
 
-			cout<<"Package recovered:"<<std::hex<<int(iPacket)<<"\n";
+			//cout<<"Package recovered:"<<std::hex<<int(iPacket)<<"\n";
 
 			switch (iPacket) {
 			case 0x0: //Keep Alive
@@ -218,19 +236,17 @@ void PlayerThread::run() {
 
 				cout<<_sName<<" joined ("<<_sIP<<") EID:"<<_iEntityID<<endl;
 				break;
+			case 0xa: //Player
+				_Network.read(1);
+				break;
 			case 0xb:
-				if (getAuthStep() < FC_AUTHSTEP_USERPOS) {
-					_Network.read(33);
-					continue;
-				}
-
+				_Network.read(33);
+				break;
+			case 0xc:
+				_Network.read(9);
 				break;
 			case 0xd: //Client Pos Update
-				if (getAuthStep() < FC_AUTHSTEP_USERPOS) {
-					_Network.read(41);
-					continue;
-				}
-
+				_Network.read(41);
 				break;
 			case 0xFE: //Server List Ping
 				_sTemp.clear();
@@ -435,4 +451,20 @@ void PlayerThread::IncrementTicks() {
 
 int PlayerThread::getConnectedPlayers() {
 	return PlayerCount;
+}
+
+NetworkIO& PlayerThread::getConnection() {
+	return _Network;
+}
+
+void PlayerThread::sendClientPosition() {
+	_Network.addByte(0x0D);
+	_Network.addDouble(_Coordinates.X);
+	_Network.addDouble(_Coordinates.Stance);
+	_Network.addDouble(_Coordinates.Y);
+	_Network.addDouble(_Coordinates.Z);
+	_Network.addFloat(_Coordinates.Yaw);
+	_Network.addFloat(_Coordinates.Pitch);
+	_Network.addBool(_Coordinates.OnGround);
+	_Network.Flush();
 }

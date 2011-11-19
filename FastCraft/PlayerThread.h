@@ -30,6 +30,7 @@ class SettingsHandler;
 class EntityProvider;
 class ServerTime;
 class PlayerPool;
+class ChunkProvider;
 
 using std::string;
 using std::queue;
@@ -62,6 +63,7 @@ private:
 	EntityProvider* _pEntityProvider;
 	ServerTime* _pServerTime;
 	PlayerPool* _pPoolMaster;
+	ChunkProvider* _pChunkProvider;
 
 	//Thread specific
 	bool _fAssigned;//true if a player is assigned to that thread
@@ -78,7 +80,7 @@ private:
 	TimeJobs _TimeJobs;
 public:
 	//De- / Constructor
-	PlayerThread(SettingsHandler*,EntityProvider*,ServerTime*,PlayerPool*);
+	PlayerThread(SettingsHandler*,EntityProvider*,ServerTime*,PlayerPool*,ChunkProvider*);
 	~PlayerThread();
 
 	virtual void run(); // Thread Main
@@ -98,6 +100,7 @@ public:
 	string getUsername(); //Returns Player Name - not the edited nikname
 	string getNickname(); //Gets actual Username thats shown in chat
 	string getIP(); //Returns actual IP of player
+	NetworkIO& getConnection();
 
 	//Queue
 	void appendQueue(QueueJob&); //Adds a job for the sending queue
@@ -113,6 +116,7 @@ private:
 	void sendTime();//Sends time if required
 	long long getTicks();
 	void IncrementTicks();
+	void sendClientPosition();
 };
 
 #endif
