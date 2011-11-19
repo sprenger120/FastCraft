@@ -18,7 +18,7 @@ GNU General Public License for more details.
 ServerTime::ServerTime() {
 	_iLastTimestamp = 0;
 	_iLastTimestamp += time(NULL);
-	_iServerTime = 0;
+	_iServerTime = 1500;
 }
 
 ServerTime::~ServerTime() {
@@ -27,7 +27,7 @@ ServerTime::~ServerTime() {
 long long ServerTime::getTime() {
 	long long iDiff=0,iTimestamp=0;
 	
-	iTimestamp += time(NULL);
+	/*iTimestamp += time(NULL);
 
 	if (iTimestamp < _iLastTimestamp) {
 		std::cout<<"***INTERNAL SERVER WARNING: Time ran backwards! Ignore time increment.";
@@ -36,7 +36,8 @@ long long ServerTime::getTime() {
 
 	iDiff = iTimestamp - _iLastTimestamp;
 
-	_iServerTime += iDiff*20; //1 real second = 20 minecraft seconds
+	_iServerTime += iDiff; //1 real second = 20 minecraft seconds
 
-	return _iServerTime;
+	*/
+	return 6000L;
 }

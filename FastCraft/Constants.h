@@ -43,8 +43,8 @@ GNU General Public License for more details.
 #define FC_DIFFICULTY_HARD				3
 
 //Interval
-#define FC_INTERVAL_TIMESEND			10
-#define FC_INTERVAL_KEEPACTIVE			20
+#define FC_INTERVAL_TIMESEND			500
+#define FC_INTERVAL_KEEPACTIVE			1100
 
 //Map Constants
 #define FC_CHUNK_BLOCKCOUNT				32768
