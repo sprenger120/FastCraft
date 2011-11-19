@@ -29,6 +29,7 @@ private:
 	StreamSocket _Connection;
 	string _sBuffer;
 	char _charBuffer[4096];
+	char _sEndianBuffer[8];
 
 	QueueJob _Job;
 

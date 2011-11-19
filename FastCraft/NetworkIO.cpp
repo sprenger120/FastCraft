@@ -18,6 +18,7 @@ GNU General Public License for more details.
 #include <Poco/Net/NetException.h>
 #include <Poco/Timespan.h>
 #include <Poco/Exception.h>
+#include <Poco/ByteOrder.h>
 #include <iostream>
 
 using Poco::RuntimeException;
@@ -65,34 +66,28 @@ void NetworkIO::addShort(short Short) {
 
 
 void NetworkIO::addInt(int iInt) {
-	_sBuffer.append<char>(1, char( iInt>>24)); 
-	_sBuffer.append<char>(1, char( iInt>>16)); 
-	_sBuffer.append<char>(1, char( iInt>>8)); 
-	_sBuffer.append<char>(1, char( iInt ));  
+	iInt = Poco::ByteOrder::toBigEndian(iInt);
+	memcpy(_sEndianBuffer,&iInt,4);
+	_sBuffer.append(_sEndianBuffer,4);
+
 	_iWriteTraffic += 4;
 }
 
 void NetworkIO::addInt64(long long iInt) {
-	_sBuffer.append<char>(1, char( iInt>>54)); 
-	_sBuffer.append<char>(1, char( iInt>>48)); 
-	_sBuffer.append<char>(1, char( iInt>>40)); 
-	_sBuffer.append<char>(1, char( iInt>>32)); 
-	_sBuffer.append<char>(1, char( iInt>>24)); 
-	_sBuffer.append<char>(1, char( iInt>>16)); 
-	_sBuffer.append<char>(1, char( iInt>>8)); 
-	_sBuffer.append<char>(1, char( iInt)); 
+	iInt = Poco::ByteOrder::toBigEndian(iInt);
+	memcpy(_sEndianBuffer,&iInt,8);
+	_sBuffer.append(_sEndianBuffer,8);
+	
 	_iWriteTraffic += 8;
 }
 
 void NetworkIO::addFloat(float dVal) {
 	int iBuff;
 
-	std::memcpy(&iBuff,&dVal,4);
-
-	_sBuffer.append<char>(1, char( iBuff>>24)); 
-	_sBuffer.append<char>(1, char( iBuff>>16)); 
-	_sBuffer.append<char>(1, char( iBuff>>8));
-	_sBuffer.append<char>(1, char( iBuff ));  
+	memcpy(&iBuff,&dVal,4);
+	iBuff = Poco::ByteOrder::toBigEndian(iBuff);
+	memcpy(_sEndianBuffer,&iBuff,4);
+	_sBuffer.append(_sEndianBuffer,4);
 
 	_iWriteTraffic += 4;
 }
@@ -101,16 +96,11 @@ void NetworkIO::addFloat(float dVal) {
 void NetworkIO::addDouble(double dVal) {
 	long long iBuff;
 
-	std::memcpy(&iBuff,&dVal,8);
+	memcpy(&iBuff,&dVal,8); //copy double to an int64
+	iBuff = Poco::ByteOrder::toBigEndian(iBuff); //switch endian
+	memcpy(_sEndianBuffer,&iBuff,8);//copy to endian buffer
+	_sBuffer.append(_sEndianBuffer,8);//append
 
-	_sBuffer.append<char>(1, char( iBuff>>54)); 
-	_sBuffer.append<char>(1, char( iBuff>>48)); 
-	_sBuffer.append<char>(1, char( iBuff>>40)); 
-	_sBuffer.append<char>(1, char( iBuff>>32)); 
-	_sBuffer.append<char>(1, char( iBuff>>24)); 
-	_sBuffer.append<char>(1, char( iBuff>>16)); 
-	_sBuffer.append<char>(1, char( iBuff>>8)); 
-	_sBuffer.append<char>(1, char( iBuff)); 
 	_iWriteTraffic += 8;
 }
 
