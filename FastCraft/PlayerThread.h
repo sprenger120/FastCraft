@@ -101,6 +101,8 @@ public:
 
 	//Queue
 	void appendQueue(QueueJob&); //Adds a job for the sending queue
+
+	static int getConnectedPlayers();
 private:
 	bool isNameSet(); //returns true if name is set
 	void ClearQueue(); //Clear send queue

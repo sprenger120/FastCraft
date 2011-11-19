@@ -27,6 +27,7 @@ GNU General Public License for more details.
 #include <Poco/Timespan.h>
 #include <Poco/Net/NetException.h>
 #include <Poco/Thread.h>
+#include <Poco/Stopwatch.h>
 
 using Poco::Thread;
 using std::cout;
@@ -96,6 +97,9 @@ PlayerThread::~PlayerThread() {
 void PlayerThread::run() {
 	int iTemp;
 	unsigned char iPacket;
+	
+	int iKeepActive_LastID = 0;
+	long long iKeepActive_LastTimestamp = getTicks();
 
 	while (1) {
 		if (!isAssigned()) {
@@ -106,7 +110,16 @@ void PlayerThread::run() {
 		if (!isAssigned()) {continue;} //Connection was closed by queue processor 
 
 		try {
-
+			
+			if (iKeepActive_LastTimestamp + FC_INTERVAL_KEEPACTIVE == getTicks()) { //Send new keep alive
+				iKeepActive_LastTimestamp = getTicks();
+				
+				iKeepActive_LastID = Random::Int();
+				_Network.addByte(0x0);
+				_Network.addInt(iKeepActive_LastID);
+				_Network.Flush();
+				cout<<"server sent:"<<"\n";
+			}
 			sendTime();
 			IncrementTicks();
 			ProcessQueue();
@@ -116,6 +129,9 @@ void PlayerThread::run() {
 			cout<<"Package recovered:"<<std::hex<<int(iPacket)<<"\n";
 
 			switch (iPacket) {
+			case 0x0: //Keep Alive
+				_Network.readInt(); //Get id
+				break;
 			case 0x1: //Login
 				//Check login order
 				if (getAuthStep() != FC_AUTHSTEP_HANDSHAKE) {
@@ -224,6 +240,7 @@ void PlayerThread::run() {
 				_sTemp.append("§");
 				Poco::NumberFormatter::append(_sTemp,_pSettings->getMaxClients()); //player slots
 				_sTemp.append("§");
+
 				Kick(_sTemp);
 				break;
 			default: 
@@ -414,4 +431,8 @@ long long PlayerThread::getTicks() {
 
 void PlayerThread::IncrementTicks() {
 	_iThreadTicks++;
+}
+
+int PlayerThread::getConnectedPlayers() {
+	return PlayerCount;
 }
