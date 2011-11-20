@@ -124,23 +124,25 @@ void PlayerThread::run() {
 			IncrementTicks();
 			ProcessQueue();
 
-			if (getAuthStep() >= FC_AUTHSTEP_PRECHUNKS) {
-				sendClientPosition();
-			}
-
 			if (getAuthStep() == FC_AUTHSTEP_PRECHUNKS) {
+				_Coordinates.X = 5.0;
+				_Coordinates.Y = 128.0;
+				_Coordinates.Z = 5.0;
+				_Coordinates.Stance = 53.0;
 				_Coordinates.OnGround = true;
 				_Coordinates.Pitch = 0.0F;
 				_Coordinates.Yaw = 0.0F;
-				_Coordinates.Stance = 50.0;
-				_Coordinates.Y = 50.0;
-				_Coordinates.X = 10.0;
-				_Coordinates.Z = 10.0;
+
 				sendClientPosition();
 
 				_pChunkProvider->sendChunks(this);
 				setAuthStep(FC_AUTHSTEP_SPAWNPOS);
 			}
+
+			/*if (getAuthStep() >= FC_AUTHSTEP_PRECHUNKS) {
+				sendClientPosition();
+			}*/
+
 
 			iPacket = _Network.readByte();
 
@@ -265,6 +267,7 @@ void PlayerThread::run() {
 				break;
 			}
 		} catch (Poco::RuntimeException) {
+			cout<<"<exception"<<"\n";
 			Disconnect();
 		}
 
