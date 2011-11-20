@@ -76,6 +76,9 @@ public:
 	static int getReadTraffic();
 	static int getWriteTraffic();
 	static int getIOTraffic();
+
+	//Special
+	string& Str(); //Returns a reference of the internal buffer
 private:
 	bool exceptionSaveReading(int); //Reads data from tcp stream, checks all thrown exceptions, increase readtraffic
 }; 

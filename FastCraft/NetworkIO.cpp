@@ -61,7 +61,6 @@ void NetworkIO::addBool(bool Bool) {
 void NetworkIO::addShort(short Short) {
 	_sBuffer.append<char>(1, char(Short>>8)); 
 	_sBuffer.append<char>(1, char(Short));
-	_iWriteTraffic += 2;
 }
 
 
@@ -69,16 +68,12 @@ void NetworkIO::addInt(int iInt) {
 	iInt = Poco::ByteOrder::toBigEndian(iInt);
 	memcpy(_sEndianBuffer,&iInt,4);
 	_sBuffer.append(_sEndianBuffer,4);
-
-	_iWriteTraffic += 4;
 }
 
 void NetworkIO::addInt64(long long iInt) {
 	iInt = Poco::ByteOrder::toBigEndian(iInt);
 	memcpy(_sEndianBuffer,&iInt,8);
 	_sBuffer.append(_sEndianBuffer,8);
-	
-	_iWriteTraffic += 8;
 }
 
 void NetworkIO::addFloat(float dVal) {
@@ -88,8 +83,6 @@ void NetworkIO::addFloat(float dVal) {
 	iBuff = Poco::ByteOrder::toBigEndian(iBuff);
 	memcpy(_sEndianBuffer,&iBuff,4);
 	_sBuffer.append(_sEndianBuffer,4);
-
-	_iWriteTraffic += 4;
 }
 
 
@@ -100,8 +93,6 @@ void NetworkIO::addDouble(double dVal) {
 	iBuff = Poco::ByteOrder::toBigEndian(iBuff); //switch endian
 	memcpy(_sEndianBuffer,&iBuff,8);//copy to endian buffer
 	_sBuffer.append(_sEndianBuffer,8);//append
-
-	_iWriteTraffic += 8;
 }
 
 void NetworkIO::addString(string sString) {
@@ -116,8 +107,6 @@ void NetworkIO::addString(string sString) {
 		_sBuffer.append<char>(1,0);
 		_sBuffer.append(sString,x,1);
 	}	
-
-	_iWriteTraffic += sString.length() * 2;
 }
 
 char NetworkIO::readByte() {
@@ -262,7 +251,7 @@ bool NetworkIO::exceptionSaveReading(int iLenght) {
 				iReadedLenght = _Connection.receiveBytes(_charBuffer,iLenght);
 				break;
 			case true:
-				iReadedLenght += _Connection.receiveBytes(&_charBuffer[iReadedLenght-1], iLenght - iReadedLenght);
+				iReadedLenght += _Connection.receiveBytes(&_charBuffer[iReadedLenght], iLenght - iReadedLenght);
 				break;
 			}
 		}catch(Poco::Net::ConnectionAbortedException) {
@@ -296,6 +285,8 @@ void NetworkIO::Flush(int iSpecial) {
 	_Job.Special = iSpecial;
 	_pSendQueue->push(_Job);
 
+
+	_iWriteTraffic += _sBuffer.length();
 	_sBuffer.clear();
 }
 
@@ -325,4 +316,8 @@ int NetworkIO::getWriteTraffic() {
 
 int NetworkIO::getIOTraffic() {
 	return _iReadTraffic + _iWriteTraffic;
+}
+
+string& NetworkIO::Str() {
+	return _sBuffer;
 }
