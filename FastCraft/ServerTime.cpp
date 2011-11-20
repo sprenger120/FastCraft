@@ -39,5 +39,5 @@ long long ServerTime::getTime() {
 	_iServerTime += iDiff; //1 real second = 20 minecraft seconds
 
 	*/
-	return 6000L;
+	return 10000L;
 }
