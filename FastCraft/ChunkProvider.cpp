@@ -17,11 +17,19 @@ GNU General Public License for more details.
 #include <iostream>
 #include <Poco/Stopwatch.h>
 #include <Poco/Exception.h>
+#include <Poco/DeflatingStream.h>
+#include <sstream>
+#include <ostream>
 #include "ChunkTerraEditor.h"
 #include "Structs.h"
+#include "NetworkIO.h"
+#include "PlayerThread.h"
 
 using std::cout;
 using std::endl;
+using std::memcpy;
+using std::stringstream;
+using Poco::DeflatingOutputStream;
 
 ChunkProvider::ChunkProvider(int iMaxChunks) {
 	if (iMaxChunks <= 0) {
@@ -35,8 +43,7 @@ ChunkProvider::ChunkProvider(int iMaxChunks) {
 	//Allocate memory
 	for (int x=0;x<=iMaxChunks-1;x++) {
 		_vMapChunks[x] = new MapChunk;	
-		_vMapChunks[x]->X = -1;
-		_vMapChunks[x]->Z = -1;
+		_vMapChunks[x]->Empty = true;
 	}
 }
 
@@ -71,12 +78,17 @@ void ChunkProvider::generateMap(int FromX,int FromZ,int ToX,int ToZ) {
 
 			_vMapChunks[index]->X = chunkX;
 			_vMapChunks[index]->Z = chunkZ;
+			_vMapChunks[index]->Empty = false;
+
+			ClearChunk(index);
 
 			Block.BlockID = 7;
 
 			try {
 
 				ChunkTerraEditor::setPlate(_vMapChunks[index],0,Block); //Bedrock 
+
+				Block.BlockID = 2;
 
 				for (short y=1;y<=50;y++) { //Stone
 					ChunkTerraEditor::setPlate(_vMapChunks[index],y,Block);
@@ -86,6 +98,13 @@ void ChunkProvider::generateMap(int FromX,int FromZ,int ToX,int ToZ) {
 				cout<<"***GENERATING ERROR:"<<err.message()<<endl;
 				throw Poco::RuntimeException("Generation failed!");
 				return;
+			}
+
+			//Generating Light & Metadata
+			for (int x=0;x<=FC_CHUNK_NIBBLECOUNT-1;x++) {
+				_vMapChunks[index]->Metadata[x] = 0;
+				_vMapChunks[index]->SkyLight[x] = 0xff;
+				_vMapChunks[index]->BlockLight[x] = 0xff;
 			}
 
 			iCount++;
@@ -118,7 +137,7 @@ int ChunkProvider::getChunkIndexByCoords(int X,int Z) {
 
 int ChunkProvider::getFreeChunkSlot() {
 	for (int x=0;x<=_iAllocatedChunkCount-1;x++) {
-		if (_vMapChunks[x]->X == -1 && _vMapChunks[x]->Z == -1) {
+		if (_vMapChunks[x]->Empty == true) {
 			return x;
 		}
 	}
@@ -126,5 +145,69 @@ int ChunkProvider::getFreeChunkSlot() {
 }
 
 void ChunkProvider::sendChunks(PlayerThread* pPlayerThread) {
-	cout<<"plah"<<"\n";
+	int index = 0;
+	NetworkIO& rNetwork = pPlayerThread->getConnection();
+
+	Poco::Stopwatch Timer;
+	Timer.start();
+
+	std::stringstream ss;
+	DeflatingOutputStream defStream(ss,Poco::DeflatingStreamBuf::STREAM_ZLIB,-1);
+
+	int packtime = 0;
+
+	for(int X = 0;X<=20;X++) {
+		for (int Z = 0;Z<=20;Z++) {
+
+			index = getChunkIndexByCoords(X,Z);
+			if (index == -1) {
+				//Generate chunk....
+				throw Poco::RuntimeException("Chunk not found");
+			}
+
+			rNetwork.addByte(0x32);
+			rNetwork.addInt(X);
+			rNetwork.addInt(Z);
+			rNetwork.addBool(1);
+			rNetwork.Flush();
+
+
+			rNetwork.addByte(0x33);
+			rNetwork.addInt(X<<4);
+			rNetwork.addShort(0);
+			rNetwork.addInt(Z<<4);
+			rNetwork.addByte(15);
+			rNetwork.addByte(127);
+			rNetwork.addByte(15);
+
+			//deflate
+			Poco::Stopwatch sw;
+			sw.start();
+			defStream.write(_vMapChunks[index]->Blocks,FC_CHUNK_BLOCKCOUNT);
+			defStream.write(_vMapChunks[index]->Metadata,FC_CHUNK_NIBBLECOUNT);
+			defStream.write(_vMapChunks[index]->BlockLight,FC_CHUNK_NIBBLECOUNT);
+			defStream.write(_vMapChunks[index]->SkyLight,FC_CHUNK_NIBBLECOUNT);
+
+			defStream.flush();
+
+			rNetwork.addInt(ss.str().length());
+			rNetwork.Str().append(ss.str());
+
+			
+			ss.clear();
+			defStream.clear();
+
+			sw.stop();
+			packtime += sw.elapsed() /1000;
+			//cout<<"packtime:"<<sw.elapsed()/1000<<"\n";
+
+		}
+
+	}
+
+	defStream.close();
+	Timer.stop();
+
+	cout<<"packtime:"<<packtime<<"\n";
+	cout<<"done! "<<Timer.elapsed()/1000<<" ms"<<endl;
 }
