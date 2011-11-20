@@ -49,5 +49,6 @@ GNU General Public License for more details.
 //Map Constants
 #define FC_CHUNK_BLOCKCOUNT				32768
 #define FC_CHUNK_NIBBLECOUNT			16384
+#define FC_CHUNK_DATACOUNT              81920
 
 #endif
