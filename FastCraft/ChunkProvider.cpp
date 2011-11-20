@@ -74,7 +74,7 @@ void ChunkProvider::generateMap(int FromX,int FromZ,int ToX,int ToZ) {
 				return;
 			}
 
-			cout<<"Generating chunk X:"<<chunkX<<" Z:"<<chunkZ<<"\n";
+			//cout<<"Generating chunk X:"<<chunkX<<" Z:"<<chunkZ<<"\n";
 
 			_vMapChunks[index]->X = chunkX;
 			_vMapChunks[index]->Z = chunkZ;
@@ -100,12 +100,10 @@ void ChunkProvider::generateMap(int FromX,int FromZ,int ToX,int ToZ) {
 				return;
 			}
 
-			//Generating Light & Metadata
-			for (int x=0;x<=FC_CHUNK_NIBBLECOUNT-1;x++) {
-				_vMapChunks[index]->Metadata[x] = 0;
-				_vMapChunks[index]->SkyLight[x] = 0xff;
-				_vMapChunks[index]->BlockLight[x] = 0xff;
-			}
+
+			std::memset(_vMapChunks[index]->Metadata,0,FC_CHUNK_NIBBLECOUNT);
+			std::memset(_vMapChunks[index]->BlockLight,0xff,FC_CHUNK_NIBBLECOUNT);
+			std::memset(_vMapChunks[index]->SkyLight,0xff,FC_CHUNK_NIBBLECOUNT);
 
 			iCount++;
 		}
@@ -199,8 +197,6 @@ void ChunkProvider::sendChunks(PlayerThread* pPlayerThread) {
 
 			sw.stop();
 			packtime += sw.elapsed() /1000;
-			//cout<<"packtime:"<<sw.elapsed()/1000<<"\n";
-
 		}
 
 	}
@@ -208,6 +204,6 @@ void ChunkProvider::sendChunks(PlayerThread* pPlayerThread) {
 	defStream.close();
 	Timer.stop();
 
-	cout<<"packtime:"<<packtime<<"\n";
-	cout<<"done! "<<Timer.elapsed()/1000<<" ms"<<endl;
+	cout<<"chunk packing time:"<<packtime<<" ms"<<"\n";
+	cout<<"done in:"<<Timer.elapsed()/1000<<" ms"<<endl;
 }
