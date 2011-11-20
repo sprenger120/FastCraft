@@ -29,9 +29,9 @@ _ServerTime()
 {
 	//Create ChunkProvider obj
 	try {
-		_pChunkProvider = new ChunkProvider(500);//Reserve memory for 500 chunks
-		_pChunkProvider->generateMap(0,0,10,10);
-	} catch (Poco::RuntimeException& err) {
+		_pChunkProvider = new ChunkProvider(750);//Reserve memory for 500 chunks
+		_pChunkProvider->generateMap(0,0,20,20);
+	} catch (Poco::RuntimeException) {
 		throw Poco::RuntimeException("Chunk generation failed");
 	}
 
