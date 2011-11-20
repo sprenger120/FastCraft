@@ -255,10 +255,8 @@ bool NetworkIO::exceptionSaveReading(int iLenght) {
 				break;
 			}
 		}catch(Poco::Net::ConnectionAbortedException) {
-			std::cout<<"NETWORKIO: connection aborted"<<"\n";
 			return false;
 		}catch(Poco::Net::InvalidSocketException) {
-			std::cout<<"NETWORKIO: invalid socket"<<"\n";
 			return false;
 		}catch(Poco::TimeoutException) {
 			std::cout<<"NETWORKIO: timeout"<<"\n";

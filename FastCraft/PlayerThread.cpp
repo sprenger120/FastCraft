@@ -267,7 +267,6 @@ void PlayerThread::run() {
 				break;
 			}
 		} catch (Poco::RuntimeException) {
-			cout<<"<exception"<<"\n";
 			Disconnect();
 		}
 
