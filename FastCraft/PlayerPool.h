@@ -22,25 +22,28 @@ GNU General Public License for more details.
 #include <vector>
 #include <Poco/Net/StreamSocket.h>
 #include <Poco/ThreadPool.h>
+#include <Poco/Runnable.h>
 #include "EntityProvider.h"
 #include "ServerTime.h"
 
 class SettingsHandler;
 class PlayerThread;
-class ChunkProvider;
+class ChunkRoot;
 
 using std::vector;
 
-class PlayerPool {
+class PlayerPool : public Poco::Runnable {
 private:
 	EntityProvider _EntityProvider;
 	Poco::ThreadPool _ThreadPool;
 	ServerTime _ServerTime;
 	vector<PlayerThread*> _vPlayerThreads;
-	ChunkProvider* _pChunkProvider;
+	ChunkRoot* _pChunkRoot;
 public:
 	PlayerPool(SettingsHandler*); //Constructor
 	~PlayerPool(); //Destructor
+
+	virtual void run(); // Thread main
 	
 	bool isAnySlotFree(); //Returns true if there is any free slot
 	void Assign(Poco::Net::StreamSocket&); //Assigns a connection to a free thread

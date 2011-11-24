@@ -16,10 +16,12 @@ GNU General Public License for more details.
 #include "PlayerPool.h"
 #include "PlayerThread.h"
 #include "SettingsHandler.h"
-#include "ChunkProvider.h"
+#include "ChunkRoot.h"
 
 #include <Poco/Thread.h>
 #include <Poco/Exception.h>
+
+using Poco::Thread;
 
 PlayerPool::PlayerPool(SettingsHandler* pSettingsHandler):
 _vPlayerThreads(0),
@@ -27,10 +29,10 @@ _ThreadPool("PlayerThreads",1,pSettingsHandler->getMaxClients()),
 _EntityProvider(),
 _ServerTime()
 {
-	//Create ChunkProvider obj
+	//Create ChunkRoot obj
 	try {
-		_pChunkProvider = new ChunkProvider(750);//Reserve memory for 500 chunks
-		_pChunkProvider->generateMap(0,0,20,20);
+		_pChunkRoot = new ChunkRoot;
+		_pChunkRoot->generateMap(0,0,20,20);
 	} catch (Poco::RuntimeException) {
 		throw Poco::RuntimeException("Chunk generation failed");
 	}
@@ -41,7 +43,7 @@ _ServerTime()
 
 	//Create Threads
 	for (int x=0;x<=_vPlayerThreads.size()-1;x++) {
-		_vPlayerThreads[x] = new PlayerThread(pSettingsHandler,&_EntityProvider,&_ServerTime,this,_pChunkProvider);
+		_vPlayerThreads[x] = new PlayerThread(pSettingsHandler,&_EntityProvider,&_ServerTime,this,_pChunkRoot);
 
 		_ThreadPool.defaultPool().start(*_vPlayerThreads[x]);
 	}
@@ -52,6 +54,13 @@ PlayerPool::~PlayerPool() {
 
 	for (int x=0;x<=_vPlayerThreads.size()-1;x++) { //Release objects
 		delete _vPlayerThreads[x];
+	}
+}
+
+
+void PlayerPool::run() {
+	while (1) {
+		Thread::sleep(1000);
 	}
 }
 
