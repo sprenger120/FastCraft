@@ -23,11 +23,10 @@ using std::cout;
 using Poco::Thread;
 
 NetworkHandler::NetworkHandler(SettingsHandler* Settings):
-_PlayerPool(Settings),
+	_PlayerPool(Settings),
 	_ServerFullMsg("")
-{
+{		
 	_iPort =  Settings->getPort();
-
 	_ServerFullMsg.append<unsigned char>(1,0xFF);
 	_ServerFullMsg.append<char>(2,0);
 }
@@ -38,9 +37,11 @@ NetworkHandler::~NetworkHandler() {
 void NetworkHandler::run() {
 	Poco::Net::ServerSocket ServerSock(_iPort);
 	Poco::Net::StreamSocket StrmSock;
-
 	ServerSock.setBlocking(true);
 
+	//Create player pool thread
+	Poco::Thread threadPlayerPool("PlayerPool");
+	threadPlayerPool.start(_PlayerPool);
 
 	while(1) {
 		ServerSock.listen(); //Wait
