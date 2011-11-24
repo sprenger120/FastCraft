@@ -15,6 +15,7 @@ GNU General Public License for more details.
 
 #include "ChunkMath.h"
 #include "Constants.h"
+#include <cmath>
 
 ChunkCoordinates ChunkMath::toChunkCoords(BlockCoordinates BlockCoords) {
 	ChunkCoordinates ChunkCoordinates;
@@ -22,6 +23,15 @@ ChunkCoordinates ChunkMath::toChunkCoords(BlockCoordinates BlockCoords) {
 
 	ChunkCoordinates.X = BlockCoords.X >> 4;
 	ChunkCoordinates.Z = BlockCoords.Z >> 4;
+
+	return ChunkCoordinates;
+}
+
+ChunkCoordinates ChunkMath::toChunkCoords(EntityCoordinates EntityCoords) {
+	ChunkCoordinates ChunkCoordinates;
+
+	ChunkCoordinates.X = int(EntityCoords.X) >> 4;
+	ChunkCoordinates.Z = int(EntityCoords.Z) >> 4;
 
 	return ChunkCoordinates;
 }
@@ -34,6 +44,18 @@ BlockCoordinates ChunkMath::toBlockCoords(ChunkCoordinates ChunkCoords) {
 	BCoords.X = ChunkCoords.X << 4;
 	BCoords.Z = ChunkCoords.Z << 4;
 	return BCoords;
+}
+
+
+int ChunkMath::Distance(ChunkCoordinates c1,ChunkCoordinates c2) {
+	double distance;
+
+	distance = sqrt(  double ((c1.X-c2.X) * (c1.X-c2.X) + 
+					  (c1.Z-c2.Z) * (c1.Z-c2.Z)
+				   ));
+
+
+	return int(distance);
 }
 
 int ChunkMath::toIndex(int x,short y,int z) {

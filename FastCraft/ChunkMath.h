@@ -23,8 +23,11 @@ private:
 	~ChunkMath();
 public:
 	static ChunkCoordinates toChunkCoords(BlockCoordinates);
+	static ChunkCoordinates toChunkCoords(EntityCoordinates);
 	static BlockCoordinates toBlockCoords(ChunkCoordinates);
 
+	static int Distance(ChunkCoordinates,ChunkCoordinates);
+	
 	static int toIndex(int,short,int); //Only for full chunks
 	static bool isIndexInBound(int);
 };
