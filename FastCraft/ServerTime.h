@@ -15,16 +15,19 @@ GNU General Public License for more details.
 #ifndef _FASTCRAFTHEADER_SERVERTIME
 #define _FASTCRAFTHEADER_SERVERTIME
 #include <iostream>
+#include <Poco/Runnable.h>
 
-class ServerTime {
+class ServerTime : public Poco::Runnable {
 private:
-	long long _iLastTimestamp;
-	long long _iServerTime;
+	static long long _iServerTime;
 public:
 	ServerTime();
 	~ServerTime();
 
-	long long getTime(); //Returns server Tick Time 
+	virtual void run(); //Thread main
+
+
+	static long long getTime(); //Returns server Tick Time 
 };
 
 #endif

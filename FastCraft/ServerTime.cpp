@@ -14,30 +14,30 @@ GNU General Public License for more details.
 */
 #include "ServerTime.h"
 #include <ctime>
+#include <Poco/Thread.h>
+
+using Poco::Thread;
 
 ServerTime::ServerTime() {
-	_iLastTimestamp = 0;
-	_iLastTimestamp += time(NULL);
-	_iServerTime = 1500;
 }
 
 ServerTime::~ServerTime() {
 }
 
-long long ServerTime::getTime() {
-	long long iDiff=0,iTimestamp=0;
-	
-	/*iTimestamp += time(NULL);
+long long ServerTime::_iServerTime = 0;
 
-	if (iTimestamp < _iLastTimestamp) {
-		std::cout<<"***INTERNAL SERVER WARNING: Time ran backwards! Ignore time increment.";
-		return _iLastTimestamp;
+
+void ServerTime::run() {
+	while ( 1 ) {
+		Thread::sleep(1000); //idle
+
+		_iServerTime += 20;
+
 	}
+}
 
-	iDiff = iTimestamp - _iLastTimestamp;
 
-	_iServerTime += iDiff; //1 real second = 20 minecraft seconds
 
-	*/
-	return 10000L;
+long long ServerTime::getTime() {
+	return _iServerTime;
 }
