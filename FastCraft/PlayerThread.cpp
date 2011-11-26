@@ -20,7 +20,7 @@ GNU General Public License for more details.
 #include "PlayerPool.h"
 #include "Constants.h"
 #include "Random.h"
-#include "ChunkProvider.h"
+#include "ChunkRoot.h"
 #include <sstream>
 #include <istream>
 #include <Poco/Timespan.h>
@@ -36,7 +36,7 @@ PlayerThread::PlayerThread(SettingsHandler* pSettingsHandler,
 	EntityProvider* pEntityProvider,
 	ServerTime* pServerTime,
 	PlayerPool* pPoolMaster,
-	ChunkProvider* pChunkProvider
+	ChunkRoot* pChunkRoot
 	) : 
 _sName(""),
 	_sNickName(""),
@@ -47,7 +47,8 @@ _sName(""),
 	_sConnectionHash(""),
 	_Web_Session("session.minecraft.net"),
 	_Web_Response(),
-	_Network(&_SendQueue)
+	_Network(&_SendQueue),
+	_ChunkProvider(pChunkRoot,&_Network)
 {
 	_Flags.Crouched = false;
 	_Flags.Eating = false;
@@ -71,7 +72,7 @@ _sName(""),
 	_pEntityProvider = pEntityProvider;
 	_pServerTime = pServerTime;
 	_pPoolMaster = pPoolMaster;
-	_pChunkProvider = pChunkProvider;
+
 
 	_fAssigned = false;
 	_iThreadTicks = 0;
@@ -98,7 +99,7 @@ PlayerThread::~PlayerThread() {
 void PlayerThread::run() {
 	int iTemp;
 	unsigned char iPacket;
-	
+
 	int iKeepActive_LastID = 0;
 	long long iKeepActive_LastTimestamp = getTicks();
 
@@ -111,10 +112,10 @@ void PlayerThread::run() {
 		if (!isAssigned()) {continue;} //Connection was closed by queue processor 
 
 		try {
-			
+
 			if (iKeepActive_LastTimestamp + FC_INTERVAL_KEEPACTIVE == getTicks()) { //Send new keep alive
 				iKeepActive_LastTimestamp = getTicks();
-				
+
 				iKeepActive_LastID = Random::Int();
 				_Network.addByte(0x0);
 				_Network.addInt(iKeepActive_LastID);
@@ -125,28 +126,27 @@ void PlayerThread::run() {
 			ProcessQueue();
 
 			if (getAuthStep() == FC_AUTHSTEP_PRECHUNKS) {
-				_Coordinates.X = 5.0;
-				_Coordinates.Y = 128.0;
-				_Coordinates.Z = 5.0;
-				_Coordinates.Stance = 53.0;
+				_Coordinates.X = 100.0;
+				_Coordinates.Y = 35.0;
+				_Coordinates.Z = 100.0;
+				_Coordinates.Stance = 35.0;
 				_Coordinates.OnGround = true;
 				_Coordinates.Pitch = 0.0F;
 				_Coordinates.Yaw = 0.0F;
 
 				sendClientPosition();
-
-				_pChunkProvider->sendChunks(this);
 				setAuthStep(FC_AUTHSTEP_SPAWNPOS);
 			}
 
-			/*if (getAuthStep() >= FC_AUTHSTEP_PRECHUNKS) {
-				sendClientPosition();
-			}*/
 
+			if (getAuthStep() >= FC_AUTHSTEP_SPAWNPOS) {
+				_ChunkProvider.HandleMovement(_Coordinates);
+				setAuthStep(FC_AUTHSTEP_INVENTORY);
+			}
 
 			iPacket = _Network.readByte();
 
-			//cout<<"Package recovered:"<<std::hex<<int(iPacket)<<"\n";
+			cout<<"Package recovered:"<<std::hex<<int(iPacket)<<"\n";
 
 			switch (iPacket) {
 			case 0x0: //Keep Alive
@@ -212,6 +212,7 @@ void PlayerThread::run() {
 				_Network.Flush();
 
 				setAuthStep(FC_AUTHSTEP_TIME); 
+				_ChunkProvider.newConnection();
 				break;
 			case 0x2: //Handshake
 				//Check login order
@@ -239,16 +240,45 @@ void PlayerThread::run() {
 				cout<<_sName<<" joined ("<<_sIP<<") EID:"<<_iEntityID<<endl;
 				break;
 			case 0xa: //Player
-				_Network.read(1);
+				if (getAuthStep() < FC_AUTHSTEP_PRECHUNKS) {
+					_Network.read(1);
+					continue;
+				}
+
+				_Coordinates.OnGround = _Network.readBool();
 				break;
 			case 0xb:
-				_Network.read(33);
+				if (getAuthStep() < FC_AUTHSTEP_PRECHUNKS) {
+					_Network.read(33);
+					continue;
+				}
+				_Coordinates.X = _Network.readDouble();
+				_Coordinates.Y = _Network.readDouble();
+				_Coordinates.Stance = _Network.readDouble();
+				_Coordinates.Z = _Network.readDouble();
+				_Coordinates.OnGround = _Network.readBool();
 				break;
 			case 0xc:
-				_Network.read(9);
+				if (getAuthStep() < FC_AUTHSTEP_PRECHUNKS) {
+					_Network.read(9);
+					continue;
+				}
+				_Coordinates.Yaw = _Network.readFloat();
+				_Coordinates.Pitch = _Network.readFloat();
+				_Coordinates.OnGround = _Network.readBool();
 				break;
 			case 0xd: //Client Pos Update
-				_Network.read(41);
+				if (getAuthStep() < FC_AUTHSTEP_PRECHUNKS) {
+					_Network.read(41);
+					continue;
+				}
+				_Coordinates.X = _Network.readDouble();
+				_Coordinates.Y = _Network.readDouble();
+				_Coordinates.Stance = _Network.readDouble();
+				_Coordinates.Z = _Network.readDouble();
+				_Coordinates.Yaw = _Network.readFloat();
+				_Coordinates.Pitch = _Network.readFloat();
+				_Coordinates.OnGround = _Network.readBool();
 				break;
 			case 0xFE: //Server List Ping
 				_sTemp.clear();
@@ -266,16 +296,17 @@ void PlayerThread::run() {
 				cout<<"Unknown packet received! 0x"<<std::hex<<int(iPacket)<<endl;
 				break;
 			}
-		} catch (Poco::RuntimeException) {
+		} catch (Poco::RuntimeException& err) {
+			cout<<">>>Exception catched:"<<err.message()<<endl;
 			Disconnect();
 		}
 
 	}
 
 }
-
 void PlayerThread::Disconnect(bool fNoLeaveMessage) {
 	if (isNameSet()) {
+		_ChunkProvider.Disconnect();
 		PlayerCount--;
 		_pEntityProvider->Remove(_iEntityID);
 	}
@@ -321,7 +352,6 @@ void PlayerThread::Connect(Poco::Net::StreamSocket& Sock) {
 
 	_Connection = Sock; 
 	_Network.newConnection(Sock);
-
 
 	_sIP.assign(_Connection.peerAddress().toString());
 }

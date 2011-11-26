@@ -25,12 +25,13 @@ GNU General Public License for more details.
 #include <queue>
 #include "Structs.h"
 #include "NetworkIO.h"
+#include "ChunkProvider.h"
 
 class SettingsHandler;
 class EntityProvider;
 class ServerTime;
 class PlayerPool;
-class ChunkProvider;
+class ChunkRoot;
 
 using std::string;
 using std::queue;
@@ -63,7 +64,7 @@ private:
 	EntityProvider* _pEntityProvider;
 	ServerTime* _pServerTime;
 	PlayerPool* _pPoolMaster;
-	ChunkProvider* _pChunkProvider;
+	ChunkProvider _ChunkProvider;
 
 	//Thread specific
 	bool _fAssigned;//true if a player is assigned to that thread
@@ -80,7 +81,7 @@ private:
 	TimeJobs _TimeJobs;
 public:
 	//De- / Constructor
-	PlayerThread(SettingsHandler*,EntityProvider*,ServerTime*,PlayerPool*,ChunkProvider*);
+	PlayerThread(SettingsHandler*,EntityProvider*,ServerTime*,PlayerPool*,ChunkRoot*);
 	~PlayerThread();
 
 	virtual void run(); // Thread Main
