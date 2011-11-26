@@ -99,6 +99,7 @@ PlayerThread::~PlayerThread() {
 void PlayerThread::run() {
 	int iTemp;
 	unsigned char iPacket;
+	EntityCoordinates TmpCoord;
 
 	int iKeepActive_LastID = 0;
 	long long iKeepActive_LastTimestamp = getTicks();
@@ -121,7 +122,8 @@ void PlayerThread::run() {
 
 
 			iPacket = _Network.readByte();
-			cout<<"Package recovered:"<<std::hex<<int(iPacket)<<"\n";
+
+			//cout<<"Package recovered:"<<std::hex<<int(iPacket)<<"\n";
 
 			switch (iPacket) {
 			case 0x0: //Keep Alive
@@ -232,21 +234,28 @@ void PlayerThread::run() {
 
 				break;
 			case 0xb: //Coords & OnGround
-
-
 				switch(isLoginDone()) {
 				case true:
-					/*_Coordinates.X = _Network.readDouble();
-					_Coordinates.Y = _Network.readDouble();
-					_Coordinates.Stance = _Network.readDouble();
-					_Coordinates.Z = _Network.readDouble();
-					_Coordinates.OnGround = _Network.readBool();
-					*/
-					_Network.read(33);
-					_ChunkProvider.HandleMovement(_Coordinates);
+					//Read coordinates in a temporary variable
+					TmpCoord.X = _Network.readDouble();
+					TmpCoord.Y = _Network.readDouble();
+					TmpCoord.Stance = _Network.readDouble();
+					TmpCoord.Z = _Network.readDouble();
+					TmpCoord.OnGround = _Network.readBool();
+
+					//if X and Z ==  8.5000000000000000 , there is crap in the tcp buffer -> ignore it
+					if (TmpCoord.X == 8.5000000000000000 && TmpCoord.Z == 8.5000000000000000) { 
+						continue;
+					}else{
+						_Coordinates.X = TmpCoord.X;
+						_Coordinates.Y = TmpCoord.Y;
+						_Coordinates.Stance = TmpCoord.Stance;
+						_Coordinates.Z = TmpCoord.Z;
+						_Coordinates.OnGround = TmpCoord.OnGround;
+						_ChunkProvider.HandleMovement(_Coordinates);
+					}
 					break;
 				case false:
-					cout<<"authstep too low"<<"\n";
 					_Network.read(33);
 					break;
 				}
@@ -264,29 +273,32 @@ void PlayerThread::run() {
 					}
 					break;
 				case false:
-					cout<<"authstep too low"<<"\n";
 					_Network.read(9);
 					break;
 				}
-
-
 				break;
 			case 0xd: //Full Client position
 				switch(isLoginDone()) {
 				case true:
-					/*_Coordinates.X = _Network.readDouble();
-					_Coordinates.Y = _Network.readDouble();
-					_Coordinates.Stance = _Network.readDouble();
-					_Coordinates.Z = _Network.readDouble();
-					_Coordinates.Yaw = _Network.readFloat();
-					_Coordinates.Pitch = _Network.readFloat();
-					_Coordinates.OnGround = _Network.readBool();
-					*/
-					_Network.read(41);
-					_ChunkProvider.HandleMovement(_Coordinates);
+					//Read coordinates in a temporary variable
+					TmpCoord.X = _Network.readDouble();
+					TmpCoord.Y = _Network.readDouble();
+					TmpCoord.Stance = _Network.readDouble();
+					TmpCoord.Z = _Network.readDouble();
+					TmpCoord.Yaw = _Network.readFloat();
+					TmpCoord.Pitch = _Network.readFloat();
+					TmpCoord.OnGround = _Network.readBool();
+
+					//if X and Z ==  8.5000000000000000 , there is crap in the tcp buffer -> ignore it
+					if (TmpCoord.X == 8.5000000000000000 && TmpCoord.Z == 8.5000000000000000) { 
+						continue;
+					}else{
+
+						_Coordinates = TmpCoord;
+						_ChunkProvider.HandleMovement(_Coordinates);
+					}
 					break;
 				case false:
-					cout<<"authstep too low"<<"\n";
 					_Network.read(41);
 					break;
 				}
@@ -486,7 +498,7 @@ void PlayerThread::sendTime() {
 
 
 	_Network.addByte(0x4);
-	_Network.addInt64(_pServerTime->getTime());
+	_Network.addInt64(ServerTime::getTime());
 	_Network.Flush();
 
 	_TimeJobs.LastTimeSend = getTicks();
@@ -528,7 +540,6 @@ void PlayerThread::sendKeepAlive() {
 		_Network.addInt(Random::Int());
 		_Network.Flush();
 	}
-
 }
 
 void PlayerThread::UpdateHealth(short iHealth,short iFood,float nSaturation) {
