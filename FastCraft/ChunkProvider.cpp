@@ -83,27 +83,27 @@ void ChunkProvider::HandleMovement(const EntityCoordinates& PlayerCoordinates) {
 			_ChunkSet.regenerate(_PlayerCoordinates);
 			CheckSpawnedChunkList();
 			if (!CheckChunkSet()) {
-				throw Poco::RuntimeException("Chunk delivering failed");
+				throw Poco::RuntimeException("Chunk delivering failed: 1");
 			}
 		}
 	}else {
 		if (_ChunkSet.isUp2Date(_PlayerCoordinates)) {
 			if (!CheckChunkSet()) {
-				throw Poco::RuntimeException("Chunk delivering failed");
+				throw Poco::RuntimeException("Chunk delivering failed: 2");
 			}
 			return;
 		}else{
 			_ChunkSet.regenerate(_PlayerCoordinates);
 			CheckSpawnedChunkList();
 			if (CheckChunkSet()) {
-				throw Poco::RuntimeException("Chunk delivering failed");
+				throw Poco::RuntimeException("Chunk delivering failed: 3");
 			}
 		}
 	}
 }
 
 bool ChunkProvider::isFullyCircleSpawned() {
-	return (_vSpawnedChunks.size() >= _ViewDistance*_ViewDistance);
+	return (_vSpawnedChunks.size() >= _ChunkSet.CalculateChunkCount());
 }
 
 
@@ -114,7 +114,11 @@ void ChunkProvider::sendChunk(MapChunk* pChunk) {
 		throw Poco::Exception("Not connected");
 	}
 
-	cout<<"send chunk"<<"\n";
+
+	if (pChunk==NULL) {
+		cout<<"NULLCHUNK"<<"\n";
+		throw Poco::Exception("Nullchunk");
+	}
 
 	sendPreChunk_Spawn(pChunk->X,pChunk->Z);
 
@@ -203,24 +207,32 @@ bool ChunkProvider::isSpawned(ChunkCoordinates coord) {
 
 bool ChunkProvider::CheckChunkSet() {
 	//Check chunk set
+	int iSentChunks=0;
 
 	try {
 		//Check chunk who player stands on
 		if ( ! isSpawned(_PlayerCoordinates)) {
 			sendChunk(_pChunkRoot->getChunk(_PlayerCoordinates.X,_PlayerCoordinates.Z));
-			return true;
-		}
-
-		for (int x=0;x<=_ViewDistance*_ViewDistance -1;x++) {
-			if ( ! isSpawned(_ChunkSet.at(x))) {
-				sendChunk(_pChunkRoot->getChunk( _ChunkSet.at(x).X,_ChunkSet.at(x).Z));
+			iSentChunks++;
+			if (iSentChunks==3) {
 				return true;
 			}
 		}
-	}catch(Poco::RuntimeException) {
+
+		for (int x=0;x<=_ChunkSet.CalculateChunkCount()-1;x++) {
+			if ( ! isSpawned(_ChunkSet.at(x))) {
+				sendChunk(_pChunkRoot->getChunk( _ChunkSet.at(x).X,_ChunkSet.at(x).Z));
+				iSentChunks++;
+				if (iSentChunks==3) {
+					return true;
+				}
+			}
+		}
+	}catch(Poco::RuntimeException&err ) {
+		cout<<"error:"<<err.message()<<"\n";
 		return false;
 	}
-	return false;
+	return true;
 }
 
 
