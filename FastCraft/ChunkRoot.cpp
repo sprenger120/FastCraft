@@ -27,20 +27,20 @@ using Poco::RuntimeException;
 
 ChunkRoot::ChunkRoot() :
 _vpChunks(0),
-_iChunkSlots(500),
-_iMaxChunkSlots(1000) // 1000 * Chunksize( 16*16*128*2.5) = 78 MB
+	_iChunkSlots(500),
+	_iMaxChunkSlots(1000) // 1000 * Chunksize( 16*16*128*2.5) = 78 MB
 {
 	if(_iChunkSlots > _iMaxChunkSlots) {
 		throw RuntimeException("Chunkslot count out of bound");
 	}
-	
+
 	_vpChunks.resize(_iChunkSlots);
 
 	//Allocate memory & init chunks
 	for (int x=0;x<=_iChunkSlots-1;x++) {
 		_vpChunks[x] = new MapChunk; //Allocate
 		_vpChunks[x]->Empty = true; //Set empty
-		
+
 		memset(_vpChunks[x]->Blocks,0,FC_CHUNK_BLOCKCOUNT); //clear blocks
 	}
 }
@@ -53,12 +53,12 @@ ChunkRoot::~ChunkRoot() {
 }
 
 void ChunkRoot::generateMap(int iFromX,int iFromZ,int iToX,int iToZ) {
-	Poco::Stopwatch Timer;
+	//Poco::Stopwatch Timer;
 	int iCount=0;
 	int index=0;
 	Block Block;
 
-	Timer.start();
+	//Timer.start();
 
 	if (iFromX > iToX || iFromZ > iToZ) {
 		throw RuntimeException("Illegal Arguments, From > To");
@@ -73,10 +73,22 @@ void ChunkRoot::generateMap(int iFromX,int iFromZ,int iToX,int iToZ) {
 		//check vector bound
 		if (_iMaxChunkSlots < _iChunkSlots + iChunkJobCount) { 
 			//bounding exception
-			RuntimeException("Chunkslot count out of bound"); 
+			cout<<"out of bound"<<"\n";
+			throw RuntimeException("Chunkslot count out of bound"); 
 		}else {
+			int from = _iChunkSlots;
+			int to = _iChunkSlots + iChunkJobCount;
+
 			_iChunkSlots += iChunkJobCount;
 			_vpChunks.resize(_iChunkSlots);
+
+			for ( int x=from-1;x<=to-1;x++) {
+				_vpChunks[x] = new MapChunk;
+
+				_vpChunks[x]->Empty = true; //Set empty
+
+				memset(_vpChunks[x]->Blocks,0,FC_CHUNK_BLOCKCOUNT); //clear block
+			}
 		}
 	}
 
@@ -84,9 +96,9 @@ void ChunkRoot::generateMap(int iFromX,int iFromZ,int iToX,int iToZ) {
 
 	for(int chunkX = iFromX;chunkX<=iToX;chunkX++) {
 		for (int chunkZ = iFromZ;chunkZ<=iToZ;chunkZ++) {
-			
+
 			index = getFreeChunkSlot();
-		
+
 			if (index == -1) {
 				throw Poco::RuntimeException("Chunk slots are full!");
 				return;
@@ -123,15 +135,30 @@ void ChunkRoot::generateMap(int iFromX,int iFromZ,int iToX,int iToZ) {
 		}
 	}
 
-	Timer.stop();
+	/*	Timer.stop();
 	cout<<"Generated "<<iCount<<" chunks in "<<Timer.elapsed() / 1000<<" ms."<<endl;
+	*/
 }
 
 MapChunk* ChunkRoot::getChunk(int X,int Z) {
 	int index;
 	index = getChunkIndexByCoords(X,Z);
-	if (index==-1) {
-		return NULL;
+
+	if (index==-1) { //Chunk doesnt exists	
+		cout<<"generate new chunk"<<"\n";
+		try { //generate new one
+			generateMap(X,Z,X,Z);
+		}catch(Poco::RuntimeException) {
+			return NULL; //failed
+		}
+
+		index = getChunkIndexByCoords(X,Z); //retry
+		if (index==-1) {
+			cout<<"chunkgen failed"<<"\n";
+			return NULL;
+		}else{
+			return _vpChunks[index];
+		}
 	}else{
 		return _vpChunks[index];
 	}
