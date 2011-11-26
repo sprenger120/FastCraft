@@ -28,11 +28,13 @@ using Poco::RuntimeException;
 ChunkRoot::ChunkRoot() :
 _vpChunks(0),
 	_iChunkSlots(500),
-	_iMaxChunkSlots(1000) // 1000 * Chunksize( 16*16*128*2.5) = 78 MB
+	_iMaxChunkSlots(5000) // 1000 * Chunksize( 16*16*128*2.5) = 78 MB
 {
 	if(_iChunkSlots > _iMaxChunkSlots) {
 		throw RuntimeException("Chunkslot count out of bound");
 	}
+
+	_iUsedChunkSlots = 0;
 
 	_vpChunks.resize(_iChunkSlots);
 
@@ -53,16 +55,12 @@ ChunkRoot::~ChunkRoot() {
 }
 
 void ChunkRoot::generateMap(int iFromX,int iFromZ,int iToX,int iToZ) {
-	//Poco::Stopwatch Timer;
-	int iCount=0;
-	int index=0;
-	Block Block;
-
-	//Timer.start();
+	Poco::Stopwatch Timer;
 
 	if (iFromX > iToX || iFromZ > iToZ) {
 		throw RuntimeException("Illegal Arguments, From > To");
 	}
+	Timer.start();
 
 	//Check chunkslot bound
 	int iChunkJobCount =  (iToX - iFromX)  * (iToZ - iFromZ); //get count of chunks that will be generated
@@ -93,51 +91,70 @@ void ChunkRoot::generateMap(int iFromX,int iFromZ,int iToX,int iToZ) {
 	}
 
 
-
+	int iCount=0;
 	for(int chunkX = iFromX;chunkX<=iToX;chunkX++) {
 		for (int chunkZ = iFromZ;chunkZ<=iToZ;chunkZ++) {
-
-			index = getFreeChunkSlot();
-
-			if (index == -1) {
-				throw Poco::RuntimeException("Chunk slots are full!");
-				return;
-			}
-
-			_vpChunks[index]->X = chunkX;
-			_vpChunks[index]->Z = chunkZ;
-			_vpChunks[index]->Empty = false;
-
-			Block.BlockID = 7;
-
-			//Generate chunk
-			try {
-				ChunkTerraEditor::setPlate(_vpChunks[index],0,Block); //Bedrock 
-
-				Block.BlockID = 2;
-
-				for (short y=1;y<=30;y++) { //Grass
-					ChunkTerraEditor::setPlate(_vpChunks[index],y,Block);
-				}
-
-			} catch (Poco::RuntimeException& err) {
-				cout<<"***GENERATING ERROR:"<<err.message()<<endl;
-				throw Poco::RuntimeException("Generation failed!");
-				return;
-			}
-
-			//Light & Metadata
-			std::memset(_vpChunks[index]->Metadata,0,FC_CHUNK_NIBBLECOUNT);
-			std::memset(_vpChunks[index]->BlockLight,0xff,FC_CHUNK_NIBBLECOUNT);
-			std::memset(_vpChunks[index]->SkyLight,0xff,FC_CHUNK_NIBBLECOUNT);
-
+			generateMap(chunkX,chunkZ);
 			iCount++;
 		}
 	}
-
-	/*	Timer.stop();
+	
+	Timer.stop();
 	cout<<"Generated "<<iCount<<" chunks in "<<Timer.elapsed() / 1000<<" ms."<<endl;
-	*/
+}
+
+
+void ChunkRoot::generateMap(int X,int Z) {
+	int index=0;
+	Block Block;
+
+	if (getFreeChunkSlotCount() == 0) {
+		if (_vpChunks.size() == _iMaxChunkSlots) {
+			throw Poco::RuntimeException("Chunk slots are full!");
+		}
+
+		index = _vpChunks.size();
+		_vpChunks.resize(index+1);
+
+		_vpChunks[index] = new MapChunk;
+		_vpChunks[index]->Empty = true; //Set empty
+
+		memset(_vpChunks[index]->Blocks,0,FC_CHUNK_BLOCKCOUNT); //clear blocks
+	}
+
+
+	index = getFreeChunkSlot();
+
+	if (index == -1) {
+		throw Poco::RuntimeException("Invalid index");
+	}
+
+	_vpChunks[index]->X = X;
+	_vpChunks[index]->Z = Z;
+	_vpChunks[index]->Empty = false;
+
+	Block.BlockID = 7;
+
+	//Generate chunk
+	try {
+		ChunkTerraEditor::setPlate(_vpChunks[index],0,Block); //Bedrock 
+
+		Block.BlockID = 2;
+
+		for (short y=1;y<=30;y++) { //Grass
+			ChunkTerraEditor::setPlate(_vpChunks[index],y,Block);
+		}
+
+	} catch (Poco::RuntimeException& err) {
+		cout<<"***GENERATING ERROR:"<<err.message()<<endl;
+		throw Poco::RuntimeException("Generation failed!");
+		return;
+	}
+
+	//Light & Metadata
+	std::memset(_vpChunks[index]->Metadata,0,FC_CHUNK_NIBBLECOUNT);
+	std::memset(_vpChunks[index]->BlockLight,0xff,FC_CHUNK_NIBBLECOUNT);
+	std::memset(_vpChunks[index]->SkyLight,0xff,FC_CHUNK_NIBBLECOUNT);
 }
 
 MapChunk* ChunkRoot::getChunk(int X,int Z) {
@@ -145,16 +162,15 @@ MapChunk* ChunkRoot::getChunk(int X,int Z) {
 	index = getChunkIndexByCoords(X,Z);
 
 	if (index==-1) { //Chunk doesnt exists	
-		cout<<"generate new chunk"<<"\n";
+		//cout<<"generate new chunk"<<"\n";
 		try { //generate new one
-			generateMap(X,Z,X,Z);
+			generateMap(X,Z);
 		}catch(Poco::RuntimeException) {
 			return NULL; //failed
 		}
 
 		index = getChunkIndexByCoords(X,Z); //retry
 		if (index==-1) {
-			cout<<"chunkgen failed"<<"\n";
 			return NULL;
 		}else{
 			return _vpChunks[index];
@@ -166,7 +182,7 @@ MapChunk* ChunkRoot::getChunk(int X,int Z) {
 
 
 int ChunkRoot::getChunkIndexByCoords(int X,int Z) {
-	for (int x=0;x<=_iChunkSlots-1;x++) {
+	for (int x=0;x<=_vpChunks.size()-1;x++) {
 		if (_vpChunks[x]->X == X && _vpChunks[x]->Z == Z) {
 			return x;
 		}
@@ -176,7 +192,7 @@ int ChunkRoot::getChunkIndexByCoords(int X,int Z) {
 
 
 int ChunkRoot::getFreeChunkSlot() {
-	for (int x=0;x<=_iChunkSlots-1;x++) {
+	for (int x=0;x<=_vpChunks.size()-1;x++) {
 		if (_vpChunks[x]->Empty) {
 			_iUsedChunkSlots++;
 			return x;
@@ -186,7 +202,7 @@ int ChunkRoot::getFreeChunkSlot() {
 }
 
 int ChunkRoot::getFreeChunkSlotCount() {
-	return _iChunkSlots - _iUsedChunkSlots;
+	return _vpChunks.size() - _iUsedChunkSlots;
 }
 
 int ChunkRoot::getUsedChunkSlotCount() {

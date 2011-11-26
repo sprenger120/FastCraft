@@ -41,6 +41,10 @@ public:
 		int, //To X
 		int //To Z
 		);
+
+	void generateMap(int, //X
+		int //Z
+		);
 	
 	MapChunk* getChunk(int, //X
 				int //Z
