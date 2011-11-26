@@ -38,5 +38,8 @@ public:
 	bool isEmpty();
 
 	ChunkCoordinates at(int);
+
+	static int CalculateChunkCount(int);
+	int CalculateChunkCount(); //Calculates the needed array size from the view distance
 };
 #endif

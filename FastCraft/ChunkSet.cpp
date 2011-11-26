@@ -26,8 +26,8 @@ _vChunkSet(0)
 		throw Poco::RuntimeException("Illegal View distance");
 	}
 
-	_vChunkSet.resize(iViewDistance*iViewDistance);
 	_iViewDistance = iViewDistance;
+	_vChunkSet.resize(CalculateChunkCount());
 	_fClear = true;
 }
 
@@ -40,18 +40,17 @@ void ChunkSet::regenerate(ChunkCoordinates playerCoordinates) {
 	_fClear = false;
 
 	std::cout<<"regen"<<"\n";
-	SquareStart.X = playerCoordinates.X - (_iViewDistance/2);
-	SquareStart.Z = playerCoordinates.Z - (_iViewDistance/2);
+	SquareStart.X = playerCoordinates.X - (_iViewDistance/2) - 1;
+	SquareStart.Z = playerCoordinates.Z - (_iViewDistance/2) - 1;
 
-	SquareEnd.X = SquareStart.X + (_iViewDistance/2);
-	SquareEnd.Z = SquareStart.Z + (_iViewDistance/2);
+	SquareEnd.X = SquareStart.X + _iViewDistance;
+	SquareEnd.Z = SquareStart.Z + _iViewDistance;
 
 	int index=0;
-	for ( int X = SquareStart.X;X<=SquareEnd.X-1;X++) {
-		for ( int Z = SquareStart.Z;Z<=SquareEnd.Z-1;Z++) {
+	for ( int X = SquareStart.X;X<=SquareEnd.X;X++) {
+		for ( int Z = SquareStart.Z;Z<=SquareEnd.Z;Z++) {
 			_vChunkSet[index].X = X;
 			_vChunkSet[index].Z = Z;
-			//cout<<index<<"\n";
 			index++;
 		}
 	}
@@ -81,4 +80,15 @@ ChunkCoordinates ChunkSet::at(int index) {
 	}
 
 	return _vChunkSet[index];
+}
+
+int ChunkSet::CalculateChunkCount(int iVD) {
+	iVD /= 2;
+	return iVD * 4 + (iVD * iVD) * 4 + 1; 
+}
+
+int ChunkSet::CalculateChunkCount() {
+	int VDdiv2 = _iViewDistance/2;
+
+	return VDdiv2 * 4 + (VDdiv2 * VDdiv2) * 4 + 1; 
 }
