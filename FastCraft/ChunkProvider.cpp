@@ -64,6 +64,8 @@ void ChunkProvider::Disconnect() {
 void ChunkProvider::HandleMovement(const EntityCoordinates& PlayerCoordinates) {
 	if (!isConnected()) { return; }
 
+	//cout<<"e-player coord  X:"<<PlayerCoordinates.X << " Z:"<<PlayerCoordinates.Z<<"\n";
+
 	_PlayerCoordinates = ChunkMath::toChunkCoords(PlayerCoordinates);
 
 
@@ -73,6 +75,7 @@ void ChunkProvider::HandleMovement(const EntityCoordinates& PlayerCoordinates) {
 	}
 
 
+	//cout<<"player coord  X:"<<_PlayerCoordinates.X << " Z:"<<_PlayerCoordinates.Z<<"\n";
 
 	if (isFullyCircleSpawned()) { //Full circle is spawned
 		if (_ChunkSet.isUp2Date(_PlayerCoordinates)) {
@@ -95,7 +98,7 @@ void ChunkProvider::HandleMovement(const EntityCoordinates& PlayerCoordinates) {
 		}else{
 			_ChunkSet.regenerate(_PlayerCoordinates);
 			CheckSpawnedChunkList();
-			if (CheckChunkSet()) {
+			if (!CheckChunkSet()) {
 				throw Poco::RuntimeException("Chunk delivering failed: 3");
 			}
 		}
@@ -238,7 +241,7 @@ bool ChunkProvider::CheckChunkSet() {
 
 void ChunkProvider::CheckSpawnedChunkList() {
 	for (int x=0;x<=_vSpawnedChunks.size()-1;x++) {
-		if(  ChunkMath::Distance(_PlayerCoordinates,_vSpawnedChunks[x]) > _ViewDistance) {
+		if(  ChunkMath::Distance(_PlayerCoordinates,_vSpawnedChunks[x]) > (_ViewDistance/2)) {
 			sendPreChunk_Despawn(_vSpawnedChunks[x].X,_vSpawnedChunks[x].Z);
 		}
 	}
