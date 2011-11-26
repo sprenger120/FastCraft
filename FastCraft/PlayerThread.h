@@ -38,6 +38,7 @@ using std::queue;
 
 struct TimeJobs {
 	long long LastTimeSend;
+	long long LastKeepAliveSend;
 };
 
 class PlayerThread : public Poco::Runnable {
@@ -49,6 +50,9 @@ private:
 	string _sIP; //IP
 	int _iEntityID;
 	char _iLoginProgress;
+	short _iHealth;
+	short _iFood;
+	float _nSaturation;
 
 	//TCP stuff
 	Poco::Net::StreamSocket _Connection;
@@ -94,7 +98,10 @@ public:
 	void Kick(string); //Kick with reason
 	void Ban(int); //Bans player (int = Expiration, -1 for permanent ban)
 	void Ban(string,int); //Bans player with reason (int = Expiration, -1 for permanent ban)
+	void UpdateHealth(short,short,float);
 
+	//For PlayerPool
+	bool isSpawned(); //Returns true if the playerpool can spawn entitys
 
 	//Accessator
 	int getThreadID(); //Gets Thread ID - used for player instance identification
@@ -108,16 +115,29 @@ public:
 
 	static int getConnectedPlayers();
 private:
-	bool isNameSet(); //returns true if name is set
+	//Queue
 	void ClearQueue(); //Clear send queue
-	void ProcessQueue(); //Returns true if connection is closed
-	void generateConnectionHash(); //Generate a new connection hash
+	void ProcessQueue(); 
+
+	//AuthStep
 	void setAuthStep(char);
 	char getAuthStep();
+	bool isLoginDone(); //returns true if the full login procedure done
+	void ProcessAuthStep();
+	bool isNameSet(); //returns true if name is set
+
+	//send... Functions
+	void sendClientPosition();
+	void sendKeepAlive();
 	void sendTime();//Sends time if required
+
+
+	//Ticks
 	long long getTicks();
 	void IncrementTicks();
-	void sendClientPosition();
+
+
+	void generateConnectionHash(); //Generate a new connection hash	
 };
 
 #endif

@@ -113,39 +113,14 @@ void PlayerThread::run() {
 
 		try {
 
-			if (iKeepActive_LastTimestamp + FC_INTERVAL_KEEPACTIVE == getTicks()) { //Send new keep alive
-				iKeepActive_LastTimestamp = getTicks();
-
-				iKeepActive_LastID = Random::Int();
-				_Network.addByte(0x0);
-				_Network.addInt(iKeepActive_LastID);
-				_Network.Flush();
-			}
+			sendKeepAlive();
 			sendTime();
 			IncrementTicks();
 			ProcessQueue();
+			ProcessAuthStep();
 
-			if (getAuthStep() == FC_AUTHSTEP_PRECHUNKS) {
-				_Coordinates.X = 100.0;
-				_Coordinates.Y = 35.0;
-				_Coordinates.Z = 100.0;
-				_Coordinates.Stance = 35.0;
-				_Coordinates.OnGround = true;
-				_Coordinates.Pitch = 0.0F;
-				_Coordinates.Yaw = 0.0F;
-
-				sendClientPosition();
-				setAuthStep(FC_AUTHSTEP_SPAWNPOS);
-			}
-
-
-			if (getAuthStep() >= FC_AUTHSTEP_SPAWNPOS) {
-				_ChunkProvider.HandleMovement(_Coordinates);
-				setAuthStep(FC_AUTHSTEP_INVENTORY);
-			}
 
 			iPacket = _Network.readByte();
-
 			cout<<"Package recovered:"<<std::hex<<int(iPacket)<<"\n";
 
 			switch (iPacket) {
@@ -240,45 +215,81 @@ void PlayerThread::run() {
 				cout<<_sName<<" joined ("<<_sIP<<") EID:"<<_iEntityID<<endl;
 				break;
 			case 0xa: //Player
-				if (getAuthStep() < FC_AUTHSTEP_PRECHUNKS) {
+
+				switch(isLoginDone()) {
+				case true:
+					_Coordinates.OnGround = _Network.readBool();
+
+					if (!_ChunkProvider.isFullyCircleSpawned()) {
+						_ChunkProvider.HandleMovement(_Coordinates);
+					}
+
+					break;
+				case false:
 					_Network.read(1);
-					continue;
+					break;
 				}
 
-				_Coordinates.OnGround = _Network.readBool();
 				break;
-			case 0xb:
-				if (getAuthStep() < FC_AUTHSTEP_PRECHUNKS) {
+			case 0xb: //Coords & OnGround
+
+
+				switch(isLoginDone()) {
+				case true:
+					/*_Coordinates.X = _Network.readDouble();
+					_Coordinates.Y = _Network.readDouble();
+					_Coordinates.Stance = _Network.readDouble();
+					_Coordinates.Z = _Network.readDouble();
+					_Coordinates.OnGround = _Network.readBool();
+					*/
 					_Network.read(33);
-					continue;
+					_ChunkProvider.HandleMovement(_Coordinates);
+					break;
+				case false:
+					cout<<"authstep too low"<<"\n";
+					_Network.read(33);
+					break;
 				}
-				_Coordinates.X = _Network.readDouble();
-				_Coordinates.Y = _Network.readDouble();
-				_Coordinates.Stance = _Network.readDouble();
-				_Coordinates.Z = _Network.readDouble();
-				_Coordinates.OnGround = _Network.readBool();
+
 				break;
-			case 0xc:
-				if (getAuthStep() < FC_AUTHSTEP_PRECHUNKS) {
+			case 0xc: //Look & OnGround
+				switch(isLoginDone()) {
+				case true:
+					_Coordinates.Yaw = _Network.readFloat();
+					_Coordinates.Pitch = _Network.readFloat();
+					_Coordinates.OnGround = _Network.readBool();
+
+					if (!_ChunkProvider.isFullyCircleSpawned()) {
+						_ChunkProvider.HandleMovement(_Coordinates);
+					}
+					break;
+				case false:
+					cout<<"authstep too low"<<"\n";
 					_Network.read(9);
-					continue;
+					break;
 				}
-				_Coordinates.Yaw = _Network.readFloat();
-				_Coordinates.Pitch = _Network.readFloat();
-				_Coordinates.OnGround = _Network.readBool();
+
+
 				break;
-			case 0xd: //Client Pos Update
-				if (getAuthStep() < FC_AUTHSTEP_PRECHUNKS) {
+			case 0xd: //Full Client position
+				switch(isLoginDone()) {
+				case true:
+					/*_Coordinates.X = _Network.readDouble();
+					_Coordinates.Y = _Network.readDouble();
+					_Coordinates.Stance = _Network.readDouble();
+					_Coordinates.Z = _Network.readDouble();
+					_Coordinates.Yaw = _Network.readFloat();
+					_Coordinates.Pitch = _Network.readFloat();
+					_Coordinates.OnGround = _Network.readBool();
+					*/
 					_Network.read(41);
-					continue;
+					_ChunkProvider.HandleMovement(_Coordinates);
+					break;
+				case false:
+					cout<<"authstep too low"<<"\n";
+					_Network.read(41);
+					break;
 				}
-				_Coordinates.X = _Network.readDouble();
-				_Coordinates.Y = _Network.readDouble();
-				_Coordinates.Stance = _Network.readDouble();
-				_Coordinates.Z = _Network.readDouble();
-				_Coordinates.Yaw = _Network.readFloat();
-				_Coordinates.Pitch = _Network.readFloat();
-				_Coordinates.OnGround = _Network.readBool();
 				break;
 			case 0xFE: //Server List Ping
 				_sTemp.clear();
@@ -452,6 +463,14 @@ char PlayerThread::getAuthStep() {
 	return _iLoginProgress;
 }
 
+bool PlayerThread::isLoginDone() {
+	if (getAuthStep() == FC_AUTHSTEP_DONE) {
+		return true;
+	}else{
+		return false;
+	}
+}
+
 void PlayerThread::sendTime() {
 	if (getAuthStep() < FC_AUTHSTEP_TIME) {return;}
 	if (getAuthStep() == FC_AUTHSTEP_TIME) { //Increment authstep
@@ -499,4 +518,98 @@ void PlayerThread::sendClientPosition() {
 	_Network.addFloat(_Coordinates.Pitch);
 	_Network.addBool(_Coordinates.OnGround);
 	_Network.Flush();
+}
+
+void PlayerThread::sendKeepAlive() {
+	if (_TimeJobs.LastKeepAliveSend + FC_INTERVAL_KEEPACTIVE == getTicks()) { //Send new keep alive
+		_TimeJobs.LastKeepAliveSend = getTicks();
+
+		_Network.addByte(0x0);
+		_Network.addInt(Random::Int());
+		_Network.Flush();
+	}
+
+}
+
+void PlayerThread::UpdateHealth(short iHealth,short iFood,float nSaturation) {
+	//Send Health
+
+	if (iHealth > 20) {
+		iHealth = 20;
+	}
+
+	if (iHealth < 0) {
+		iHealth = 0;
+	}
+
+	if (iFood > 20) {
+		iFood = 20;
+	}
+
+	if (iFood < 0) {
+		iFood = 0;
+	}
+
+	if (nSaturation > 5.0F) {
+		nSaturation = 5.0F;
+	}
+
+	if (nSaturation < 0.0F) {
+		nSaturation = 0.0F;
+	}
+
+
+	_iHealth = iHealth;
+	_iFood = iFood;
+	_nSaturation = nSaturation;
+
+	_Network.addByte(0x8);
+	_Network.addShort(_iHealth);
+	_Network.addShort(_iFood);
+	_Network.addFloat(_nSaturation);
+	_Network.Flush();
+}
+
+
+bool PlayerThread::isSpawned() {
+	if (getAuthStep() >= FC_AUTHSTEP_PRECHUNKS) {
+		return true;
+	}else{
+		return false;
+	}
+}
+
+void PlayerThread::ProcessAuthStep() {
+
+	switch (getAuthStep()) {
+	case FC_AUTHSTEP_PRECHUNKS:
+		//Set start coordinates
+		_Coordinates.X = 100.0;
+		_Coordinates.Y = 35.0;
+		_Coordinates.Z = 100.0;
+		_Coordinates.Stance = 35.0;
+		_Coordinates.OnGround = false;
+		_Coordinates.Pitch = 0.0F;
+		_Coordinates.Yaw = 0.0F;
+
+		_ChunkProvider.HandleMovement(_Coordinates); //Send first chunk
+
+		setAuthStep(FC_AUTHSTEP_SPAWNPOS);
+		break;
+	case FC_AUTHSTEP_SPAWNPOS:
+		//Send spawnpos & Health
+		_Network.addByte(0x6);
+		_Network.addInt(0); //X
+		_Network.addInt(0); // Y
+		_Network.addInt(0); // Z 
+		_Network.Flush();
+
+		UpdateHealth(20,20,5.0F);
+		setAuthStep(FC_AUTHSTEP_INVENTORY);
+		break;
+	case FC_AUTHSTEP_INVENTORY:
+		sendClientPosition(); //Login completly done
+		setAuthStep(FC_AUTHSTEP_DONE);
+		break;
+	}
 }
