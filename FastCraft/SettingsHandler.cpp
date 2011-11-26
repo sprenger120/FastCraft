@@ -188,7 +188,7 @@ int SettingsHandler::getMaxClients() {
 }
 
 string SettingsHandler::getSupportedMCVersion() {
-	return "1.8.1";
+	return "1.0.0";
 }
 
 string SettingsHandler::getFastCraftVersion() {
@@ -196,7 +196,7 @@ string SettingsHandler::getFastCraftVersion() {
 }
 
 int SettingsHandler::getSupportedProtocolVersion() {
-	return 17; //Minecraft 1.8.1
+	return 22;
 }
 
 string SettingsHandler::getServerDescription() {
