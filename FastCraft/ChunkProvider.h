@@ -17,30 +17,50 @@ GNU General Public License for more details.
 #define _FASTCRAFTHEADER_CHUNKPROVIDER
 
 #include "Structs.h"
+#include "ChunkSet.h"
 #include <vector>
+#include <sstream>
+#include <Poco/DeflatingStream.h>
 
 class PlayerThread;
+class NetworkIO;
+class ChunkRoot;
+
+using std::vector;
 
 class ChunkProvider {
 private:
-	std::vector<MapChunk*> _vMapChunks;
-	int _iAllocatedChunkCount;
+	vector<ChunkCoordinates> _vSpawnedChunks;
+	ChunkCoordinates _PlayerCoordinates;
+
+	NetworkIO* _pNetwork;
+	ChunkRoot* _pChunkRoot;
+	ChunkSet _ChunkSet;
+
+	//Packing
+	std::stringstream _stringStrm;
+	Poco::DeflatingOutputStream _deflatingStrm;
+
+	const int _ViewDistance; //chunk count to each direction
+	bool _fConnected;
+	bool _fNewConnection;
 public:
-	ChunkProvider(int); //Chunk Count 
+	ChunkProvider(ChunkRoot*,NetworkIO*);
 	~ChunkProvider();
 
-	void generateMap(
-		int, //From X
-		int, //From Z
-		int, //To X
-		int  //To Z
-		);
+	void newConnection();
+	void Disconnect();
 
-
-	void sendChunks(PlayerThread*); 
-private:
-	void ClearChunk(int);
-	int getChunkIndexByCoords(int,int); //Returns -1 if chunk wasnt found
-	int getFreeChunkSlot(); //Returns -1 if no chunk slots are free
+	void HandleMovement(const EntityCoordinates&);
+	bool isFullyCircleSpawned();
+public: 
+	void sendChunk(MapChunk*); //Sends packed chunk (no prechunk will be send)
+	void sendPreChunk_Spawn(int,int);
+	void sendPreChunk_Despawn(int,int);
+	
+	bool isConnected();
+	bool isSpawned(ChunkCoordinates);
+	bool CheckChunkSet();
+	void CheckSpawnedChunkList();
 };
 #endif

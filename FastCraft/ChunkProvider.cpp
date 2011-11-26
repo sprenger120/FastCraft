@@ -14,16 +14,14 @@ GNU General Public License for more details.
 */
 
 #include "ChunkProvider.h"
-#include <iostream>
-#include <Poco/Stopwatch.h>
 #include <Poco/Exception.h>
 #include <Poco/DeflatingStream.h>
-#include <sstream>
-#include <ostream>
-#include "ChunkTerraEditor.h"
+#include <Poco/Exception.h>
 #include "Structs.h"
 #include "NetworkIO.h"
 #include "PlayerThread.h"
+#include "ChunkMath.h"
+#include "ChunkRoot.h"
 
 using std::cout;
 using std::endl;
@@ -31,179 +29,205 @@ using std::memcpy;
 using std::stringstream;
 using Poco::DeflatingOutputStream;
 
-ChunkProvider::ChunkProvider(int iMaxChunks) {
-	if (iMaxChunks <= 0) {
-		throw Poco::RuntimeException("Illegal chunk count");
-		return;
-	}
 
-	_iAllocatedChunkCount = iMaxChunks;
-	_vMapChunks.resize(iMaxChunks);
-
-	//Allocate memory
-	for (int x=0;x<=iMaxChunks-1;x++) {
-		_vMapChunks[x] = new MapChunk;	
-		_vMapChunks[x]->Empty = true;
-	}
+ChunkProvider::ChunkProvider(ChunkRoot* pChunkRoot,NetworkIO* pNetworkIO) :
+_vSpawnedChunks(0),
+	_ViewDistance(10),
+	_ChunkSet(10),
+	_stringStrm(),
+	_deflatingStrm(_stringStrm,Poco::DeflatingStreamBuf::STREAM_ZLIB,-1)
+{
+	_pChunkRoot = pChunkRoot;
+	_pNetwork = pNetworkIO;
+	_fNewConnection = false;
+	_fConnected = false;
 }
 
 ChunkProvider::~ChunkProvider() {
-	//release memory
-	for (int x=0;x<=_iAllocatedChunkCount-1;x++) {
-		delete (_vMapChunks[x]);
-	}
+	_vSpawnedChunks.clear();
 }
 
-void ChunkProvider::generateMap(int FromX,int FromZ,int ToX,int ToZ) {
-	Poco::Stopwatch Timer;
-	Timer.start();
-	int iCount=0;
-	int index=0;
-	Block Block;
+void ChunkProvider::newConnection() {
+	if (_fConnected) {
+		throw Poco::RuntimeException("ChunkProvider: Already connected");
+	}
+	_fConnected = true;
+	_fNewConnection = true;
+	_ChunkSet.clear();
+}
 
-	if (FromX > ToX || FromZ > ToZ) {
-		throw Poco::RuntimeException("Illegal Arguments, From > To");
-		return;
+void ChunkProvider::Disconnect() {
+	_fConnected = false;
+	_vSpawnedChunks.clear();
+}
+
+void ChunkProvider::HandleMovement(const EntityCoordinates& PlayerCoordinates) {
+	if (!isConnected()) { return; }
+
+	_PlayerCoordinates = ChunkMath::toChunkCoords(PlayerCoordinates);
+
+
+	if (_fNewConnection) {
+		_fNewConnection = false;
+		_ChunkSet.regenerate(_PlayerCoordinates);
 	}
 
-	for(int chunkX = FromX;chunkX<=ToX;chunkX++) {
-		for (int chunkZ = FromZ;chunkZ<=ToZ;chunkZ++) {
-			index = getFreeChunkSlot();
-			if (index == -1) {
-				throw Poco::RuntimeException("Chunk slots are full!");
-				return;
+
+
+	if (isFullyCircleSpawned()) { //Full circle is spawned
+		if (_ChunkSet.isUp2Date(_PlayerCoordinates)) {
+			//Player doesn't leave it's chunk and all chunks were delivered
+			return;
+		}else{
+			//All chunks were delivered but  the player leaved it's chunk
+			_ChunkSet.regenerate(_PlayerCoordinates);
+			CheckSpawnedChunkList();
+			if (!CheckChunkSet()) {
+				throw Poco::RuntimeException("Chunk delivering failed");
 			}
-
-			//cout<<"Generating chunk X:"<<chunkX<<" Z:"<<chunkZ<<"\n";
-
-			_vMapChunks[index]->X = chunkX;
-			_vMapChunks[index]->Z = chunkZ;
-			_vMapChunks[index]->Empty = false;
-
-			ClearChunk(index);
-
-			Block.BlockID = 7;
-
-			try {
-
-				ChunkTerraEditor::setPlate(_vMapChunks[index],0,Block); //Bedrock 
-
-				Block.BlockID = 2;
-
-				for (short y=1;y<=50;y++) { //Stone
-					ChunkTerraEditor::setPlate(_vMapChunks[index],y,Block);
-				}
-
-			} catch (Poco::RuntimeException& err) {
-				cout<<"***GENERATING ERROR:"<<err.message()<<endl;
-				throw Poco::RuntimeException("Generation failed!");
-				return;
+		}
+	}else {
+		if (_ChunkSet.isUp2Date(_PlayerCoordinates)) {
+			if (!CheckChunkSet()) {
+				throw Poco::RuntimeException("Chunk delivering failed");
 			}
-
-
-			std::memset(_vMapChunks[index]->Metadata,0,FC_CHUNK_NIBBLECOUNT);
-			std::memset(_vMapChunks[index]->BlockLight,0xff,FC_CHUNK_NIBBLECOUNT);
-			std::memset(_vMapChunks[index]->SkyLight,0xff,FC_CHUNK_NIBBLECOUNT);
-
-			iCount++;
-		}
-	}
-
-	Timer.stop();
-	cout<<"Generated "<<iCount<<" chunks in "<<Timer.elapsed() / 1000<<" ms."<<endl;
-}
-
-
-void ChunkProvider::ClearChunk(int Index) {
-	if (Index < 0 || Index > _iAllocatedChunkCount) {return;}
-
-	MapChunk * pAffectedChunk = _vMapChunks[Index];
-
-	for(int x=0;x<=FC_CHUNK_BLOCKCOUNT-1;x++) {
-		pAffectedChunk->Blocks[x] = 0;
-	}
-}
-
-int ChunkProvider::getChunkIndexByCoords(int X,int Z) {
-	for (int x=0;x<=_iAllocatedChunkCount-1;x++) {
-		if (_vMapChunks[x]->X == X && _vMapChunks[x]->Z == Z) {
-			return x;
-		}
-	}
-	return -1;
-}
-
-int ChunkProvider::getFreeChunkSlot() {
-	for (int x=0;x<=_iAllocatedChunkCount-1;x++) {
-		if (_vMapChunks[x]->Empty == true) {
-			return x;
-		}
-	}
-	return -1;
-}
-
-void ChunkProvider::sendChunks(PlayerThread* pPlayerThread) {
-	int index = 0;
-	NetworkIO& rNetwork = pPlayerThread->getConnection();
-
-	Poco::Stopwatch Timer;
-	Timer.start();
-
-	std::stringstream ss;
-	DeflatingOutputStream defStream(ss,Poco::DeflatingStreamBuf::STREAM_ZLIB,-1);
-
-	int packtime = 0;
-
-	for(int X = 0;X<=20;X++) {
-		for (int Z = 0;Z<=20;Z++) {
-
-			index = getChunkIndexByCoords(X,Z);
-			if (index == -1) {
-				//Generate chunk....
-				throw Poco::RuntimeException("Chunk not found");
+			return;
+		}else{
+			_ChunkSet.regenerate(_PlayerCoordinates);
+			CheckSpawnedChunkList();
+			if (CheckChunkSet()) {
+				throw Poco::RuntimeException("Chunk delivering failed");
 			}
-
-			rNetwork.addByte(0x32);
-			rNetwork.addInt(X);
-			rNetwork.addInt(Z);
-			rNetwork.addBool(1);
-			rNetwork.Flush();
-
-
-			rNetwork.addByte(0x33);
-			rNetwork.addInt(X<<4);
-			rNetwork.addShort(0);
-			rNetwork.addInt(Z<<4);
-			rNetwork.addByte(15);
-			rNetwork.addByte(127);
-			rNetwork.addByte(15);
-
-			//deflate
-			Poco::Stopwatch sw;
-			sw.start();
-			defStream.write(_vMapChunks[index]->Blocks,FC_CHUNK_BLOCKCOUNT);
-			defStream.write(_vMapChunks[index]->Metadata,FC_CHUNK_NIBBLECOUNT);
-			defStream.write(_vMapChunks[index]->BlockLight,FC_CHUNK_NIBBLECOUNT);
-			defStream.write(_vMapChunks[index]->SkyLight,FC_CHUNK_NIBBLECOUNT);
-
-			defStream.flush();
-
-			rNetwork.addInt(ss.str().length());
-			rNetwork.Str().append(ss.str());
-
-			
-			ss.clear();
-			defStream.clear();
-
-			sw.stop();
-			packtime += sw.elapsed() /1000;
 		}
+	}
+}
 
+bool ChunkProvider::isFullyCircleSpawned() {
+	return (_vSpawnedChunks.size() >= _ViewDistance*_ViewDistance);
+}
+
+
+void ChunkProvider::sendChunk(MapChunk* pChunk) {
+	//Network Stuff
+
+	if (!isConnected()) {
+		throw Poco::Exception("Not connected");
 	}
 
-	defStream.close();
-	Timer.stop();
+	cout<<"send chunk"<<"\n";
 
-	cout<<"chunk packing time:"<<packtime<<" ms"<<"\n";
-	cout<<"done in:"<<Timer.elapsed()/1000<<" ms"<<endl;
+	sendPreChunk_Spawn(pChunk->X,pChunk->Z);
+
+	_pNetwork->addByte(0x33);
+	_pNetwork->addInt((pChunk->X)<<4);
+	_pNetwork->addShort(0);
+	_pNetwork->addInt((pChunk->Z)<<4);
+	_pNetwork->addByte(15);
+	_pNetwork->addByte(127);
+	_pNetwork->addByte(15);
+
+	//deflate
+	_deflatingStrm.write(pChunk->Blocks,FC_CHUNK_BLOCKCOUNT);
+	_deflatingStrm.write(pChunk->Metadata,FC_CHUNK_NIBBLECOUNT);
+	_deflatingStrm.write(pChunk->BlockLight,FC_CHUNK_NIBBLECOUNT);
+	_deflatingStrm.write(pChunk->SkyLight,FC_CHUNK_NIBBLECOUNT);
+
+	_deflatingStrm.flush();
+
+	_pNetwork->addInt(_stringStrm.str().length());
+	_pNetwork->Str().append(_stringStrm.str());
+
+
+	_stringStrm.clear();
+	_deflatingStrm.clear();
+
+	_pNetwork->Flush();
+
+	//Add to spawned list
+	ChunkCoordinates Coord;
+	Coord.X = pChunk->X;
+	Coord.Z = pChunk->Z;
+
+	_vSpawnedChunks.push_back(Coord);
+}
+
+
+void ChunkProvider::sendPreChunk_Spawn(int X,int Z){
+	if (!isConnected()) {
+		throw Poco::Exception("Not connected");
+	}
+
+	_pNetwork->addByte(0x32);
+	_pNetwork->addInt(X);
+	_pNetwork->addInt(Z);
+	_pNetwork->addBool(true);
+	_pNetwork->Flush();
+}
+
+void ChunkProvider::sendPreChunk_Despawn(int X,int Z){
+	if (!isConnected()) {
+		throw Poco::Exception("Not connected");
+	}
+
+	cout<<"despawn chunk"<<"\n";
+
+	_pNetwork->addByte(0x32);
+	_pNetwork->addInt(X);
+	_pNetwork->addInt(Z);
+	_pNetwork->addBool(false);
+	_pNetwork->Flush();
+
+
+	//Remove from spawned list
+	for (int x=0;x<=_vSpawnedChunks.size()-1;x++) {
+		if(_vSpawnedChunks[x].X == X && _vSpawnedChunks[x].Z == Z) {
+			_vSpawnedChunks.erase(_vSpawnedChunks.begin()+x);
+			break;
+		}
+	}
+}
+
+bool ChunkProvider::isConnected() {
+	return _fConnected;
+}
+
+bool ChunkProvider::isSpawned(ChunkCoordinates coord) {
+	if(_vSpawnedChunks.size() == 0 ) {return false;}
+	for ( int x=0;x<=_vSpawnedChunks.size()-1;x++) {
+		if (_vSpawnedChunks[x].X == coord.X && _vSpawnedChunks[x].Z == coord.Z) {
+			return true;
+		}
+	}
+	return false;
+}
+
+bool ChunkProvider::CheckChunkSet() {
+	//Check chunk set
+
+	try {
+		//Check chunk who player stands on
+		if ( ! isSpawned(_PlayerCoordinates)) {
+			sendChunk(_pChunkRoot->getChunk(_PlayerCoordinates.X,_PlayerCoordinates.Z));
+			return true;
+		}
+
+		for (int x=0;x<=_ViewDistance*_ViewDistance -1;x++) {
+			if ( ! isSpawned(_ChunkSet.at(x))) {
+				sendChunk(_pChunkRoot->getChunk( _ChunkSet.at(x).X,_ChunkSet.at(x).Z));
+				return true;
+			}
+		}
+	}catch(Poco::RuntimeException) {
+		return false;
+	}
+	return false;
+}
+
+
+void ChunkProvider::CheckSpawnedChunkList() {
+	for (int x=0;x<=_vSpawnedChunks.size()-1;x++) {
+		if(  ChunkMath::Distance(_PlayerCoordinates,_vSpawnedChunks[x]) > _ViewDistance) {
+			sendPreChunk_Despawn(_vSpawnedChunks[x].X,_vSpawnedChunks[x].Z);
+		}
+	}
 }
