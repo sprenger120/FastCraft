@@ -119,14 +119,14 @@ char NetworkIO::readByte() {
 
 bool NetworkIO::readBool() {
 	char iByte;
-	
+
 	try {
 		iByte = readByte();
 	}catch(RuntimeException) {
 		throw RuntimeException("Connection aborted");
 	}
-	
-	
+
+
 	if (iByte == 0) {
 		return false;
 	}else{
@@ -140,7 +140,7 @@ short NetworkIO::readShort() {
 	}
 
 	return short(_charBuffer[0])<<8 | 
-		   short(_charBuffer[1]);
+		short(_charBuffer[1]);
 }
 
 int NetworkIO::readInt() {
@@ -149,9 +149,9 @@ int NetworkIO::readInt() {
 	}
 
 	return int(_charBuffer[0])<<24 | 
-		   int(_charBuffer[1])<<16 |
-		   int(_charBuffer[2])<<8 |
-		   int(_charBuffer[3]);
+		int(_charBuffer[1])<<16 |
+		int(_charBuffer[2])<<8 |
+		int(_charBuffer[3]);
 }
 
 
@@ -160,44 +160,40 @@ long long NetworkIO::readInt64() {
 		throw RuntimeException("Connection aborted");
 	}
 
-	return long long(_charBuffer[0])<<54 | 
-		   long long(_charBuffer[1])<<48 |
-		   long long(_charBuffer[2])<<40 |
-		   long long(_charBuffer[3])<<32 |
-		   long long(_charBuffer[4])<<24 |
-		   long long(_charBuffer[5])<<16 |
-		   long long(_charBuffer[6])<<8  |
-		   long long(_charBuffer[7]);
+	long long iVal;
+	memcpy(&iVal,_charBuffer,8);
+
+	return Poco::ByteOrder::fromBigEndian(iVal);
 }
 
 float NetworkIO::readFloat() {
 	int iInt;
-	
+
 	try {
 		iInt = readInt();
 	}catch(RuntimeException) {
 		throw RuntimeException("Connection aborted");
 	}
-	
+
 	float dVal;
+
 	memcpy(&dVal,&iInt,4);
-	
+
 	return dVal;
 }
 
 
 double NetworkIO::readDouble() {
 	long long iInt;
-	
+
 	try {
 		iInt = readInt64();
 	}catch(RuntimeException) {
 		throw RuntimeException("Connection aborted");
 	}
-	
+
 	double dVal;
 	memcpy(&dVal,&iInt,8);
-	
 	return dVal;
 }
 
@@ -207,7 +203,7 @@ string NetworkIO::readString() {
 
 	try {
 		iDataLenght = readShort();
-		
+
 		for(int x = 0;x<=iDataLenght-1;x++) {
 			readByte();
 			sOutput.append(1,readByte());
@@ -228,7 +224,7 @@ void NetworkIO::read(int iLenght) {
 bool NetworkIO::exceptionSaveReading(int iLenght) {
 	int iReadedLenght = 0;
 	bool fUnderflow = false;
-	
+
 	if (iLenght == 0) { 
 		std::cout<<"NETWORKIO: recv lenght zero"<<"\n";
 		return true;
@@ -242,7 +238,7 @@ bool NetworkIO::exceptionSaveReading(int iLenght) {
 	if (iLenght > 4096) {
 		return false;
 	}
-	
+
 
 	while ( iReadedLenght < iLenght) {
 		try {
@@ -273,7 +269,7 @@ bool NetworkIO::exceptionSaveReading(int iLenght) {
 		std::cout<<"r:"<<iReadedLenght<<" l:"<<iLenght<<"\n";
 	}
 
-	
+
 	_iReadTraffic += iLenght;
 	return true;
 }
