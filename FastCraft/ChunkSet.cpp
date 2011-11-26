@@ -16,10 +16,13 @@ GNU General Public License for more details.
 #include "ChunkSet.h"
 #include <Poco/Exception.h>
 
+#include <iostream>
+using std::cout;
+
 ChunkSet::ChunkSet(int iViewDistance) :
 _vChunkSet(0)
 {
-	if (_iViewDistance <= 0) {
+	if (iViewDistance <= 0) {
 		throw Poco::RuntimeException("Illegal View distance");
 	}
 
@@ -36,22 +39,24 @@ void ChunkSet::regenerate(ChunkCoordinates playerCoordinates) {
 	ChunkCoordinates SquareStart,SquareEnd;
 	_fClear = false;
 
+	std::cout<<"regen"<<"\n";
 	SquareStart.X = playerCoordinates.X - (_iViewDistance/2);
 	SquareStart.Z = playerCoordinates.Z - (_iViewDistance/2);
 
-	SquareEnd.X = playerCoordinates.X - (_iViewDistance/2);
-	SquareEnd.Z = playerCoordinates.Z - (_iViewDistance/2);
+	SquareEnd.X = SquareStart.X + (_iViewDistance/2);
+	SquareEnd.Z = SquareStart.Z + (_iViewDistance/2);
 
 	int index=0;
-	for ( int X = SquareStart.X;X<=SquareEnd.X;X++) {
-		for ( int Z = SquareStart.Z;Z<=SquareEnd.Z;Z++) {
+	for ( int X = SquareStart.X;X<=SquareEnd.X-1;X++) {
+		for ( int Z = SquareStart.Z;Z<=SquareEnd.Z-1;Z++) {
 			_vChunkSet[index].X = X;
 			_vChunkSet[index].Z = Z;
+			//cout<<index<<"\n";
 			index++;
 		}
 	}
 
-
+	_PlayerCoordinates = playerCoordinates;
 }
 
 bool ChunkSet::isUp2Date(ChunkCoordinates playerCoordinates) {
@@ -68,4 +73,12 @@ void ChunkSet::clear() {
 
 bool ChunkSet::isEmpty() {
 	return _fClear;
+}
+
+ChunkCoordinates ChunkSet::at(int index) {
+	if ( index > (_vChunkSet.size() -1) || index < 0 ) {
+		throw Poco::RuntimeException("Invalid index");
+	}
+
+	return _vChunkSet[index];
 }

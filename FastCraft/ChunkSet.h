@@ -36,5 +36,7 @@ public:
 
 	void clear();
 	bool isEmpty();
+
+	ChunkCoordinates at(int);
 };
 #endif
