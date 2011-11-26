@@ -117,7 +117,7 @@ _sServerDescription(""),
 			_fSpawnHostileAnimals  = pConf->getBool("SpawnHostileMobs");
 
 			//Player
-			_iViewDistance = 	pConf->getInt("ViewDistance");
+			_iViewDistance = pConf->getInt("ViewDistance");
 			_fPVP = pConf->getBool("PVP");
 		} catch(Poco::NotFoundException& err) {
 			
@@ -165,10 +165,15 @@ _sServerDescription(""),
 		}
 
 		//View distance
-		if (_iViewDistance < 1 || _iViewDistance > 100) {
+		if (_iViewDistance < 1 || _iViewDistance > 30) {
 			cout<<"***Config ERROR: Illegal view distance. Falling back to 10!"<<endl;
 			_iViewDistance = 10;
 		}
+
+		if (_iViewDistance%2) { 
+			_iViewDistance++;
+		}
+
 	}
 
 	//MapInfo
