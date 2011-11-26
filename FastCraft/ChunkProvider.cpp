@@ -176,8 +176,6 @@ void ChunkProvider::sendPreChunk_Despawn(int X,int Z){
 		throw Poco::Exception("Not connected");
 	}
 
-	cout<<"despawn chunk"<<"\n";
-
 	_pNetwork->addByte(0x32);
 	_pNetwork->addInt(X);
 	_pNetwork->addInt(Z);
@@ -211,11 +209,17 @@ bool ChunkProvider::isSpawned(ChunkCoordinates coord) {
 bool ChunkProvider::CheckChunkSet() {
 	//Check chunk set
 	int iSentChunks=0;
+	MapChunk* pChunk;
 
 	try {
 		//Check chunk who player stands on
 		if ( ! isSpawned(_PlayerCoordinates)) {
-			sendChunk(_pChunkRoot->getChunk(_PlayerCoordinates.X,_PlayerCoordinates.Z));
+			pChunk = _pChunkRoot->getChunk(_PlayerCoordinates.X,_PlayerCoordinates.Z);
+			if (pChunk==NULL) {
+				//Todo: end of world reached message in players chat
+				return true;
+			}
+			sendChunk(pChunk);
 			iSentChunks++;
 			if (iSentChunks==3) {
 				return true;
@@ -224,7 +228,12 @@ bool ChunkProvider::CheckChunkSet() {
 
 		for (int x=0;x<=_ChunkSet.CalculateChunkCount()-1;x++) {
 			if ( ! isSpawned(_ChunkSet.at(x))) {
-				sendChunk(_pChunkRoot->getChunk( _ChunkSet.at(x).X,_ChunkSet.at(x).Z));
+				pChunk = _pChunkRoot->getChunk( _ChunkSet.at(x).X,_ChunkSet.at(x).Z);
+				if (pChunk==NULL) {
+					//Todo: end of world reached message in players chat
+					return true;
+				}
+				sendChunk(pChunk);
 				iSentChunks++;
 				if (iSentChunks==3) {
 					return true;
