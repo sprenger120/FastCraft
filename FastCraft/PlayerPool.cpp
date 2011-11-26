@@ -59,6 +59,11 @@ PlayerPool::~PlayerPool() {
 
 
 void PlayerPool::run() {
+	//Create Servertime thread
+	Poco::Thread threadServerTime;
+	ServerTime ServerTime;
+	threadServerTime.start(ServerTime);
+
 	while (1) {
 		Thread::sleep(1000);
 	}
