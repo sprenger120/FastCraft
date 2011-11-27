@@ -40,13 +40,12 @@ NetworkIO::~NetworkIO() {
 	_sBuffer.clear();
 }
 
-int NetworkIO::_iReadTraffic  = 0;
-int NetworkIO::_iWriteTraffic = 0;
+unsigned long long NetworkIO::_iReadTraffic  = 0;
+unsigned long long NetworkIO::_iWriteTraffic = 0;
 
 
 void NetworkIO::addByte(char Byte) {
 	_sBuffer.append<char>(1,Byte);
-	_iWriteTraffic++;
 }
 
 void NetworkIO::addBool(bool Bool) {
@@ -55,7 +54,6 @@ void NetworkIO::addBool(bool Bool) {
 	}else{
 		_sBuffer.append<char>(1,0);
 	}
-	_iWriteTraffic++;
 }
 
 void NetworkIO::addShort(short Short) {
@@ -269,7 +267,6 @@ bool NetworkIO::exceptionSaveReading(int iLenght) {
 		std::cout<<"r:"<<iReadedLenght<<" l:"<<iLenght<<"\n";
 	}
 
-
 	_iReadTraffic += iLenght;
 	return true;
 }
@@ -300,15 +297,18 @@ void NetworkIO::newConnection(StreamSocket& Sock) {
 	_Connection.setBlocking(true);
 }
 
-int NetworkIO::getReadTraffic() {
+unsigned long long NetworkIO::getReadTraffic() {
 	return _iReadTraffic;
 }
 
-int NetworkIO::getWriteTraffic() {
+unsigned long long NetworkIO::getWriteTraffic() {
 	return _iWriteTraffic;
 }
 
-int NetworkIO::getIOTraffic() {
+unsigned long long NetworkIO::getIOTraffic() {
+	if (_iReadTraffic < 0 || _iWriteTraffic < 0) {
+		std::cout<<"";
+	}
 	return _iReadTraffic + _iWriteTraffic;
 }
 

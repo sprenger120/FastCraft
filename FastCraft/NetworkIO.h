@@ -38,8 +38,8 @@ private:
 	bool _fConnected;
 	const int _iTimeout;
 
-	static int _iReadTraffic;
-	static int _iWriteTraffic;
+	static unsigned long long _iReadTraffic;
+	static unsigned long long _iWriteTraffic;
 public:
 	NetworkIO(std::queue<QueueJob>*); //Init NetworkIO without connection
 	~NetworkIO();
@@ -73,9 +73,9 @@ public:
 	void newConnection(StreamSocket&);
 
 	//Traffic
-	static int getReadTraffic();
-	static int getWriteTraffic();
-	static int getIOTraffic();
+	static unsigned long long getReadTraffic();
+	static unsigned long long getWriteTraffic();
+	static unsigned long long getIOTraffic();
 
 	//Special
 	string& Str(); //Returns a reference of the internal buffer
