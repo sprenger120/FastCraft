@@ -306,12 +306,21 @@ unsigned long long NetworkIO::getWriteTraffic() {
 }
 
 unsigned long long NetworkIO::getIOTraffic() {
-	if (_iReadTraffic < 0 || _iWriteTraffic < 0) {
-		std::cout<<"";
-	}
 	return _iReadTraffic + _iWriteTraffic;
 }
 
 string& NetworkIO::Str() {
 	return _sBuffer;
+}
+
+void NetworkIO::packString(string& rString,string Input) {
+	short iLenght = Input.size();
+	
+	rString.append<char>(1, char(iLenght>>8)); 
+	rString.append<char>(1, char(iLenght));
+	
+	for(int x = 0;x<=Input.length()-1;x++) {
+		rString.append<char>(1,0);
+		rString.append(1,Input.at(x));
+	}
 }

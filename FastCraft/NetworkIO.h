@@ -72,6 +72,9 @@ public:
 	void closeConnection();
 	void newConnection(StreamSocket&);
 
+	//StringPacking
+	static void packString(string&,string);
+
 	//Traffic
 	static unsigned long long getReadTraffic();
 	static unsigned long long getWriteTraffic();
