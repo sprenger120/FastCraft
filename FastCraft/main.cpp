@@ -73,11 +73,12 @@ int main() {
 
 	while (1) {		
 		sTemp.clear();
-		Poco::NumberFormatter::append(sTemp,double(NetworkIO::getIOTraffic()) / 1024.0 / 1024.0,4);
+		Poco::NumberFormatter::append(sTemp,NetworkIO::getIOTraffic() / 1024 / 1024);
 		sTemp.append(" MB | Player: ");
 		Poco::NumberFormatter::append(sTemp,PlayerThread::getConnectedPlayers());
 		sTemp.append("/");
 		Poco::NumberFormatter::append(sTemp,pSettingHandler->getMaxClients());
+		sTemp.append(" | Time: " + ServerTime::getTimeFormated());
 
 		sConsole.assign(L"Fastcraft | IO: " + s2ws(sTemp));
 		SetConsoleTitle(sConsole.c_str());
