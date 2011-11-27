@@ -109,6 +109,7 @@ public:
 	string getNickname(); //Gets actual Username thats shown in chat
 	string getIP(); //Returns actual IP of player
 	NetworkIO& getConnection();
+	EntityCoordinates getCoordinates();
 
 	//Queue
 	void appendQueue(QueueJob&); //Adds a job for the sending queue

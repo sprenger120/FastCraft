@@ -20,6 +20,7 @@ GNU General Public License for more details.
 #define _FASTCRAFTHEADER_PLAYERPOOL
 #include <iostream>
 #include <vector>
+#include <queue>
 #include <Poco/Net/StreamSocket.h>
 #include <Poco/ThreadPool.h>
 #include <Poco/Runnable.h>
@@ -29,8 +30,17 @@ GNU General Public License for more details.
 class SettingsHandler;
 class PlayerThread;
 class ChunkRoot;
+struct QueueJob;
 
 using std::vector;
+using std::string;
+using std::queue;
+
+struct ChatEntry {
+	std::string Message;
+	int X;
+	int Z;
+};
 
 class PlayerPool : public Poco::Runnable {
 private:
@@ -38,6 +48,8 @@ private:
 	Poco::ThreadPool _ThreadPool;
 	ServerTime _ServerTime;
 	vector<PlayerThread*> _vPlayerThreads;
+	queue<ChatEntry> _qChat;
+
 	ChunkRoot* _pChunkRoot;
 public:
 	PlayerPool(SettingsHandler*); //Constructor
@@ -47,7 +59,10 @@ public:
 	
 	bool isAnySlotFree(); //Returns true if there is any free slot
 	void Assign(Poco::Net::StreamSocket&); //Assigns a connection to a free thread
+
+	void Chat(string,PlayerThread*,bool = true);
 private:
 	int getFreeSlot(); //Returns -1 if there is no free slot
+	void sendMessageToAll(string&);
 };
 #endif

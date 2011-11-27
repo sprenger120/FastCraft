@@ -190,6 +190,7 @@ void PlayerThread::run() {
 
 				setAuthStep(FC_AUTHSTEP_TIME); 
 				_ChunkProvider.newConnection();
+				_pPoolMaster->Chat(_sName + " joined game",this,false); //false= no <Name> adding
 				break;
 			case 0x2: //Handshake
 				//Check login order
@@ -215,6 +216,10 @@ void PlayerThread::run() {
 				_Network.Flush();
 
 				cout<<_sName<<" joined ("<<_sIP<<") EID:"<<_iEntityID<<endl;
+				break;
+			case 0x3: //Chat
+				_sTemp.assign(_Network.readString());
+				_pPoolMaster->Chat(_sTemp,this);
 				break;
 			case 0xa: //Player
 
@@ -314,6 +319,10 @@ void PlayerThread::run() {
 
 				Kick(_sTemp);
 				break;
+			case 0xFF: //Disconnect
+				_Network.readString();
+				Disconnect();
+				break;
 			default: 
 				Kick("Unknown packet!");
 				cout<<"Unknown packet received! 0x"<<std::hex<<int(iPacket)<<endl;
@@ -335,6 +344,7 @@ void PlayerThread::Disconnect(bool fNoLeaveMessage) {
 	}
 
 	if (isNameSet() && !fNoLeaveMessage) { // If names is known
+		_pPoolMaster->Chat(_sName + " left game",this,false); //false= no <Name> adding
 		cout<<_sName<<" left server."<<"\n"; 
 	}
 
@@ -623,4 +633,8 @@ void PlayerThread::ProcessAuthStep() {
 		setAuthStep(FC_AUTHSTEP_DONE);
 		break;
 	}
+}
+
+EntityCoordinates PlayerThread::getCoordinates() {
+	return _Coordinates;
 }
