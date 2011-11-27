@@ -14,6 +14,7 @@ GNU General Public License for more details.
 */
 #include "ServerTime.h"
 #include <ctime>
+#include <sstream>
 #include <Poco/Thread.h>
 
 using Poco::Thread;
@@ -24,7 +25,7 @@ ServerTime::ServerTime() {
 ServerTime::~ServerTime() {
 }
 
-long long ServerTime::_iServerTime = 0;
+long long ServerTime::_iServerTime = 24000*2;
 
 
 void ServerTime::run() {
@@ -37,6 +38,41 @@ void ServerTime::run() {
 }
 
 
+string ServerTime::getTimeFormated() {
+	int iDay,iHour,iMinute,iYear=0;
+	long long iTicks;
+	double dTicks=0.0;
+	
+	iTicks = _iServerTime;
+
+	
+	//Thx 2 Bukkit Essentials Team for this formula
+	iTicks -= 18000 + 24000; 
+
+
+	iDay = int(iTicks/24000);
+	iTicks -= iDay*24000;
+	iYear = iDay / 356;
+	iDay = iDay%356;
+
+	iHour = iDay%356;
+
+	iHour = int(iTicks/1000);
+	iTicks-= iHour*1000;
+
+	dTicks += double(iTicks);
+
+	iMinute = (int)(dTicks/16.66666);
+	
+	std::stringstream strStrm;
+
+	strStrm<<(iHour<10 && iHour >= 0 ? "0" : "")
+		   <<iHour<<":"
+		   <<(iMinute<10 && iMinute >= 0 ? "0" : "")
+		   <<iMinute;
+
+	return strStrm.str();
+}
 
 long long ServerTime::getTime() {
 	return _iServerTime;

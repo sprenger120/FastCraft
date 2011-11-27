@@ -14,8 +14,10 @@ GNU General Public License for more details.
 */
 #ifndef _FASTCRAFTHEADER_SERVERTIME
 #define _FASTCRAFTHEADER_SERVERTIME
-#include <iostream>
+#include <string>
 #include <Poco/Runnable.h>
+
+using std::string;
 
 class ServerTime : public Poco::Runnable {
 private:
@@ -28,6 +30,7 @@ public:
 
 
 	static long long getTime(); //Returns server Tick Time 
+	static string getTimeFormated();
 };
 
 #endif
