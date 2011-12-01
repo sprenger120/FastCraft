@@ -1,12 +1,17 @@
-FastCraft 
+FastCraft
 ===========
 
-Fastcraft is a SMP Minecraft Server, written in C++.
+Fastcraft is a SMP Minecraft Server, written in C++.  The current version is very unstable and slow, but I will make it running faster ;). 
 
 
-Used Libarys
------------
+**Current Version: 0.0.1 Alpha - Lazy Chicken**
 
+***
 
+Famework: [POCO](http://pocoproject.org/)
 
-<a href="http://pocoproject.org/" target="_blank"><img src="http://a.fsdn.com/con/icons/po/poco@sf.net/poco.png" alt="POCO Logo" title="POCO Logo"/></a>      <a href="http://zlib.net/" target="_blank"><img src="http://upload.wikimedia.org/wikipedia/commons/thumb/5/5f/Zlib_3D_green.png/64px-Zlib_3D_green.png" alt="Zlib Logo" title="POCO Logo"/></a>      <a href="http://www.khronos.org/opencl/" target="_blank"><img src="http://sprenger120.homeip.net/Images/OpenCl.png" alt="openCL Logo" title="openCL Logo"/></a>        
+Libarys: 
+
+* [ZLIB](http://zlib.net/)
+
+* [openCl](http://www.khronos.org/opencl/) (not used right now)
