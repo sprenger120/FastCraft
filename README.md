@@ -8,7 +8,7 @@ Fastcraft is a SMP Minecraft Server, written in C++.  The current version is ver
 
 ***
 
-Famework: [POCO](http://pocoproject.org/)
+Framework: [POCO](http://pocoproject.org/)
 
 Libarys: 
 
