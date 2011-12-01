@@ -1,4 +1,4 @@
-![logo](http://sprenger120.homeip.net/Images/FCLogo.jpg)
+![logo](http://sprenger120.homeip.net/Images/FCLogo.png)
 
 ***
 
