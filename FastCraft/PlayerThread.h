@@ -46,7 +46,7 @@ private:
 	//Player specific data
 	PlayerFlags _Flags; //Burning,eating...
 	EntityCoordinates _Coordinates; //Coordinates
-	string _sName,_sNickName; //Minecraft.net Username and Ingame Nickname
+	string _sName; //Minecraft.net Username and Ingame Nickname
 	string _sIP; //IP
 	int _iEntityID;
 	char _iLoginProgress;
@@ -74,7 +74,6 @@ private:
 	bool _fAssigned;//true if a player is assigned to that thread
 	long long _iThreadTicks;
 	int _iThreadID;
-	static int InstanceCounter;
 	static int PlayerCount;
 
 	//Verification
@@ -104,9 +103,7 @@ public:
 	bool isSpawned(); //Returns true if the playerpool can spawn entitys
 
 	//Accessator
-	int getThreadID(); //Gets Thread ID - used for player instance identification
 	string getUsername(); //Returns Player Name - not the edited nikname
-	string getNickname(); //Gets actual Username thats shown in chat
 	string getIP(); //Returns actual IP of player
 	NetworkIO& getConnection();
 	EntityCoordinates getCoordinates();
@@ -137,8 +134,9 @@ private:
 	long long getTicks();
 	void IncrementTicks();
 
-
+	//Other
 	void generateConnectionHash(); //Generate a new connection hash	
+	template <class T> T fixRange(T,T,T);
 };
 
 #endif
