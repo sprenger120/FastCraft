@@ -19,8 +19,9 @@ GNU General Public License for more details.
 #include "ChunkTerraEditor.h"
 #include <Poco/Stopwatch.h>
 #include <Poco/Exception.h>
+#include <cstring>
 
-using std::memset;
+using std::cout;
 using Poco::Stopwatch;
 using Poco::RuntimeException;
 

@@ -18,9 +18,7 @@ GNU General Public License for more details.
 #include <vector>
 #include <iostream>
 
-using std::cout;
 using std::endl;
-using std::memset;
 using std::vector;
 
 struct MapChunk;

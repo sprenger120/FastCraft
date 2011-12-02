@@ -16,6 +16,9 @@ GNU General Public License for more details.
 #ifndef _FASTCRAFTHEADER_RANDOM
 #define _FASTCRAFTHEADER_RANDOM
 
+typedef unsigned long long _uInt64;
+typedef long long _sInt64;
+
 class Random {
 public:
 	static signed int Int();

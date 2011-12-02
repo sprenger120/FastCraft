@@ -26,6 +26,7 @@ GNU General Public License for more details.
 #include "NetworkIO.h"
 #include "PlayerThread.h"
 #include <Poco/NumberFormatter.h>
+#include <Poco/Platform.h>
 
 using std::cout;
 using std::string;
@@ -33,6 +34,7 @@ using std::wstring;
 using std::endl;
 using Poco::Thread;
 
+/* 
 std::wstring s2ws(const std::string& s)
 {
 	//http://codereview.stackexchange.com/questions/419/converting-between-stdwstring-and-stdstring
@@ -45,7 +47,7 @@ std::wstring s2ws(const std::string& s)
     delete[] buf;
     return r;
 }
-
+*/
 
 int main() {
 	SettingsHandler* pSettingHandler;
@@ -79,9 +81,10 @@ int main() {
 		sTemp.append("/");
 		Poco::NumberFormatter::append(sTemp,pSettingHandler->getMaxClients());
 		sTemp.append(" | Time: " + ServerTime::getTimeFormated());
-
-		sConsole.assign(L"Fastcraft | IO: " + s2ws(sTemp));
+		
+		/*sConsole.assign(L"Fastcraft | IO: " + s2ws(sTemp));
 		SetConsoleTitle(sConsole.c_str());
+		*/
 
 		Thread::sleep(1000);
 	}

@@ -18,25 +18,23 @@ GNU General Public License for more details.
 
 
 long long Random::Int64() {
-	unsigned long long iInt;
+	_uInt64 iInt = 0L;
 	char iShift = rand();
 	
-	iInt = uInt64();
-	
+        iInt += uInt64();
+        
 	if(iShift%2) {
 		iInt <<= 48 + iShift%2; 
 	}
 
-	return signed long long(iInt);
+	return _sInt64(iInt);
 }
 
-unsigned long long Random::uInt64() {
-	unsigned long long iRandVal=0,iVal1=0,iVal2=0;
+_uInt64 Random::uInt64() {
+	_uInt64 iVal1=0L,iVal2=0L;
 
-	iVal1=0;
-	iVal2=0;
-	iVal1 += std::rand();
-	iVal2 += std::rand();
+	iVal1 += rand();
+	iVal2 += rand();
 
 	if (rand()%2) {
 		iVal2 = 0;
@@ -45,7 +43,7 @@ unsigned long long Random::uInt64() {
 	return  (iVal2<<32) | iVal1;
 }
 
-signed int Random::Int() {
+int Random::Int() {
 	unsigned int iInt;
 	char iShift = rand();
 	
@@ -56,7 +54,7 @@ signed int Random::Int() {
 		iInt <<= 16 + iShift%2; 
 	}
 
-	return signed int(iInt);
+	return int(iInt);
 }
 
 unsigned int Random::uInt() {

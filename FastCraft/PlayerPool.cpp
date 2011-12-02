@@ -20,8 +20,10 @@ GNU General Public License for more details.
 #include "Structs.h"
 #include <Poco/Thread.h>
 #include <Poco/Exception.h>
+#include <iostream>
 
 using Poco::Thread;
+using std::cout;
 
 PlayerPool::PlayerPool(SettingsHandler* pSettingsHandler):
 _vPlayerThreads(0),

@@ -20,9 +20,9 @@ GNU General Public License for more details.
 #include <Poco/Exception.h>
 #include <Poco/ByteOrder.h>
 #include <iostream>
+#include <cstring>
 
 using Poco::RuntimeException;
-using std::memcpy;
 
 NetworkIO::NetworkIO(std::queue<QueueJob>* p) : 
 _Connection(),

@@ -39,7 +39,6 @@ void ChunkSet::regenerate(ChunkCoordinates playerCoordinates) {
 	ChunkCoordinates SquareStart,SquareEnd;
 	_fClear = false;
 
-	std::cout<<"regen"<<"\n";
 	SquareStart.X = playerCoordinates.X - (_iViewDistance/2) - 1;
 	SquareStart.Z = playerCoordinates.Z - (_iViewDistance/2) - 1;
 
