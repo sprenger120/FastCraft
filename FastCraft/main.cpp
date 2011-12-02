@@ -14,40 +14,19 @@ GNU General Public License for more details.
 */
 
 #include <iostream>
-#include <string>
+#include <sstream>
 
 #include <Poco/Thread.h>
 #include <Poco/Exception.h>
-#include "NetworkHandler.h"
+#include "AcceptThread.h"
 #include "SettingsHandler.h"
 #include "PlayerThread.h"
-#include "EntityProvider.h"
-#include "ChunkProvider.h"
 #include "NetworkIO.h"
-#include "PlayerThread.h"
-#include <Poco/NumberFormatter.h>
-#include <Poco/Platform.h>
+#include <Poco/StreamCopier.h>
 
 using std::cout;
-using std::string;
-using std::wstring;
-using std::endl;
+using std::stringstream;
 using Poco::Thread;
-
-/* 
-std::wstring s2ws(const std::string& s)
-{
-	//http://codereview.stackexchange.com/questions/419/converting-between-stdwstring-and-stdstring
-    int len;
-    int slength = (int)s.length() + 1;
-    len = MultiByteToWideChar(CP_ACP, 0, s.c_str(), slength, 0, 0); 
-    wchar_t* buf = new wchar_t[len];
-    MultiByteToWideChar(CP_ACP, 0, s.c_str(), slength, buf, len);
-    std::wstring r(buf);
-    delete[] buf;
-    return r;
-}
-*/
 
 int main() {
 	SettingsHandler* pSettingHandler;
@@ -60,36 +39,35 @@ int main() {
 		Thread::sleep(3000);
 		return 1;
 	}
-	cout<<"Running on *:"<<pSettingHandler->getPort()<<" with "<<pSettingHandler->getMaxClients()<<" player slots"<<endl;
+	cout<<"Running on *:"<<pSettingHandler->getPort()<<" with "<<pSettingHandler->getMaxClients()<<" player slots"<<std::endl;
 
 
 	//Start Network Thread
-	NetworkHandler NetworkHandler(pSettingHandler);
-	Thread threadNetworkHandler("NetworkHandler");
-	threadNetworkHandler.start(NetworkHandler);
+	AcceptThread AcceptThread(pSettingHandler);
+	Thread threadAcceptThread("AcceptThread");
+	threadAcceptThread.start(AcceptThread);
 
-	cout<<"Ready."<<"\n"<<endl;
+	cout<<"Ready."<<"\n"<<std::endl;
 
-	std::wstring sConsole(L"");
-	string sTemp("");
-
+	stringstream StrStrm;
 	while (1) {		
-		sTemp.clear();
-		Poco::NumberFormatter::append(sTemp,NetworkIO::getIOTraffic() / 1024 / 1024);
-		sTemp.append(" MB | Player: ");
-		Poco::NumberFormatter::append(sTemp,PlayerThread::getConnectedPlayers());
-		sTemp.append("/");
-		Poco::NumberFormatter::append(sTemp,pSettingHandler->getMaxClients());
-		sTemp.append(" | Time: " + ServerTime::getTimeFormated());
-		
-		/*sConsole.assign(L"Fastcraft | IO: " + s2ws(sTemp));
-		SetConsoleTitle(sConsole.c_str());
-		*/
+		StrStrm.clear();
 
+		StrStrm<<"IO:"
+			   <<NetworkIO::getIOTraffic() / 1024 / 1024
+			   <<" MB | Player: "
+			   <<PlayerThread::getConnectedPlayers()
+			   <<"/"
+			   <<pSettingHandler->getMaxClients()
+			   <<" | Time: "
+			   <<ServerTime::getTimeFormated()
+			   <<"\n";
+		
+
+		Poco::StreamCopier::copyStream(StrStrm,cout);
 		Thread::sleep(1000);
 	}
 
 	delete pSettingHandler;
-
 	return 1;
 }
