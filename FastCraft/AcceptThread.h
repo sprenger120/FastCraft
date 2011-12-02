@@ -13,8 +13,8 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 */
 
-#ifndef _FASTCRAFTHEADER_NETWORKNHANDLER
-#define _FASTCRAFTHEADER_NETWORKNHANDLER
+#ifndef _FASTCRAFTHEADER_ACCEPTHREAD
+#define _FASTCRAFTHEADER_ACCEPTHREAD
 
 #include <iostream>
 #include <Poco/Runnable.h>
@@ -25,7 +25,7 @@ class SettingsHandler;
 
 using std::string;
 
-class NetworkHandler : public Poco::Runnable {
+class AcceptThread : public Poco::Runnable {
 private:
 	short _iPort;
 	string _sIP;
@@ -34,8 +34,8 @@ private:
 	PlayerPool _PlayerPool;
 public:
 	//De- /constructor
-	NetworkHandler(SettingsHandler*);
-	~NetworkHandler();
+	AcceptThread(SettingsHandler*);
+	~AcceptThread();
 
 	virtual void run(); //Thread Main
 };

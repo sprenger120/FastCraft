@@ -12,7 +12,7 @@ but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 */
-#include "NetworkHandler.h" 
+#include "AcceptThread.h" 
 #include "SettingsHandler.h"
 #include <Poco/Net/ServerSocket.h>
 #include <Poco/Net/StreamSocket.h>
@@ -22,7 +22,7 @@ using Poco::Net::StreamSocket;
 using std::cout;
 using Poco::Thread;
 
-NetworkHandler::NetworkHandler(SettingsHandler* Settings):
+AcceptThread::AcceptThread(SettingsHandler* Settings):
 	_PlayerPool(Settings),
 	_ServerFullMsg("")
 {		
@@ -31,10 +31,10 @@ NetworkHandler::NetworkHandler(SettingsHandler* Settings):
 	_ServerFullMsg.append<char>(2,0);
 }
 
-NetworkHandler::~NetworkHandler() {
+AcceptThread::~AcceptThread() {
 }
 
-void NetworkHandler::run() {
+void AcceptThread::run() {
 	Poco::Net::ServerSocket ServerSock(_iPort);
 	Poco::Net::StreamSocket StrmSock;
 	ServerSock.setBlocking(true);
