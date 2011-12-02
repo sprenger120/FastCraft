@@ -68,7 +68,6 @@ void PlayerPool::run() {
 	ChatEntry ChatEntry;
 	
 	std::string sData;
-	int x;
 
 	while (1) {
 		if (_qChat.size() == 0) {
@@ -119,7 +118,7 @@ void PlayerPool::Chat(string String,PlayerThread* pPlayer,bool fAppendName) {
 
 	if (fAppendName) {
 		Entry.Message.assign("<");
-		Entry.Message.append( pPlayer->getNickname());
+		Entry.Message.append( pPlayer->getUsername());
 		Entry.Message.append("> ");
 	}
 	Entry.Message.append(String);
