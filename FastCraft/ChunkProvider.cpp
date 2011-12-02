@@ -33,7 +33,6 @@ using Poco::DeflatingOutputStream;
 ChunkProvider::ChunkProvider(ChunkRoot* pChunkRoot,NetworkIO* pNetworkIO) :
 _vSpawnedChunks(0),
 	_ViewDistance(10),
-	_ChunkSet(10),
 	_stringStrm(),
 	_deflatingStrm(_stringStrm,Poco::DeflatingStreamBuf::STREAM_ZLIB,-1)
 {
@@ -53,7 +52,6 @@ void ChunkProvider::newConnection() {
 	}
 	_fConnected = true;
 	_fNewConnection = true;
-	_ChunkSet.clear();
 }
 
 void ChunkProvider::Disconnect() {
