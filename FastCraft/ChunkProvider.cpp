@@ -64,49 +64,40 @@ void ChunkProvider::Disconnect() {
 void ChunkProvider::HandleMovement(const EntityCoordinates& PlayerCoordinates) {
 	if (!isConnected()) { return; }
 
-	//cout<<"e-player coord  X:"<<PlayerCoordinates.X << " Z:"<<PlayerCoordinates.Z<<"\n";
-
 	_PlayerCoordinates = ChunkMath::toChunkCoords(PlayerCoordinates);
-
 
 	if (_fNewConnection) {
 		_fNewConnection = false;
-		_ChunkSet.regenerate(_PlayerCoordinates);
+		_oldPlayerCoordinates = _PlayerCoordinates;
 	}
 
 
-	//cout<<"player coord  X:"<<_PlayerCoordinates.X << " Z:"<<_PlayerCoordinates.Z<<"\n";
+	bool fFullCircle = isFullyCircleSpawned();
+	bool fMoved = playerChangedPosition();
 
-	if (isFullyCircleSpawned()) { //Full circle is spawned
-		if (_ChunkSet.isUp2Date(_PlayerCoordinates)) {
-			//Player doesn't leave it's chunk and all chunks were delivered
-			return;
-		}else{
-			//All chunks were delivered but  the player leaved it's chunk
-			_ChunkSet.regenerate(_PlayerCoordinates);
-			CheckSpawnedChunkList();
-			if (!CheckChunkSet()) {
-				throw Poco::RuntimeException("Chunk delivering failed: 1");
-			}
-		}
-	}else {
-		if (_ChunkSet.isUp2Date(_PlayerCoordinates)) {
-			if (!CheckChunkSet()) {
-				throw Poco::RuntimeException("Chunk delivering failed: 2");
-			}
-			return;
-		}else{
-			_ChunkSet.regenerate(_PlayerCoordinates);
-			CheckSpawnedChunkList();
-			if (!CheckChunkSet()) {
-				throw Poco::RuntimeException("Chunk delivering failed: 3");
-			}
-		}
+	if (fFullCircle && !fMoved) {
+		return;
 	}
+
+
+	if (	fFullCircle && fMoved || //all chunks delivered, moved to another chunk
+		!fFullCircle && fMoved || //not all chunks delvered,  in same chunk 
+		!fFullCircle && !fMoved // not all chunks delvered, moved to another chunk	
+		) {
+			if (fMoved) {
+				CheckSpawnedChunkList();
+			}
+
+			if (!CheckChunkSet()) {
+				throw Poco::RuntimeException("Chunk delivering failed");
+			}
+	}
+
+	_oldPlayerCoordinates = _PlayerCoordinates;
 }
 
 bool ChunkProvider::isFullyCircleSpawned() {
-	return (_vSpawnedChunks.size() >= _ChunkSet.CalculateChunkCount());
+	return (_vSpawnedChunks.size() >= CalculateChunkCount());
 }
 
 
@@ -207,9 +198,8 @@ bool ChunkProvider::isSpawned(ChunkCoordinates coord) {
 }
 
 bool ChunkProvider::CheckChunkSet() {
-	//Check chunk set
-	int iSentChunks=0;
 	MapChunk* pChunk;
+	ChunkCoordinates SquareStart,SquareEnd,Temp;
 
 	try {
 		//Check chunk who player stands on
@@ -220,22 +210,27 @@ bool ChunkProvider::CheckChunkSet() {
 				return true;
 			}
 			sendChunk(pChunk);
-			iSentChunks++;
-			if (iSentChunks==3) {
-				return true;
-			}
+			return true;
 		}
 
-		for (int x=0;x<=_ChunkSet.CalculateChunkCount()-1;x++) {
-			if ( ! isSpawned(_ChunkSet.at(x))) {
-				pChunk = _pChunkRoot->getChunk( _ChunkSet.at(x).X,_ChunkSet.at(x).Z);
-				if (pChunk==NULL) {
-					//Todo: end of world reached message in players chat
-					return true;
-				}
-				sendChunk(pChunk);
-				iSentChunks++;
-				if (iSentChunks==3) {
+		SquareStart.X = _PlayerCoordinates.X - (_ViewDistance/2) - 1;
+		SquareStart.Z = _PlayerCoordinates.Z - (_ViewDistance/2) - 1;
+
+		SquareEnd.X = SquareStart.X + _ViewDistance;
+		SquareEnd.Z = SquareStart.Z + _ViewDistance;
+
+		for ( int X = SquareStart.X;X<=SquareEnd.X;X++) {
+			for ( int Z = SquareStart.Z;Z<=SquareEnd.Z;Z++) {
+				Temp.X = X;
+				Temp.Z = Z;
+				
+				if ( ! isSpawned(Temp)) {
+					pChunk = _pChunkRoot->getChunk(X,Z);
+					if (pChunk==NULL) {
+						//Todo: end of world reached message in players chat
+						return true;
+					}
+					sendChunk(pChunk);
 					return true;
 				}
 			}
@@ -249,9 +244,23 @@ bool ChunkProvider::CheckChunkSet() {
 
 
 void ChunkProvider::CheckSpawnedChunkList() {
+	if (_vSpawnedChunks.size() == 0) { return; }
 	for (int x=0;x<=_vSpawnedChunks.size()-1;x++) {
 		if(  ChunkMath::Distance(_PlayerCoordinates,_vSpawnedChunks[x]) > (_ViewDistance/2)) {
 			sendPreChunk_Despawn(_vSpawnedChunks[x].X,_vSpawnedChunks[x].Z);
 		}
 	}
+}
+
+bool ChunkProvider::playerChangedPosition() {
+	if (_oldPlayerCoordinates.X == _PlayerCoordinates.X && _oldPlayerCoordinates.Z == _PlayerCoordinates.Z) {
+		return false;
+	}else{
+		return true;
+	}
+}
+
+int ChunkProvider::CalculateChunkCount() {
+	int iVD = _ViewDistance / 2;
+	return iVD * 4 + (iVD * iVD) * 4 + 1; 
 }

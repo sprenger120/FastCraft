@@ -17,7 +17,6 @@ GNU General Public License for more details.
 #define _FASTCRAFTHEADER_CHUNKPROVIDER
 
 #include "Structs.h"
-#include "ChunkSet.h"
 #include <vector>
 #include <sstream>
 #include <Poco/DeflatingStream.h>
@@ -32,10 +31,10 @@ class ChunkProvider {
 private:
 	vector<ChunkCoordinates> _vSpawnedChunks;
 	ChunkCoordinates _PlayerCoordinates;
+	ChunkCoordinates _oldPlayerCoordinates;
 
 	NetworkIO* _pNetwork;
 	ChunkRoot* _pChunkRoot;
-	ChunkSet _ChunkSet;
 
 	//Packing
 	std::stringstream _stringStrm;
@@ -62,5 +61,8 @@ public:
 	bool isSpawned(ChunkCoordinates);
 	bool CheckChunkSet();
 	void CheckSpawnedChunkList();
+
+	bool playerChangedPosition();
+	int CalculateChunkCount();
 };
 #endif
