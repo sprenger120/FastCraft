@@ -31,6 +31,7 @@ _Connection(),
 	_iTimeout(10), //10 seconds
 	_pSendQueue(p)
 {
+	_fLocked = false;
 }
 
 NetworkIO::~NetworkIO() {
@@ -323,4 +324,15 @@ void NetworkIO::packString(string& rString,string Input) {
 		rString.append<char>(1,0);
 		rString.append(1,Input.at(x));
 	}
+}
+
+void NetworkIO::Lock() {
+	while(_fLocked) {
+	}
+	
+	_fLocked = true;
+}
+
+void NetworkIO::UnLock() {
+	_fLocked = false;
 }

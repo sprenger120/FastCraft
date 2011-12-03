@@ -36,6 +36,7 @@ private:
 	std::queue<QueueJob>* _pSendQueue;
 
 	bool _fConnected;
+	bool _fLocked;
 	const int _iTimeout;
 
 	static unsigned long long _iReadTraffic;
@@ -71,6 +72,10 @@ public:
 	bool isConnected();
 	void closeConnection();
 	void newConnection(StreamSocket&);
+
+	//Lock & unlock
+	void Lock();
+	void UnLock();
 
 	//StringPacking
 	static void packString(string&,string);
