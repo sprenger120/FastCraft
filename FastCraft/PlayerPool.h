@@ -26,6 +26,7 @@ GNU General Public License for more details.
 #include <Poco/Runnable.h>
 #include "EntityProvider.h"
 #include "ServerTime.h"
+#include "PackingThread.h"
 
 class SettingsHandler;
 class PlayerThread;
@@ -49,6 +50,7 @@ private:
 	ServerTime _ServerTime;
 	vector<PlayerThread*> _vPlayerThreads;
 	queue<ChatEntry> _qChat;
+	PackingThread _PackingThread;
 
 	ChunkRoot* _pChunkRoot;
 public:

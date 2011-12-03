@@ -30,7 +30,8 @@ _vPlayerThreads(0),
 _ThreadPool("PlayerThreads",1,pSettingsHandler->getMaxClients()),
 _EntityProvider(),
 _ServerTime(),
-_qChat()
+_qChat(),
+_PackingThread()
 {
 	//Create ChunkRoot obj
 	try {
@@ -46,7 +47,7 @@ _qChat()
 
 	//Create Threads
 	for (int x=0;x<=_vPlayerThreads.size()-1;x++) {
-		_vPlayerThreads[x] = new PlayerThread(pSettingsHandler,&_EntityProvider,&_ServerTime,this,_pChunkRoot);
+		_vPlayerThreads[x] = new PlayerThread(pSettingsHandler,&_EntityProvider,&_ServerTime,this,_pChunkRoot,&_PackingThread);
 
 		_ThreadPool.defaultPool().start(*_vPlayerThreads[x]);
 	}
@@ -67,8 +68,11 @@ void PlayerPool::run() {
 	ServerTime ServerTime;
 	threadServerTime.start(ServerTime);
 
+	//Create Packing Thread
+	Poco::Thread threadPackingThread;
+	threadPackingThread.start(_PackingThread);
+
 	ChatEntry ChatEntry;
-	
 	std::string sData;
 
 	while (1) {
