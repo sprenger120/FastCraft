@@ -36,7 +36,8 @@ PlayerThread::PlayerThread(SettingsHandler* pSettingsHandler,
 	EntityProvider* pEntityProvider,
 	ServerTime* pServerTime,
 	PlayerPool* pPoolMaster,
-	ChunkRoot* pChunkRoot
+	ChunkRoot* pChunkRoot,
+	PackingThread* pPackingThread
 	) : 
 _sName(""),
 	_sIP(""),
@@ -47,7 +48,7 @@ _sName(""),
 	_Web_Session("session.minecraft.net"),
 	_Web_Response(),
 	_Network(&_SendQueue),
-	_ChunkProvider(pChunkRoot,&_Network)
+	_ChunkProvider(pChunkRoot,&_Network,pPackingThread)
 {
 	_Flags.Crouched = false;
 	_Flags.Eating = false;
@@ -61,8 +62,9 @@ _sName(""),
 	_Coordinates.Y = 0.0;
 	_Coordinates.Yaw = 0.0F;
 	_Coordinates.Z = 0.0;
-	_TimeJobs.LastTimeSend = 0;
 
+	_TimeJobs.LastTimeSend = 0;
+	_TimeJobs.LastKeepAliveSend = 0;
 
 	_iEntityID=0;
 	setAuthStep(FC_AUTHSTEP_NOTCONNECTED);
@@ -71,7 +73,6 @@ _sName(""),
 	_pEntityProvider = pEntityProvider;
 	_pServerTime = pServerTime;
 	_pPoolMaster = pPoolMaster;
-
 
 	_fAssigned = false;
 	_iThreadTicks = 0;
@@ -127,15 +128,15 @@ void PlayerThread::run() {
 		try {
 			sendKeepAlive();
 			sendTime();
-			
+
 			Timer.stop();
 			_iThreadTicks += Timer.elapsed() / 1000;
 			Timer.reset();
 			Timer.start();
-			
-			ProcessQueue();
-			ProcessAuthStep();
 
+			ProcessAuthStep();
+			ProcessQueue();
+					
 			iPacket = _Network.readByte();
 
 			//cout<<"Package recovered:"<<std::hex<<int(iPacket)<<"\n";
@@ -191,6 +192,8 @@ void PlayerThread::run() {
 				}
 
 				//Answer
+				_Network.Lock();
+
 				_Network.addByte(0x1);
 				_Network.addInt(_iEntityID);
 				_Network.addString("");
@@ -202,6 +205,7 @@ void PlayerThread::run() {
 				_Network.addByte(_pSettings->getMaxClients());
 
 				_Network.Flush();
+				_Network.UnLock();
 
 				setAuthStep(FC_AUTHSTEP_TIME); 
 				_ChunkProvider.newConnection();
@@ -220,6 +224,7 @@ void PlayerThread::run() {
 				_iEntityID = _pEntityProvider->Add(FC_ENTITY_PLAYER); //Fetch a new entity id
 
 				//Send response (Connection Hash)
+				_Network.Lock();
 				_Network.addByte(0x02);
 
 				if (_pSettings->isOnlineModeActivated()) {
@@ -229,7 +234,7 @@ void PlayerThread::run() {
 					_Network.addString("-");
 				}
 				_Network.Flush();
-
+				_Network.UnLock();
 				cout<<_sName<<" joined ("<<_sIP<<") EID:"<<_iEntityID<<endl;
 				break;
 			case 0x3: //Chat
@@ -398,14 +403,12 @@ void PlayerThread::Connect(Poco::Net::StreamSocket& Sock) {
 	_iThreadTicks = 0;
 }
 
-
-
-
-
 void PlayerThread::Kick(string sReason) {
+	_Network.Lock();
 	_Network.addByte(0xFF);
 	_Network.addString(sReason);
 	_Network.Flush(FC_JOB_CLOSECONN);
+	_Network.UnLock();
 
 	if (isNameSet()) { // If names is known
 		cout<<_sName<<" was kicked for: "<<sReason<<"\n"; 
@@ -413,9 +416,11 @@ void PlayerThread::Kick(string sReason) {
 }
 
 void PlayerThread::Kick() {
+	_Network.Lock();
 	_Network.addByte(0xFF);
 	_Network.addString("");
 	_Network.Flush(FC_JOB_CLOSECONN);
+	_Network.UnLock();
 
 	if (isNameSet()) { // If names is known
 		cout<<_sName<<" was kicked"<<"\n"; 
@@ -433,10 +438,12 @@ void PlayerThread::sendTime() {
 	if (getAuthStep() < FC_AUTHSTEP_TIME) {return;}
 	if (getAuthStep() == FC_AUTHSTEP_TIME) { //Increment authstep
 		//Send first time packet
+		_Network.Lock();
 		_Network.addByte(0x4);
 		_Network.addInt64(ServerTime::getTime());
 		_Network.Flush();
-		
+		_Network.UnLock();
+
 		_TimeJobs.LastTimeSend = getTicks();
 		setAuthStep(FC_AUTHSTEP_PRECHUNKS);
 		return;
@@ -445,10 +452,11 @@ void PlayerThread::sendTime() {
 
 	if (_TimeJobs.LastTimeSend + FC_INTERVAL_TIMESEND <= getTicks()) {
 		_TimeJobs.LastTimeSend = getTicks();
-
+		_Network.Lock();
 		_Network.addByte(0x4);
 		_Network.addInt64(ServerTime::getTime());
 		_Network.Flush();
+		_Network.UnLock();
 	}
 }
 
@@ -461,6 +469,8 @@ NetworkIO& PlayerThread::getConnection() {
 }
 
 void PlayerThread::sendClientPosition() {
+	_Network.Lock();
+
 	_Network.addByte(0x0D);
 	_Network.addDouble(_Coordinates.X);
 	_Network.addDouble(_Coordinates.Stance);
@@ -470,15 +480,19 @@ void PlayerThread::sendClientPosition() {
 	_Network.addFloat(_Coordinates.Pitch);
 	_Network.addBool(_Coordinates.OnGround);
 	_Network.Flush();
+
+	_Network.UnLock();
 }
 
 void PlayerThread::sendKeepAlive() {
 	if (_TimeJobs.LastKeepAliveSend + FC_INTERVAL_KEEPACTIVE <= getTicks()) { //Send new keep alive
 		_TimeJobs.LastKeepAliveSend = getTicks();
 
+		_Network.Lock();
 		_Network.addByte(0x0);
 		_Network.addInt(Random::Int());
 		_Network.Flush();
+		_Network.UnLock();
 	}
 }
 
@@ -488,11 +502,13 @@ void PlayerThread::UpdateHealth(short iHealth,short iFood,float nSaturation) {
 	_iFood = fixRange<short>(iFood,0,20);
 	_nSaturation = fixRange<float>(iFood,0.0F,5.0F);
 
+	_Network.Lock();
 	_Network.addByte(0x8);
 	_Network.addShort(_iHealth);
 	_Network.addShort(_iFood);
 	_Network.addFloat(_nSaturation);
 	_Network.Flush();
+	_Network.UnLock();
 }
 
 
@@ -553,8 +569,7 @@ void PlayerThread::ProcessAuthStep() {
 		_Coordinates.Pitch = 0.0F;
 		_Coordinates.Yaw = 0.0F;
 
-		_ChunkProvider.HandleMovement(_Coordinates); //Send first chunk
-
+		_ChunkProvider.HandleMovement(_Coordinates); //Send first chunks
 		setAuthStep(FC_AUTHSTEP_SPAWNPOS);
 		break;
 	case FC_AUTHSTEP_SPAWNPOS:
@@ -588,13 +603,14 @@ void PlayerThread::ClearQueue() {
 
 void PlayerThread::ProcessQueue() {
 	QueueJob qJob;
-	while (1) {
-		if (_SendQueue.size() == 0) {return;}
 
+	while (_SendQueue.size()) {
 		qJob = _SendQueue.front();
 		_SendQueue.pop();
 
 		_Connection.sendBytes(qJob.Data.c_str(),qJob.Data.length());
+		
+		Thread::sleep(5);
 
 		switch(qJob.Special) {
 		case FC_JOB_NO:

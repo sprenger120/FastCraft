@@ -32,6 +32,7 @@ class EntityProvider;
 class ServerTime;
 class PlayerPool;
 class ChunkRoot;
+class PackingThread;
 
 using std::string;
 using std::queue;
@@ -68,6 +69,7 @@ private:
 	EntityProvider* _pEntityProvider;
 	ServerTime* _pServerTime;
 	PlayerPool* _pPoolMaster;
+
 	ChunkProvider _ChunkProvider;
 
 	//Thread specific
@@ -84,7 +86,7 @@ private:
 	TimeJobs _TimeJobs;
 public:
 	//De- / Constructor
-	PlayerThread(SettingsHandler*,EntityProvider*,ServerTime*,PlayerPool*,ChunkRoot*);
+	PlayerThread(SettingsHandler*,EntityProvider*,ServerTime*,PlayerPool*,ChunkRoot*,PackingThread*);
 	~PlayerThread();
 
 	virtual void run(); // Thread Main
