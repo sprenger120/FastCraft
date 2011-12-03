@@ -31,13 +31,14 @@ using std::stringstream;
 using Poco::DeflatingOutputStream;
 
 
-ChunkProvider::ChunkProvider(ChunkRoot* pChunkRoot,NetworkIO* pNetworkIO,PackingThread* pPackingThread) :
+ChunkProvider::ChunkProvider(ChunkRoot* pChunkRoot,NetworkIO* pNetworkIO,PackingThread* pPackingThread,PlayerThread* pPlayer) :
 _vSpawnedChunks(0),
 	_ViewDistance(10)
 {
 	_pChunkRoot = pChunkRoot;
 	_pNetwork = pNetworkIO;
 	_pPackingThread = pPackingThread;
+	_pPlayer = pPlayer;
 	_fNewConnection = false;
 	_fConnected = false;
 }
@@ -211,6 +212,10 @@ bool ChunkProvider::CheckChunkSet() {
 	}catch(Poco::RuntimeException&err ) {
 		cout<<"error:"<<err.message()<<"\n";
 		return false;
+	}
+
+	if (_pPlayer->getAuthStep() == FC_AUTHSTEP_PRECHUNKS) {
+		_pPlayer->sendClientPosition(); //The client leaves "loading map" screen immediately
 	}
 
 

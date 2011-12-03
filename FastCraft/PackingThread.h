@@ -18,7 +18,7 @@ GNU General Public License for more details.
 #include <Poco/Runnable.h>
 #include <queue>
 #include <sstream>
-#include <poco/DeflatingStream.h>
+#include <Poco/DeflatingStream.h>
 #include "Structs.h"
 
 class NetworkIO;

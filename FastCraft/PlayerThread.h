@@ -109,6 +109,9 @@ public:
 	string getIP(); //Returns actual IP of player
 	NetworkIO& getConnection();
 	EntityCoordinates getCoordinates();
+	
+	char getAuthStep();
+	void sendClientPosition();
 
 	//Queue
 	void appendQueue(QueueJob&); //Adds a job for the sending queue
@@ -121,13 +124,11 @@ private:
 
 	//AuthStep
 	void setAuthStep(char);
-	char getAuthStep();
 	bool isLoginDone(); //returns true if the full login procedure done
 	void ProcessAuthStep();
 	bool isNameSet(); //returns true if name is set
 
 	//send... Functions
-	void sendClientPosition();
 	void sendKeepAlive();
 	void sendTime();//Sends time if required
 

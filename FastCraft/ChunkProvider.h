@@ -23,6 +23,7 @@ class PlayerThread;
 class NetworkIO;
 class ChunkRoot;
 class PackingThread;
+class PlayerThread;
 
 using std::vector;
 
@@ -35,12 +36,13 @@ private:
 	NetworkIO* _pNetwork;
 	ChunkRoot* _pChunkRoot;
 	PackingThread* _pPackingThread;
+	PlayerThread* _pPlayer;
 
 	const int _ViewDistance; //chunk count to each direction
 	bool _fConnected;
 	bool _fNewConnection;
 public:
-	ChunkProvider(ChunkRoot*,NetworkIO*,PackingThread*);
+	ChunkProvider(ChunkRoot*,NetworkIO*,PackingThread*,PlayerThread*);
 	~ChunkProvider();
 
 	void newConnection();

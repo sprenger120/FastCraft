@@ -48,7 +48,7 @@ _sName(""),
 	_Web_Session("session.minecraft.net"),
 	_Web_Response(),
 	_Network(&_SendQueue),
-	_ChunkProvider(pChunkRoot,&_Network,pPackingThread)
+	_ChunkProvider(pChunkRoot,&_Network,pPackingThread,this)
 {
 	_Flags.Crouched = false;
 	_Flags.Eating = false;
@@ -585,7 +585,6 @@ void PlayerThread::ProcessAuthStep() {
 		break;
 	case FC_AUTHSTEP_INVENTORY:
 		//ToDo: send inventory
-		sendClientPosition(); //Login completly done
 		setAuthStep(FC_AUTHSTEP_DONE);
 		break;
 	}
