@@ -152,6 +152,7 @@ bool ChunkProvider::CheckChunkSet() {
 	MapChunk* pChunk;
 	PackJob Job;
 	ChunkCoordinates SquareStart,SquareEnd,Temp;
+	int iPlayerChunkVectorIndex = -1;
 	
 	vector<PackJob> vJobs;
 
@@ -175,6 +176,7 @@ bool ChunkProvider::CheckChunkSet() {
 			sendSpawn(Job.X,Job.Z);
 			
 			vJobs.push_back(Job);
+			iPlayerChunkVectorIndex = vJobs.size()-1;
 
 			AddChunkToList(_PlayerCoordinates.X,_PlayerCoordinates.Z);
 		}
@@ -213,6 +215,13 @@ bool ChunkProvider::CheckChunkSet() {
 		cout<<"error:"<<err.message()<<"\n";
 		return false;
 	}
+
+	if (iPlayerChunkVectorIndex != -1) {
+		//Send player chunk, before send him his position
+		_pPackingThread->AddJob(vJobs[iPlayerChunkVectorIndex]);
+		vJobs.erase(vJobs.begin() + iPlayerChunkVectorIndex);
+	}
+
 
 	if (_pPlayer->getAuthStep() == FC_AUTHSTEP_PRECHUNKS) {
 		_pPlayer->sendClientPosition(); //The client leaves "loading map" screen immediately
