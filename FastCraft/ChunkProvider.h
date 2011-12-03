@@ -18,12 +18,11 @@ GNU General Public License for more details.
 
 #include "Structs.h"
 #include <vector>
-#include <sstream>
-#include <Poco/DeflatingStream.h>
 
 class PlayerThread;
 class NetworkIO;
 class ChunkRoot;
+class PackingThread;
 
 using std::vector;
 
@@ -35,16 +34,13 @@ private:
 
 	NetworkIO* _pNetwork;
 	ChunkRoot* _pChunkRoot;
-
-	//Packing
-	std::stringstream _stringStrm;
-	Poco::DeflatingOutputStream _deflatingStrm;
+	PackingThread* _pPackingThread;
 
 	const int _ViewDistance; //chunk count to each direction
 	bool _fConnected;
 	bool _fNewConnection;
 public:
-	ChunkProvider(ChunkRoot*,NetworkIO*);
+	ChunkProvider(ChunkRoot*,NetworkIO*,PackingThread*);
 	~ChunkProvider();
 
 	void newConnection();
@@ -53,9 +49,8 @@ public:
 	void HandleMovement(const EntityCoordinates&);
 	bool isFullyCircleSpawned();
 public: 
-	void sendChunk(MapChunk*); //Sends packed chunk (no prechunk will be send)
-	void sendPreChunk_Spawn(int,int);
-	void sendPreChunk_Despawn(int,int);
+	void sendDespawn(int,int);
+	void sendSpawn(int,int);
 	
 	bool isConnected();
 	bool isSpawned(ChunkCoordinates);
@@ -64,5 +59,7 @@ public:
 
 	bool playerChangedPosition();
 	int CalculateChunkCount();
+
+	void AddChunkToList(int,int);
 };
 #endif

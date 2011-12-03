@@ -22,6 +22,7 @@ GNU General Public License for more details.
 #include "PlayerThread.h"
 #include "ChunkMath.h"
 #include "ChunkRoot.h"
+#include "PackingThread.h"
 
 using std::cout;
 using std::endl;
@@ -30,14 +31,13 @@ using std::stringstream;
 using Poco::DeflatingOutputStream;
 
 
-ChunkProvider::ChunkProvider(ChunkRoot* pChunkRoot,NetworkIO* pNetworkIO) :
+ChunkProvider::ChunkProvider(ChunkRoot* pChunkRoot,NetworkIO* pNetworkIO,PackingThread* pPackingThread) :
 _vSpawnedChunks(0),
-	_ViewDistance(10),
-	_stringStrm(),
-	_deflatingStrm(_stringStrm,Poco::DeflatingStreamBuf::STREAM_ZLIB,-1)
+	_ViewDistance(10)
 {
 	_pChunkRoot = pChunkRoot;
 	_pNetwork = pNetworkIO;
+	_pPackingThread = pPackingThread;
 	_fNewConnection = false;
 	_fConnected = false;
 }
@@ -78,7 +78,7 @@ void ChunkProvider::HandleMovement(const EntityCoordinates& PlayerCoordinates) {
 	}
 
 
-	if (	fFullCircle && fMoved || //all chunks delivered, moved to another chunk
+	if ( fFullCircle && fMoved || //all chunks delivered, moved to another chunk
 		!fFullCircle && fMoved || //not all chunks delvered,  in same chunk 
 		!fFullCircle && !fMoved // not all chunks delvered, moved to another chunk	
 		) {
@@ -99,78 +99,30 @@ bool ChunkProvider::isFullyCircleSpawned() {
 }
 
 
-void ChunkProvider::sendChunk(MapChunk* pChunk) {
-	//Network Stuff
-
-	if (!isConnected()) {
-		throw Poco::Exception("Not connected");
-	}
-
-
-	if (pChunk==NULL) {
-		cout<<"NULLCHUNK"<<"\n";
-		throw Poco::Exception("Nullchunk");
-	}
-
-	sendPreChunk_Spawn(pChunk->X,pChunk->Z);
-
-	_pNetwork->addByte(0x33);
-	_pNetwork->addInt((pChunk->X)<<4);
-	_pNetwork->addShort(0);
-	_pNetwork->addInt((pChunk->Z)<<4);
-	_pNetwork->addByte(15);
-	_pNetwork->addByte(127);
-	_pNetwork->addByte(15);
-
-	//deflate
-	_deflatingStrm.write(pChunk->Blocks,FC_CHUNK_BLOCKCOUNT);
-	_deflatingStrm.write(pChunk->Metadata,FC_CHUNK_NIBBLECOUNT);
-	_deflatingStrm.write(pChunk->BlockLight,FC_CHUNK_NIBBLECOUNT);
-	_deflatingStrm.write(pChunk->SkyLight,FC_CHUNK_NIBBLECOUNT);
-
-	_deflatingStrm.flush();
-
-	_pNetwork->addInt(_stringStrm.str().length());
-	_pNetwork->Str().append(_stringStrm.str());
-
-
-	_stringStrm.clear();
-	_deflatingStrm.clear();
-
-	_pNetwork->Flush();
-
-	//Add to spawned list
-	ChunkCoordinates Coord;
-	Coord.X = pChunk->X;
-	Coord.Z = pChunk->Z;
-
-	_vSpawnedChunks.push_back(Coord);
-}
-
-
-void ChunkProvider::sendPreChunk_Spawn(int X,int Z){
-	if (!isConnected()) {
-		throw Poco::Exception("Not connected");
-	}
+void ChunkProvider::sendSpawn(int X,int Z) {
+	_pNetwork->Lock();
 
 	_pNetwork->addByte(0x32);
 	_pNetwork->addInt(X);
 	_pNetwork->addInt(Z);
 	_pNetwork->addBool(true);
 	_pNetwork->Flush();
+
+	_pNetwork->UnLock();
 }
 
-void ChunkProvider::sendPreChunk_Despawn(int X,int Z){
+void ChunkProvider::sendDespawn(int X,int Z){
 	if (!isConnected()) {
 		throw Poco::Exception("Not connected");
 	}
 
+	_pNetwork->Lock();
 	_pNetwork->addByte(0x32);
 	_pNetwork->addInt(X);
 	_pNetwork->addInt(Z);
 	_pNetwork->addBool(false);
 	_pNetwork->Flush();
-
+	_pNetwork->UnLock();
 
 	//Remove from spawned list
 	for (int x=0;x<=_vSpawnedChunks.size()-1;x++) {
@@ -197,18 +149,33 @@ bool ChunkProvider::isSpawned(ChunkCoordinates coord) {
 
 bool ChunkProvider::CheckChunkSet() {
 	MapChunk* pChunk;
+	PackJob Job;
 	ChunkCoordinates SquareStart,SquareEnd,Temp;
+	
+	vector<PackJob> vJobs;
+
+
+	Job.pNetwork = _pNetwork;
 
 	try {
 		//Check chunk who player stands on
 		if ( ! isSpawned(_PlayerCoordinates)) {
 			pChunk = _pChunkRoot->getChunk(_PlayerCoordinates.X,_PlayerCoordinates.Z);
 			if (pChunk==NULL) {
+				cout<<"nullpointer"<<"\n";
 				//Todo: end of world reached message in players chat
 				return true;
 			}
-			sendChunk(pChunk);
-			return true;
+
+			Job.X = _PlayerCoordinates.X;
+			Job.Z = _PlayerCoordinates.Z;
+			Job.pChunk = pChunk;
+
+			sendSpawn(Job.X,Job.Z);
+			
+			vJobs.push_back(Job);
+
+			AddChunkToList(_PlayerCoordinates.X,_PlayerCoordinates.Z);
 		}
 
 		SquareStart.X = _PlayerCoordinates.X - (_ViewDistance/2) - 1;
@@ -225,11 +192,19 @@ bool ChunkProvider::CheckChunkSet() {
 				if ( ! isSpawned(Temp)) {
 					pChunk = _pChunkRoot->getChunk(X,Z);
 					if (pChunk==NULL) {
+						cout<<"nullpointer"<<"\n";
 						//Todo: end of world reached message in players chat
 						return true;
 					}
-					sendChunk(pChunk);
-					return true;
+
+					Job.X = X;
+					Job.Z = Z;
+					Job.pChunk = pChunk;
+
+					sendSpawn(X,Z);
+					vJobs.push_back(Job);
+
+					AddChunkToList(X,Z);
 				}
 			}
 		}
@@ -237,6 +212,13 @@ bool ChunkProvider::CheckChunkSet() {
 		cout<<"error:"<<err.message()<<"\n";
 		return false;
 	}
+
+
+	for (int x=0;x<=vJobs.size()-1;x++) {
+		_pPackingThread->AddJob(vJobs[x]);
+	}
+
+	vJobs.clear();
 	return true;
 }
 
@@ -245,7 +227,7 @@ void ChunkProvider::CheckSpawnedChunkList() {
 	if (_vSpawnedChunks.size() == 0) { return; }
 	for (int x=0;x<=_vSpawnedChunks.size()-1;x++) {
 		if(  ChunkMath::Distance(_PlayerCoordinates,_vSpawnedChunks[x]) > (_ViewDistance/2)) {
-			sendPreChunk_Despawn(_vSpawnedChunks[x].X,_vSpawnedChunks[x].Z);
+			sendDespawn(_vSpawnedChunks[x].X,_vSpawnedChunks[x].Z);
 		}
 	}
 }
@@ -261,4 +243,12 @@ bool ChunkProvider::playerChangedPosition() {
 int ChunkProvider::CalculateChunkCount() {
 	int iVD = _ViewDistance / 2;
 	return iVD * 4 + (iVD * iVD) * 4 + 1; 
+}
+
+void ChunkProvider::AddChunkToList(int X,int Z) {
+	ChunkCoordinates Coord;
+	Coord.X = X;
+	Coord.Z = Z;
+
+	_vSpawnedChunks.push_back(Coord);
 }
