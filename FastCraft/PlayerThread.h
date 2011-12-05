@@ -40,6 +40,7 @@ using std::queue;
 struct TimeJobs {
 	long long LastTimeSend;
 	long long LastKeepAliveSend;
+	long long LastHandleMovement;
 };
 
 class PlayerThread : public Poco::Runnable {
@@ -59,6 +60,7 @@ private:
 	Poco::Net::StreamSocket _Connection;
 	string _sTemp;
 	queue<QueueJob> _SendQueue;
+	queue<string> _ChatQueue;
 	NetworkIO _Network;
 
 	//Connection Hash
@@ -85,38 +87,116 @@ private:
 	//Time jobs
 	TimeJobs _TimeJobs;
 public:
-	//De- / Constructor
+	/*
+	* De- / constructor
+	*/
 	PlayerThread(SettingsHandler*,EntityProvider*,ServerTime*,PlayerPool*,ChunkRoot*,PackingThread*);
 	~PlayerThread();
 
+
+	/*
+	* Thread  Main
+	*/
 	virtual void run(); // Thread Main
 
-	void Disconnect(bool = false); //Clear Player object
-	void Connect(Poco::Net::StreamSocket&); //Manage New Player connection | clear if necessary
-	bool isAssigned(); //Returns true if a player is assigned to this thread
 
-	void Kick(); //Kicks player without reason
-	void Kick(string); //Kick with reason
-	void Ban(int); //Bans player (int = Expiration, -1 for permanent ban)
-	void Ban(string,int); //Bans player with reason (int = Expiration, -1 for permanent ban)
+	/*
+	* Connect a TCP player connection for server <-> interchange
+	*/
+	void Connect(Poco::Net::StreamSocket&);
+
+
+	/*
+	* Returns the actual Thread state 
+	* false:  Thread is free
+	* true:  Thread is busy 
+	*/
+	bool isAssigned(); 
+
+
+	/*
+	* Kicks a player without reason
+	* The thread will be free after call
+	*/
+	void Kick(); 
+
+
+	/*
+	* Kicks a player with reason
+	* The thread will be free after call
+	*/
+	void Kick(string);
+
+
+	/*
+	* Update health and food from client
+	* This function will send informations to client
+	
+	Prameter:
+	@1 : Health (0-20)
+	@2 : Food   (0-20)
+	@3 : Saturation (0.0F - 5.0F)
+	*/
 	void UpdateHealth(short,short,float);
 
-	//For PlayerPool
-	bool isSpawned(); //Returns true if the playerpool can spawn entitys
 
-	//Accessator
-	string getUsername(); //Returns Player Name - not the edited nikname
-	string getIP(); //Returns actual IP of player
+	/*
+	* Interts text into player chat
+
+	Parameter:
+	@1 : Text to insert 
+	*/
+	void insertChat(string&);
+
+
+	/*
+	* Returns true if PlayerPool can spawn Entits
+	* This means that AuthStep FC_AUTHSTEP_PRECHUNKS is reached
+	*/
+	bool isSpawned(); 
+
+	/*
+	* Returns Playername
+	* If Authstep FC_AUTHSTEP_HANDSHAKE isn't done, it will return a blank string
+	*/
+	string getUsername();
+
+
+	/*
+	* Returns IP and port of player
+	*  IP:port
+	*/
+	string getIP();
+
+
+	/*
+	* Returns a reference to player's NetworkIO object
+	* For right NetworkIO handling, have a look in NetworkIO.h
+	*/
 	NetworkIO& getConnection();
+
+	/*
+	* Returns Players full coordinates and look
+	*/
 	EntityCoordinates getCoordinates();
 	
+	/*
+	* Returns actual authentification step of player 
+	* For authentification steps, have a look in the wiki or in Constants.h
+	*/ 
 	char getAuthStep();
-	void sendClientPosition();
 
-	//Queue
-	void appendQueue(QueueJob&); //Adds a job for the sending queue
-
+	/*
+	* Returns count of actual connected players
+	*/
 	static int getConnectedPlayers();
+
+	/*
+	* These are internal functions 
+	* DONT USE THEM
+	*/
+	void sendClientPosition();
+	void appendQueue(QueueJob&);
 private:
 	//Queue
 	void ClearQueue(); //Clear send queue
@@ -134,12 +214,24 @@ private:
 
 
 	//Ticks
-	long long getTicks();
-	void IncrementTicks();
+	long long getTicks(); 
 
 	//Other
 	void generateConnectionHash(); //Generate a new connection hash	
 	template <class T> T fixRange(T,T,T);
+	void Disconnect(bool = false); //Clear Player object
+
+	//Packets
+	void Packet0_KeepAlive();
+	void Packet1_Login();
+	void Packet2_Handshake();
+	void Packet3_Chat();
+	void Packet10_Player();
+	void Packet11_Position();
+	void Packet12_Look();
+	void Packet13_PosAndLook();
+	void Packet254_ServerListPing();
+	void Packet255_Disconnect();
 };
 
 #endif
