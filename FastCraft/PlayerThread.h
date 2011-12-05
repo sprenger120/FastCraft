@@ -181,8 +181,8 @@ public:
 	EntityCoordinates getCoordinates();
 	
 	/*
-	* Returns actual authentification step of player 
-	* For authentification steps, have a look in the wiki or in Constants.h
+	* Returns actual authentication step of player 
+	* For authentication steps, have a look in the wiki or in Constants.h
 	*/ 
 	char getAuthStep();
 
