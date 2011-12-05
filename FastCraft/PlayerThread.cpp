@@ -44,6 +44,7 @@ _sName(""),
 	_Connection(),
 	_sTemp(""),
 	_SendQueue(),
+	_ChatQueue(),
 	_sConnectionHash(""),
 	_Web_Session("session.minecraft.net"),
 	_Web_Response(),
@@ -108,14 +109,10 @@ int PlayerThread::getConnectedPlayers() {
 
 
 void PlayerThread::run() {
-	int iTemp;
 	unsigned char iPacket;
-	EntityCoordinates TmpCoord;
 	Poco::Stopwatch Timer;
+	
 	Timer.start();
-
-	int iKeepActive_LastID = 0;
-	long long iKeepActive_LastTimestamp = getTicks();
 
 	while (1) {
 		if (!isAssigned()) {
@@ -123,225 +120,55 @@ void PlayerThread::run() {
 			continue;
 		} 
 
-		if (!isAssigned()) {continue;} //Connection was closed by queue processor 
 
 		try {
-			sendKeepAlive();
-			sendTime();
-
+			//Thread Ticks
 			Timer.stop();
 			_iThreadTicks += Timer.elapsed() / 1000;
 			Timer.reset();
 			Timer.start();
 
+
+			sendKeepAlive(); 
+			sendTime();
+
 			ProcessAuthStep();
 			ProcessQueue();
-					
+
 			iPacket = _Network.readByte();
 
 			//cout<<"Package recovered:"<<std::hex<<int(iPacket)<<"\n";
 
 			switch (iPacket) {
-			case 0x0: //Keep Alive
-				_Network.readInt(); //Get id
+			case 0x0:
+				Packet0_KeepAlive();
 				break;
-			case 0x1: //Login
-				//Check login order
-				if (getAuthStep() != FC_AUTHSTEP_HANDSHAKE) {
-					Kick("False login order!");
-					continue;
-				}
-
-				//Check minecraft version
-				iTemp = _Network.readInt(); //Protocol Version
-
-				if (iTemp > _pSettings->getSupportedProtocolVersion()) {
-					Kick("Outdated server!");
-					continue;
-				}
-
-				if (iTemp < _pSettings->getSupportedProtocolVersion()) {
-					Kick("Outdated client!");
-					continue;
-				}
-
-				_Network.readString(); //Username (already known)	
-				_Network.read(16);
-
-				//Check premium 
-				if (_pSettings->isOnlineModeActivated()) {
-					string sPath("/game/checkserver.jsp?user=");
-					sPath.append(_sName);
-					sPath.append("&serverId=");
-					sPath.append(_sConnectionHash);
-
-					Poco::Net::HTTPRequest Request ( 
-						Poco::Net::HTTPRequest::HTTP_GET, 
-						sPath,
-						Poco::Net::HTTPMessage::HTTP_1_1);
-
-					_Web_Session.sendRequest(Request);
-					std::istream &is = _Web_Session.receiveResponse(_Web_Response);
-					string sErg;
-					is>>sErg;
-
-					if (sErg.compare("YES") != 0) {
-						Kick("Failed to verify username!");
-						continue;
-					}
-				}
-
-				//Answer
-				_Network.Lock();
-
-				_Network.addByte(0x1);
-				_Network.addInt(_iEntityID);
-				_Network.addString("");
-				_Network.addInt64(1234568);
-				_Network.addInt(_pSettings->getServerMode());
-				_Network.addByte(0);
-				_Network.addByte(_pSettings->getDifficulty());
-				_Network.addByte(_pSettings->getWorldHeight());
-				_Network.addByte(_pSettings->getMaxClients());
-
-				_Network.Flush();
-				_Network.UnLock();
-
-				setAuthStep(FC_AUTHSTEP_TIME); 
-				_ChunkProvider.newConnection();
-				_pPoolMaster->Chat(_sName + " joined game",this,false); //false= no <Name> adding
+			case 0x1:
+				Packet1_Login();
 				break;
-			case 0x2: //Handshake
-				//Check login order
-				if (getAuthStep() != FC_AUTHSTEP_CONNECTEDONLY) {
-					Kick("False login order!");
-					continue;
-				}
-				_sName = _Network.readString();
-
-				PlayerCount++;
-				setAuthStep(FC_AUTHSTEP_HANDSHAKE);
-				_iEntityID = _pEntityProvider->Add(FC_ENTITY_PLAYER); //Fetch a new entity id
-
-				//Send response (Connection Hash)
-				_Network.Lock();
-				_Network.addByte(0x02);
-
-				if (_pSettings->isOnlineModeActivated()) {
-					generateConnectionHash();
-					_Network.addString(_sConnectionHash);
-				}else{
-					_Network.addString("-");
-				}
-				_Network.Flush();
-				_Network.UnLock();
-				cout<<_sName<<" joined ("<<_sIP<<") EID:"<<_iEntityID<<endl;
+			case 0x2:
+				Packet2_Handshake();
 				break;
-			case 0x3: //Chat
-				_sTemp.assign(_Network.readString());
-				_pPoolMaster->Chat(_sTemp,this);
+			case 0x3:
+				Packet3_Chat();
 				break;
-			case 0xa: //Player
-
-				switch(isLoginDone()) {
-				case true:
-					_Coordinates.OnGround = _Network.readBool();
-
-					if (!_ChunkProvider.isFullyCircleSpawned()) {
-						_ChunkProvider.HandleMovement(_Coordinates);
-					}
-
-					break;
-				case false:
-					_Network.read(1);
-					break;
-				}
-
+			case 0xa: 
+				Packet10_Player();
 				break;
-			case 0xb: //Coords & OnGround
-				switch(isLoginDone()) {
-				case true:
-					//Read coordinates in a temporary variable
-					TmpCoord.X = _Network.readDouble();
-					TmpCoord.Y = _Network.readDouble();
-					TmpCoord.Stance = _Network.readDouble();
-					TmpCoord.Z = _Network.readDouble();
-					TmpCoord.OnGround = _Network.readBool();
-
-					//if X and Z ==  8.5000000000000000 , there is crap in the tcp buffer -> ignore it
-					if (TmpCoord.X == 8.5000000000000000 && TmpCoord.Z == 8.5000000000000000) { 
-						continue;
-					}else{
-						_Coordinates.X = TmpCoord.X;
-						_Coordinates.Y = TmpCoord.Y;
-						_Coordinates.Stance = TmpCoord.Stance;
-						_Coordinates.Z = TmpCoord.Z;
-						_Coordinates.OnGround = TmpCoord.OnGround;
-						_ChunkProvider.HandleMovement(_Coordinates);
-					}
-					break;
-				case false:
-					_Network.read(33);
-					break;
-				}
-
+			case 0xb:
+				Packet11_Position();
 				break;
-			case 0xc: //Look & OnGround
-				switch(isLoginDone()) {
-				case true:
-					_Coordinates.Yaw = _Network.readFloat();
-					_Coordinates.Pitch = _Network.readFloat();
-					_Coordinates.OnGround = _Network.readBool();
-
-					if (!_ChunkProvider.isFullyCircleSpawned()) {
-						_ChunkProvider.HandleMovement(_Coordinates);
-					}
-					break;
-				case false:
-					_Network.read(9);
-					break;
-				}
+			case 0xc: 
+				Packet12_Look();
 				break;
-			case 0xd: //Full Client position
-				switch(isLoginDone()) {
-				case true:
-					//Read coordinates in a temporary variable
-					TmpCoord.X = _Network.readDouble();
-					TmpCoord.Y = _Network.readDouble();
-					TmpCoord.Stance = _Network.readDouble();
-					TmpCoord.Z = _Network.readDouble();
-					TmpCoord.Yaw = _Network.readFloat();
-					TmpCoord.Pitch = _Network.readFloat();
-					TmpCoord.OnGround = _Network.readBool();
-
-					//if X and Z ==  8.5000000000000000 , there is crap in the tcp buffer -> ignore it
-					if (TmpCoord.X == 8.5000000000000000 && TmpCoord.Z == 8.5000000000000000) { 
-						continue;
-					}else{
-
-						_Coordinates = TmpCoord;
-						_ChunkProvider.HandleMovement(_Coordinates);
-					}
-					break;
-				case false:
-					_Network.read(41);
-					break;
-				}
+			case 0xd: 
+				Packet13_PosAndLook();
 				break;
 			case 0xFE: //Server List Ping
-				_sTemp.clear();
-				_sTemp.assign(_pSettings->getServerDescription()); //Server Description
-				_sTemp.append("§");
-				Poco::NumberFormatter::append(_sTemp,PlayerCount); //Player count
-				_sTemp.append("§");
-				Poco::NumberFormatter::append(_sTemp,_pSettings->getMaxClients()); //player slots
-				_sTemp.append("§");
-
-				Kick(_sTemp);
+				Packet254_ServerListPing();
 				break;
 			case 0xFF: //Disconnect
-				_Network.readString();
-				Disconnect();
+				Packet255_Disconnect();
 				break;
 			default: 
 				Kick("Unknown packet!");
@@ -594,6 +421,11 @@ void PlayerThread::ProcessAuthStep() {
 /*
 * QUEUE
 */
+
+void PlayerThread::insertChat(string& rString) {
+	_ChatQueue.push(rString);
+}
+
 void PlayerThread::ClearQueue() {
 	for (int x = 1;x<=_SendQueue.size();x++) {
 		_SendQueue.pop();
@@ -602,13 +434,40 @@ void PlayerThread::ClearQueue() {
 
 void PlayerThread::ProcessQueue() {
 	QueueJob qJob;
+	string Buffer("");
+	string Message("");
+	int iChunkCount = 0;
 
-	while (_SendQueue.size()) {
+	//Chat queue
+
+	while (_ChatQueue.size()) {
+		Message = _ChatQueue.front();
+		_ChatQueue.pop();
+
+		Buffer.clear();
+		Buffer.append<char>(1,3);
+
+		NetworkIO::packString(Buffer,Message);
+
+		_Connection.sendBytes(Buffer.c_str(),Buffer.length());
+	}
+
+	Poco::Stopwatch timer;
+
+	timer.start();
+
+	if (_SendQueue.size() == 0) {return;}
+
+	//packet queue
+	while (_SendQueue.size() && iChunkCount == 0) {
+
 		qJob = _SendQueue.front();
 		_SendQueue.pop();
 
+		//cout<<_sName<<" queue size:"<<_SendQueue.size()<<"\n";
+
 		_Connection.sendBytes(qJob.Data.c_str(),qJob.Data.length());
-		
+	
 		Thread::sleep(5);
 
 		switch(qJob.Special) {
@@ -623,9 +482,232 @@ void PlayerThread::ProcessQueue() {
 			Disconnect(true);
 			break;
 		}
+		//break;
 	}
+
+	timer.stop();
+
+	cout<<"Queue flush time for"<<_sName<<": "<<timer.elapsed()/1000<<"\n";
 }
 
 void PlayerThread::appendQueue(QueueJob& Job) {
 	_SendQueue.push(Job);
+}
+
+/*
+* Packets
+*/
+
+void PlayerThread::Packet0_KeepAlive() {
+	_Network.readInt(); //Get id
+}
+
+void PlayerThread::Packet1_Login() {
+	int iProtocolVersion = 0;
+
+	//Check login order
+	if (getAuthStep() != FC_AUTHSTEP_HANDSHAKE) {
+		Kick("False login order!");
+		return;
+	}
+
+	//Check minecraft version
+	iProtocolVersion = _Network.readInt(); //Protocol Version
+
+	if (iProtocolVersion > _pSettings->getSupportedProtocolVersion()) {
+		Kick("Outdated server!");
+		return;
+	}
+
+	if (iProtocolVersion < _pSettings->getSupportedProtocolVersion()) {
+		Kick("Outdated client!");
+		return;
+	}
+
+	_Network.readString(); //Username (already known)	
+	_Network.read(16);
+
+	//Check premium 
+	if (_pSettings->isOnlineModeActivated()) {
+		string sPath("/game/checkserver.jsp?user=");
+		sPath.append(_sName);
+		sPath.append("&serverId=");
+		sPath.append(_sConnectionHash);
+
+		Poco::Net::HTTPRequest Request ( 
+			Poco::Net::HTTPRequest::HTTP_GET, 
+			sPath,
+			Poco::Net::HTTPMessage::HTTP_1_1);
+
+		_Web_Session.sendRequest(Request);
+		std::istream &is = _Web_Session.receiveResponse(_Web_Response);
+		string sErg;
+		is>>sErg;
+
+		if (sErg.compare("YES") != 0) {
+			Kick("Failed to verify username!");
+			return;
+		}
+	}
+
+	//Answer
+	_Network.Lock();
+
+	_Network.addByte(0x1);
+	_Network.addInt(_iEntityID);
+	_Network.addString("");
+	_Network.addInt64(1234568);
+	_Network.addInt(_pSettings->getServerMode());
+	_Network.addByte(0);
+	_Network.addByte(_pSettings->getDifficulty());
+	_Network.addByte(_pSettings->getWorldHeight());
+	_Network.addByte(_pSettings->getMaxClients());
+
+	_Network.Flush();
+	_Network.UnLock();
+
+	setAuthStep(FC_AUTHSTEP_TIME); 
+	_ChunkProvider.newConnection();
+	_pPoolMaster->Chat(_sName + " joined game",this,false); //false= no <Name> adding
+}
+
+void PlayerThread::Packet2_Handshake() {
+	//Check login order
+	if (getAuthStep() != FC_AUTHSTEP_CONNECTEDONLY) {
+		Kick("False login order!");
+		return;
+	}
+	_sName = _Network.readString();
+
+	PlayerCount++;
+	setAuthStep(FC_AUTHSTEP_HANDSHAKE);
+	_iEntityID = _pEntityProvider->Add(FC_ENTITY_PLAYER); //Fetch a new entity id
+
+	//Send response (Connection Hash)
+	_Network.Lock();
+	_Network.addByte(0x02);
+
+	if (_pSettings->isOnlineModeActivated()) {
+		generateConnectionHash();
+		_Network.addString(_sConnectionHash);
+	}else{
+		_Network.addString("-");
+	}
+	_Network.Flush();
+	_Network.UnLock();
+	cout<<_sName<<" joined ("<<_sIP<<") EID:"<<_iEntityID<<endl;
+}
+
+void PlayerThread::Packet3_Chat() {
+	_sTemp.assign(_Network.readString());
+	_pPoolMaster->Chat(_sTemp,this);
+}
+
+void PlayerThread::Packet10_Player() {
+	switch(isLoginDone()) {
+	case true:
+		_Coordinates.OnGround = _Network.readBool();
+
+		if (!_ChunkProvider.isFullyCircleSpawned()) {
+			_ChunkProvider.HandleMovement(_Coordinates);
+		}
+
+		break;
+	case false:
+		_Network.read(1);
+		break;
+	}
+}
+
+void PlayerThread::Packet11_Position() {
+	EntityCoordinates TmpCoord;
+	switch(isLoginDone()) {
+	case true:
+		//Read coordinates in a temporary variable
+		TmpCoord.X = _Network.readDouble();
+		TmpCoord.Y = _Network.readDouble();
+		TmpCoord.Stance = _Network.readDouble();
+		TmpCoord.Z = _Network.readDouble();
+		TmpCoord.OnGround = _Network.readBool();
+
+		//if X and Z ==  8.5000000000000000 , there is crap in the tcp buffer -> ignore it
+		if (TmpCoord.X == 8.5000000000000000 && TmpCoord.Z == 8.5000000000000000) { 
+			return;
+		}else{
+			_Coordinates.X = TmpCoord.X;
+			_Coordinates.Y = TmpCoord.Y;
+			_Coordinates.Stance = TmpCoord.Stance;
+			_Coordinates.Z = TmpCoord.Z;
+			_Coordinates.OnGround = TmpCoord.OnGround;
+			//_ChunkProvider.HandleMovement(_Coordinates);
+		}
+		break;
+	case false:
+		_Network.read(33);
+		break;
+	}
+}
+
+void PlayerThread::Packet12_Look() {
+	switch(isLoginDone()) {
+	case true:
+		_Coordinates.Yaw = _Network.readFloat();
+		_Coordinates.Pitch = _Network.readFloat();
+		_Coordinates.OnGround = _Network.readBool();
+
+		/*if (!_ChunkProvider.isFullyCircleSpawned()) {
+		//_ChunkProvider.HandleMovement(_Coordinates);
+		}*/
+		break;
+	case false:
+		_Network.read(9);
+		break;
+	}
+
+}
+
+void PlayerThread::Packet13_PosAndLook() {
+	EntityCoordinates TmpCoord;
+	switch(isLoginDone()) {
+	case true:
+		//Read coordinates in a temporary variable
+		TmpCoord.X = _Network.readDouble();
+		TmpCoord.Y = _Network.readDouble();
+		TmpCoord.Stance = _Network.readDouble();
+		TmpCoord.Z = _Network.readDouble();
+		TmpCoord.Yaw = _Network.readFloat();
+		TmpCoord.Pitch = _Network.readFloat();
+		TmpCoord.OnGround = _Network.readBool();
+
+		//if X and Z ==  8.5000000000000000 , there is crap in the tcp buffer -> ignore it
+		if (TmpCoord.X == 8.5000000000000000 && TmpCoord.Z == 8.5000000000000000) { 
+			return;
+		}else{
+
+			_Coordinates = TmpCoord;
+			//_ChunkProvider.HandleMovement(_Coordinates);
+		}
+		break;
+	case false:
+		_Network.read(41);
+		break;
+	}
+
+}
+
+void PlayerThread::Packet254_ServerListPing() {
+	_sTemp.clear();
+	_sTemp.assign(_pSettings->getServerDescription()); //Server Description
+	_sTemp.append("§");
+	Poco::NumberFormatter::append(_sTemp,PlayerCount); //Player count
+	_sTemp.append("§");
+	Poco::NumberFormatter::append(_sTemp,_pSettings->getMaxClients()); //player slots
+	_sTemp.append("§");
+
+	Kick(_sTemp);
+}
+
+void PlayerThread::Packet255_Disconnect() {
+					_Network.readString();
+				Disconnect();
 }
