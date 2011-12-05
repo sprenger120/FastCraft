@@ -27,11 +27,11 @@ using std::cout;
 
 PlayerPool::PlayerPool(SettingsHandler* pSettingsHandler):
 _vPlayerThreads(0),
-_ThreadPool("PlayerThreads",1,pSettingsHandler->getMaxClients()),
-_EntityProvider(),
-_ServerTime(),
-_qChat(),
-_PackingThread()
+	_ThreadPool("PlayerThreads",1,pSettingsHandler->getMaxClients()),
+	_EntityProvider(),
+	_ServerTime(),
+	_qChat(),
+	_PackingThread()
 {
 	//Create ChunkRoot obj
 	try {
@@ -83,7 +83,7 @@ void PlayerPool::run() {
 
 		ChatEntry = _qChat.front();
 		_qChat.pop();
-		
+
 		sendMessageToAll(ChatEntry.Message);
 		cout<<"Chat: "<<ChatEntry.Message<<endl; //Server console
 	}
@@ -100,7 +100,7 @@ bool PlayerPool::isAnySlotFree() {
 
 void PlayerPool::Assign(Poco::Net::StreamSocket& StrmSocket) {
 	int iSlot;
-	
+
 	iSlot = getFreeSlot();
 	if (iSlot == -1) {return;}
 
@@ -111,7 +111,7 @@ void PlayerPool::Assign(Poco::Net::StreamSocket& StrmSocket) {
 int PlayerPool::getFreeSlot() {
 	for (int x=0;x<=_vPlayerThreads.size()-1;x++) { //Release objects
 		if (!_vPlayerThreads[x]->isAssigned()) {
-		return x;
+			return x;
 		}
 	}
 	return -1;
@@ -136,20 +136,11 @@ void PlayerPool::Chat(string String,PlayerThread* pPlayer,bool fAppendName) {
 }
 
 void PlayerPool::sendMessageToAll(string& rString) {
-	QueueJob Job;
-
-	Job.Data.clear();
-	Job.Data.append<char>(1,0x3);
-
-	NetworkIO::packString(Job.Data,rString);
-	Job.Special = FC_JOB_NO;
-		
 	for (int x=0;x<=_vPlayerThreads.size()-1;x++) {
-			if( _vPlayerThreads[x]->isAssigned()) {
-				if ( _vPlayerThreads[x]->isSpawned()) {
-					_vPlayerThreads[x]->appendQueue(Job);
-				}
+		if( _vPlayerThreads[x]->isAssigned()) {
+			if ( _vPlayerThreads[x]->isSpawned()) {
+				_vPlayerThreads[x]->insertChat(rString);
 			}
-
+		}
 	}
 }
