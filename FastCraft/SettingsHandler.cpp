@@ -165,10 +165,12 @@ _sServerDescription(""),
 		}
 
 		//View distance
-		if (_iViewDistance < 1 || _iViewDistance > 30) {
+		if (_iViewDistance < 4 || _iViewDistance > 16) {
 			cout<<"***Config ERROR: Illegal view distance. Falling back to 10!"<<endl;
 			_iViewDistance = 10;
 		}
+
+
 
 		if (_iViewDistance%2) { 
 			_iViewDistance++;
