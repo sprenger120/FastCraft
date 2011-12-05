@@ -51,7 +51,7 @@ int main() {
 
 	stringstream StrStrm;
 	while (1) {		
-		StrStrm.clear();
+		/*StrStrm.clear();
 
 		StrStrm<<"IO:"
 			   <<NetworkIO::getIOTraffic() / 1024 / 1024
@@ -65,6 +65,7 @@ int main() {
 		
 
 		Poco::StreamCopier::copyStream(StrStrm,cout);
+		*/
 		Thread::sleep(1000);
 	}
 
