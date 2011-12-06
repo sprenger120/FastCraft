@@ -13,7 +13,9 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 */
 #include "AcceptThread.h" 
+#include "NetworkIO.h"
 #include "SettingsHandler.h"
+#include "PlayerPool.h"
 #include <Poco/Net/ServerSocket.h>
 #include <Poco/Net/StreamSocket.h>
 #include <Poco/Thread.h>
@@ -22,38 +24,33 @@ using Poco::Net::StreamSocket;
 using std::cout;
 using Poco::Thread;
 
-AcceptThread::AcceptThread(SettingsHandler* Settings):
-	_PlayerPool(Settings),
+AcceptThread::AcceptThread(PlayerPool& rPlayerPool):
+	_rPlayerPool(rPlayerPool),
 	_ServerFullMsg("")
-{		
-	_iPort =  Settings->getPort();
+{
 	_ServerFullMsg.append<unsigned char>(1,0xFF);
-	_ServerFullMsg.append<char>(2,0);
+	NetworkIO::packString(_ServerFullMsg,"Server full!");
 }
 
 AcceptThread::~AcceptThread() {
 }
 
 void AcceptThread::run() {
-	Poco::Net::ServerSocket ServerSock(_iPort);
+	Poco::Net::ServerSocket ServerSock(SettingsHandler::getPort());
 	Poco::Net::StreamSocket StrmSock;
 	ServerSock.setBlocking(true);
-
-	//Create player pool thread
-	Poco::Thread threadPlayerPool("PlayerPool");
-	threadPlayerPool.start(_PlayerPool);
 
 	while(1) {
 		ServerSock.listen(); //Wait
 		StrmSock = ServerSock.acceptConnection(); //Ooh a new player
 
-		if (!_PlayerPool.isAnySlotFree()) { //There is no free slot
+		if (!_rPlayerPool.isAnySlotFree()) { //There is no free slot
 			StrmSock.sendBytes(_ServerFullMsg.c_str(),_ServerFullMsg.length());
 			Thread::sleep(100); //Wait a moment 
 			StrmSock.close();
 			continue;
 		}
 
-		_PlayerPool.Assign(StrmSock);
+		_rPlayerPool.Assign(StrmSock);
 	}
 }

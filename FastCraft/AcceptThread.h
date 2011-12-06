@@ -19,22 +19,19 @@ GNU General Public License for more details.
 #include <iostream>
 #include <Poco/Runnable.h>
 #include <string>
-#include "PlayerPool.h"
-
-class SettingsHandler;
 
 using std::string;
+class PlayerPool;
 
 class AcceptThread : public Poco::Runnable {
 private:
-	short _iPort;
 	string _sIP;
 	string _ServerFullMsg;
 	
-	PlayerPool _PlayerPool;
+	PlayerPool& _rPlayerPool;
 public:
 	//De- /constructor
-	AcceptThread(SettingsHandler*);
+	AcceptThread(PlayerPool&);
 	~AcceptThread();
 
 	virtual void run(); //Thread Main
