@@ -28,28 +28,28 @@ using std::string;
 class SettingsHandler {
 private:
 	//Network
-	int _iPort;
-	int _iMaxClients;
+	static int _iPort;
+	static int _iPlayerSlots;
 	
 	//Server Info
-	string _sServerDescription;
-	int _iServerMode;
-	char _iDifficulty;
-	bool _fOnlineMode;
-	bool _fWhitelist;
+	static string _sServerDescription;
+	static int _iServerMode;
+	static char _iDifficulty;
+	static bool _fOnlineMode;
+	static bool _fWhitelist;
 	
 	//Map Info
-	unsigned char _iWorldHeight;
-	bool _fAllowNeather;
-	string _sMainMapName;
+	static int _iWorldHeight;
+	static bool _fAllowNeather;
+	static string _sMainMapName;
 
 	//Spawning
-	bool _fSpawnPeacefulAnimals;
-	bool _fSpawnHostileAnimals;
+	static bool _fSpawnPeacefulAnimals;
+	static bool _fSpawnHostileAnimals;
 
 	//Player
-	int _iViewDistance;
-	bool _fPVP;
+	static int _iViewDistance;
+	static bool _fPVP;
 public:
 	//De- / constructor 
 	SettingsHandler(); //Read configuration
@@ -57,8 +57,8 @@ public:
 
 	//Property Accessors
 		//Network
-		short getPort(); //Returns port that FastCraft binds
-		int getMaxClients(); //Returns maximal allowed parallel connected clients
+		static short getPort(); //Returns port that FastCraft binds
+		static int getPlayerSlotCount(); //Returns maximal allowed parallel connected clients
 		
 		//Version
 		static string getSupportedMCVersion(); //Returns accepted Minecraft Version (Text)
@@ -66,25 +66,25 @@ public:
 		static int getSupportedProtocolVersion(); //Returns actual supported minecraft protocol version 
 
 		//Server Info
-		string getServerDescription();
-		int getServerMode(); //false for survival, true for creative
-		char getDifficulty();
-		bool isOnlineModeActivated(); //returns true if name verification is required
-		bool isWhitelistActivated();
+		static string getServerDescription();
+		static int getServerMode(); //false for survival, true for creative
+		static char getDifficulty();
+		static bool isOnlineModeActivated(); //returns true if name verification is required
+		static bool isWhitelistActivated();
 
 		//Map Info
-		long long getMapSeed();
-		unsigned char getWorldHeight();
-		bool isNeatherAllowed(); 
-		string getMainWorldName();
+		static long long getMapSeed();
+		static unsigned char getWorldHeight();
+		static bool isNeatherAllowed(); 
+		static string getMainWorldName();
 
 		//Spawning
-		bool isPeacefulAnimalSpawningActivated();
-		bool isHostileAnimalSpawningActivated();
+		static bool isPeacefulAnimalSpawningActivated();
+		static bool isHostileAnimalSpawningActivated();
 
 		//Player
-		int getViewDistance();
-		bool isPVPActivated();
+		static int getViewDistance();
+		static bool isPVPActivated();
 };
 
 #endif
