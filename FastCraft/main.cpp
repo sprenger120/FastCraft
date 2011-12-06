@@ -20,8 +20,8 @@ GNU General Public License for more details.
 #include <Poco/Exception.h>
 #include "AcceptThread.h"
 #include "SettingsHandler.h"
-#include "PlayerThread.h"
-#include "NetworkIO.h"
+#include "PlayerPool.h"
+#include "PackingThread.h"
 #include <Poco/StreamCopier.h>
 
 using std::cout;
@@ -29,46 +29,45 @@ using std::stringstream;
 using Poco::Thread;
 
 int main() {
-	SettingsHandler* pSettingHandler;
+	SettingsHandler Settings;
 
 	cout<<"--- FAST CRAFT v. "<<SettingsHandler::getFastCraftVersion()<<" for Minecraft "<<SettingsHandler::getSupportedMCVersion()<<" ---"<<"\n";
 
 	try {
-		pSettingHandler = new SettingsHandler; //Load configuration
+		Settings = SettingsHandler(); //Load configuration into static variables
 	} catch (Poco::RuntimeException) {
 		Thread::sleep(3000);
 		return 1;
 	}
-	cout<<"Running on *:"<<pSettingHandler->getPort()<<" with "<<pSettingHandler->getMaxClients()<<" player slots"<<std::endl;
+	cout<<"Running on *:"<<SettingsHandler::getPort()<<" with "<<SettingsHandler::getPlayerSlotCount()<<" player slots"<<std::endl;
 
 
-	//Start Network Thread
-	AcceptThread AcceptThread(pSettingHandler);
-	Thread threadAcceptThread("AcceptThread");
-	threadAcceptThread.start(AcceptThread);
+	//Threads
+	Thread threadPackingThread("Chunk Packer");
+	Thread threadPlayerPool("PlayerPool");
+	Thread threadAcceptThread("Network Acceptor");
+
+
+	//Create ChunkPacker Thread
+	PackingThread Packer;
+	threadPackingThread.start(Packer);
+
+
+	//Create player pool thread
+	PlayerPool PPool(Packer);
+	threadPlayerPool.start(PPool);
+
+	//Acceptor thread
+	AcceptThread Acceptor(PPool);
+	threadAcceptThread.start(Acceptor);
+
 
 	cout<<"Ready."<<"\n"<<std::endl;
+	//ToDo: server time...
 
-	stringstream StrStrm;
 	while (1) {		
-		/*StrStrm.clear();
-
-		StrStrm<<"IO:"
-			   <<NetworkIO::getIOTraffic() / 1024 / 1024
-			   <<" MB | Player: "
-			   <<PlayerThread::getConnectedPlayers()
-			   <<"/"
-			   <<pSettingHandler->getMaxClients()
-			   <<" | Time: "
-			   <<ServerTime::getTimeFormated()
-			   <<"\n";
-		
-
-		Poco::StreamCopier::copyStream(StrStrm,cout);
-		*/
 		Thread::sleep(1000);
 	}
 
-	delete pSettingHandler;
 	return 1;
 }
