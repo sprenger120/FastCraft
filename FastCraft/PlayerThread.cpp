@@ -229,7 +229,7 @@ void PlayerThread::Kick(string sReason) {
 	NetworkIO::packString(_sTemp,sReason);
 	_Connection.sendBytes(_sTemp.c_str(),_sTemp.length());
 
-	Thread::sleep(50);
+	Thread::sleep(100);
 	if (isSpawned()) { // If names is known
 		cout<<_sName<<" was kicked for: "<<sReason<<"\n"; 
 	}
@@ -242,7 +242,7 @@ void PlayerThread::Kick() {
 	_sTemp.append<char>(2,0x0);
 	_Connection.sendBytes(_sTemp.c_str(),_sTemp.length());
 
-	Thread::sleep(50);
+	Thread::sleep(100);
 	if (isSpawned()) { // If names is known
 		cout<<_sName<<" was kicked"<<"\n"; 
 	}
@@ -380,35 +380,34 @@ void PlayerThread::ProcessQueue() {
 
 	timer.start();
 
+
 	if (_SendQueue.size() == 0) {return;}
 
 	//packet queue
-	//while (_SendQueue.size() && iChunkCount == 0) {
+	while (_SendQueue.size()) {
+		qJob = _SendQueue.front();
+		_SendQueue.pop();
 
-	qJob = _SendQueue.front();
-	_SendQueue.pop();
 
-	//cout<<_sName<<" queue size:"<<_SendQueue.size()<<"\n";
 
-	_Connection.sendBytes(qJob.Data.c_str(),qJob.Data.length());
+		_Connection.sendBytes(qJob.Data.c_str(),qJob.Data.length());
 
-	//Thread::sleep(5);
+		if (qJob.Data.c_str()[0] == 0x32) { continue; }
 
-	switch(qJob.Special) {
-	case FC_JOB_NONE:
-		break;
-	case FC_JOB_CLOSECONN:
-		Thread::sleep(50); 
-		Disconnect(true);
-		break;
-	default:
-		cout<<"***INTERNAL SERVER ERROR: Unknown job ID: ("<<qJob.Special<<") !"<<"\n";
-		Disconnect(true);
+		switch(qJob.Special) {
+		case FC_JOB_NONE:
+			break;
+		case FC_JOB_CLOSECONN:
+			Thread::sleep(100); 
+			Disconnect(true);
+			break;
+		default:
+			cout<<"***INTERNAL SERVER ERROR: Unknown job ID: ("<<qJob.Special<<") !"<<"\n";
+			Disconnect(true);
+			break;
+		}
 		break;
 	}
-
-	//break;
-	//}
 
 
 	timer.stop();
@@ -514,13 +513,19 @@ void PlayerThread::Packet1_Login() {
 	_Network.addInt(0); // Y
 	_Network.addInt(0); // Z 
 	_Network.Flush();
-
 	_Network.UnLock();
 
-	sendTime(); //Time
-
+	//Client position
+	sendClientPosition(); //Make client leave downloading map screen | chunk provider will send clients position again, after spawning chunk who standing on
+	
+	//Time
+	sendTime(); 
+	
+	//Health
 	UpdateHealth(20,20,5.0F); //Health
-	_ChunkProvider.HandleMovement(_Coordinates); //Send fist chunks and confirm client position
+
+	//Chunks
+	_ChunkProvider.HandleMovement(_Coordinates);
 }
 
 void PlayerThread::Packet2_Handshake() {

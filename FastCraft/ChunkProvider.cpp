@@ -224,7 +224,7 @@ bool ChunkProvider::CheckChunkSet() {
 
 
 	if (_fNewConnection) {
-		_pPlayer->sendClientPosition(); //The client leaves "loading map" screen immediately
+		_pPlayer->sendClientPosition(); //fix potential in block suffocation
 		_fNewConnection = false;
 	}
 

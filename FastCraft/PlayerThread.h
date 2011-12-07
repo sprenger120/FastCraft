@@ -196,10 +196,7 @@ private:
 	void Interval_KeepAlive();
 	void Interval_Time();
 
-	
 	void sendTime();
-	void sendCompass();
-
 
 	//Ticks
 	long long getTicks(); 
