@@ -16,19 +16,8 @@ GNU General Public License for more details.
 #ifndef _FASTCRAFTHEADER_CONSTANTS
 #define _FASTCRAFTHEADER_CONSTANTS
 
-#define FC_JOB_NO						0
+#define FC_JOB_NONE						0
 #define FC_JOB_CLOSECONN				1
-
-//Authentification steps
-#define FC_AUTHSTEP_NOTCONNECTED		0
-#define FC_AUTHSTEP_CONNECTEDONLY		1
-#define FC_AUTHSTEP_HANDSHAKE			2
-#define FC_AUTHSTEP_TIME				3
-#define FC_AUTHSTEP_PRECHUNKS			4
-#define FC_AUTHSTEP_SPAWNPOS			5
-#define FC_AUTHSTEP_INVENTORY			6
-#define FC_AUTHSTEP_USERPOS				7
-#define FC_AUTHSTEP_DONE				8
 
 //Entitys
 #define FC_ENTITY_PLAYER				1
@@ -42,11 +31,11 @@ GNU General Public License for more details.
 #define FC_DIFFICULTY_NORMAL			2
 #define FC_DIFFICULTY_HARD				3
 
-//Interval
+//Interval in milli seconds
 #define FC_INTERVAL_TIMESEND			5000
 #define FC_INTERVAL_KEEPACTIVE			15000
 
-//Map Constants
+//Chunk Constants
 #define FC_CHUNK_BLOCKCOUNT				32768
 #define FC_CHUNK_NIBBLECOUNT			16384
 #define FC_CHUNK_DATACOUNT              81920
