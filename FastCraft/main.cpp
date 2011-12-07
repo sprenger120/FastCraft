@@ -22,6 +22,7 @@ GNU General Public License for more details.
 #include "SettingsHandler.h"
 #include "PlayerPool.h"
 #include "PackingThread.h"
+#include "ServerTime.h"
 #include <Poco/StreamCopier.h>
 
 using std::cout;
@@ -63,10 +64,11 @@ int main() {
 
 
 	cout<<"Ready."<<"\n"<<std::endl;
-	//ToDo: server time...
+	
 
 	while (1) {		
 		Thread::sleep(1000);
+		ServerTime::tick();
 	}
 
 	return 1;

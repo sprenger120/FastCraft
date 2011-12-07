@@ -25,8 +25,7 @@ private:
 public:
 	ServerTime();
 	~ServerTime();
-
-	virtual void run(); //Thread main
+	static void tick();
 
 
 	static long long getTime(); //Returns server Tick Time 

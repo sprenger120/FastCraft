@@ -28,13 +28,8 @@ ServerTime::~ServerTime() {
 long long ServerTime::_iServerTime = 24000*2;
 
 
-void ServerTime::run() {
-	while ( 1 ) {
-		Thread::sleep(1000); //idle
-
-		_iServerTime += 20;
-
-	}
+void ServerTime::tick() {
+	_iServerTime += 20;
 }
 
 
