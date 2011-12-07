@@ -31,13 +31,12 @@ GNU General Public License for more details.
 using Poco::Thread;
 using std::cout;
 using std::endl;
+using std::dec;
 
-PlayerThread::PlayerThread(SettingsHandler* pSettingsHandler,
-	EntityProvider* pEntityProvider,
-	ServerTime* pServerTime,
+PlayerThread::PlayerThread(EntityProvider& rEntityProvider,
 	PlayerPool* pPoolMaster,
-	ChunkRoot* pChunkRoot,
-	PackingThread* pPackingThread
+	ChunkRoot& rChunkRoot,
+	PackingThread& rPackingThread
 	) : 
 _sName(""),
 	_sIP(""),
@@ -49,7 +48,8 @@ _sName(""),
 	_Web_Session("session.minecraft.net"),
 	_Web_Response(),
 	_Network(&_SendQueue),
-	_ChunkProvider(pChunkRoot,&_Network,pPackingThread,this)
+	_rEntityProvider(rEntityProvider),
+	_ChunkProvider(rChunkRoot,_Network,rPackingThread,this)
 {
 	_Flags.Crouched = false;
 	_Flags.Eating = false;
@@ -68,18 +68,14 @@ _sName(""),
 	_TimeJobs.LastKeepAliveSend = 0;
 
 	_iEntityID=0;
-	setAuthStep(FC_AUTHSTEP_NOTCONNECTED);
-
-	_pSettings = pSettingsHandler;
-	_pEntityProvider = pEntityProvider;
-	_pServerTime = pServerTime;
 	_pPoolMaster = pPoolMaster;
 
+	_fSpawned = false;
 	_fAssigned = false;
 	_iThreadTicks = 0;
 }
 
-int PlayerThread::PlayerCount = 0;
+int PlayerThread::_PlayerCount = 0;
 
 PlayerThread::~PlayerThread() {
 	ClearQueue();
@@ -103,7 +99,7 @@ EntityCoordinates PlayerThread::getCoordinates() {
 }
 
 int PlayerThread::getConnectedPlayers() {
-	return PlayerCount;
+	return _PlayerCount;
 }
 
 
@@ -111,7 +107,7 @@ int PlayerThread::getConnectedPlayers() {
 void PlayerThread::run() {
 	unsigned char iPacket;
 	Poco::Stopwatch Timer;
-	
+
 	Timer.start();
 
 	while (1) {
@@ -129,24 +125,29 @@ void PlayerThread::run() {
 			Timer.start();
 
 
-			sendKeepAlive(); 
-			sendTime();
-
-			ProcessAuthStep();
+			Interval_KeepAlive(); 
+			Interval_Time();
 			ProcessQueue();
 
 			iPacket = _Network.readByte();
 
 			//cout<<"Package recovered:"<<std::hex<<int(iPacket)<<"\n";
-
 			switch (iPacket) {
 			case 0x0:
 				Packet0_KeepAlive();
 				break;
 			case 0x1:
+				if (isSpawned()) {
+					Kick("Login already done!");
+					continue;
+				}
 				Packet1_Login();
 				break;
 			case 0x2:
+				if (isSpawned()) {
+					Kick("Login already done!");
+					continue;
+				}
 				Packet2_Handshake();
 				break;
 			case 0x3:
@@ -184,10 +185,10 @@ void PlayerThread::run() {
 
 }
 void PlayerThread::Disconnect(bool fNoLeaveMessage) {
-	if (isNameSet()) {
+	if (isSpawned()) {
 		_ChunkProvider.Disconnect();
-		PlayerCount--;
-		_pEntityProvider->Remove(_iEntityID);
+		_PlayerCount--;
+		_rEntityProvider.Remove(_iEntityID);
 
 		if (!fNoLeaveMessage) {
 			_pPoolMaster->Chat(_sName + " left game",this,false); //false= no <Name> adding
@@ -202,9 +203,11 @@ void PlayerThread::Disconnect(bool fNoLeaveMessage) {
 	_Flags.Riding = false;
 	_Flags.Sprinting = false;
 
-	setAuthStep(FC_AUTHSTEP_NOTCONNECTED);
-
+	_fSpawned = false;
 	_fAssigned = false;
+	_sName.clear();
+	_sIP.clear();
+
 
 	_TimeJobs.LastKeepAliveSend = 0;
 	_TimeJobs.LastTimeSend = 0;
@@ -220,13 +223,11 @@ void PlayerThread::Connect(Poco::Net::StreamSocket& Sock) {
 		Disconnect();
 	}
 	_fAssigned=true;
-	setAuthStep(FC_AUTHSTEP_CONNECTEDONLY);
 
 	_Connection = Sock; 
 	_Network.newConnection(Sock);
 
 	_sIP.assign(_Connection.peerAddress().toString());
-	_sName.clear();
 	_iThreadTicks = 0;
 }
 
@@ -237,7 +238,7 @@ void PlayerThread::Kick(string sReason) {
 	_Network.Flush(FC_JOB_CLOSECONN);
 	_Network.UnLock();
 
-	if (isNameSet()) { // If names is known
+	if (isSpawned()) { // If names is known
 		cout<<_sName<<" was kicked for: "<<sReason<<"\n"; 
 	}
 }
@@ -249,7 +250,7 @@ void PlayerThread::Kick() {
 	_Network.Flush(FC_JOB_CLOSECONN);
 	_Network.UnLock();
 
-	if (isNameSet()) { // If names is known
+	if (isSpawned()) { // If names is known
 		cout<<_sName<<" was kicked"<<"\n"; 
 	}
 }
@@ -261,30 +262,20 @@ void PlayerThread::generateConnectionHash() {
 	_sConnectionHash.assign(StringStream.str());
 }
 
-void PlayerThread::sendTime() {
-	if (getAuthStep() < FC_AUTHSTEP_TIME) {return;}
-	if (getAuthStep() == FC_AUTHSTEP_TIME) { //Increment authstep
-		//Send first time packet
-		_Network.Lock();
-		_Network.addByte(0x4);
-		_Network.addInt64(ServerTime::getTime());
-		_Network.Flush();
-		_Network.UnLock();
-
-		_TimeJobs.LastTimeSend = getTicks();
-		setAuthStep(FC_AUTHSTEP_PRECHUNKS);
-		return;
-	}
-
-
+void PlayerThread::Interval_Time() {
 	if (_TimeJobs.LastTimeSend + FC_INTERVAL_TIMESEND <= getTicks()) {
 		_TimeJobs.LastTimeSend = getTicks();
-		_Network.Lock();
-		_Network.addByte(0x4);
-		_Network.addInt64(ServerTime::getTime());
-		_Network.Flush();
-		_Network.UnLock();
+		sendTime();
 	}
+}
+
+
+void PlayerThread::sendTime() {
+	_Network.Lock();
+	_Network.addByte(0x4);
+	_Network.addInt64(ServerTime::getTime());
+	_Network.Flush();
+	_Network.UnLock();
 }
 
 long long PlayerThread::getTicks() {
@@ -311,7 +302,7 @@ void PlayerThread::sendClientPosition() {
 	_Network.UnLock();
 }
 
-void PlayerThread::sendKeepAlive() {
+void PlayerThread::Interval_KeepAlive() {
 	if (_TimeJobs.LastKeepAliveSend + FC_INTERVAL_KEEPACTIVE <= getTicks()) { //Send new keep alive
 		_TimeJobs.LastKeepAliveSend = getTicks();
 
@@ -353,70 +344,10 @@ template <class T> T PlayerThread::fixRange(T val,T min,T max) {
 }
 
 
-/*
-*	AUTHSTEP
-*/
+
 bool PlayerThread::isSpawned() {
-	if (getAuthStep() >= FC_AUTHSTEP_PRECHUNKS) {
-		return true;
-	}else{
-		return false;
-	}
+	return _fSpawned;
 }
-
-bool PlayerThread::isNameSet() {
-	return _iLoginProgress >= FC_AUTHSTEP_HANDSHAKE;
-}
-
-void PlayerThread::setAuthStep(char iMode) {
-	_iLoginProgress = iMode;
-}
-
-char PlayerThread::getAuthStep() {
-	return _iLoginProgress;
-}
-
-bool PlayerThread::isLoginDone() {
-	if (getAuthStep() == FC_AUTHSTEP_DONE) {
-		return true;
-	}else{
-		return false;
-	}
-}
-
-void PlayerThread::ProcessAuthStep() {
-	switch (getAuthStep()) {
-	case FC_AUTHSTEP_PRECHUNKS:
-		//Set start coordinates
-		_Coordinates.X = 100.0;
-		_Coordinates.Y = 35.0;
-		_Coordinates.Z = 100.0;
-		_Coordinates.Stance = 35.0;
-		_Coordinates.OnGround = false;
-		_Coordinates.Pitch = 0.0F;
-		_Coordinates.Yaw = 0.0F;
-
-		_ChunkProvider.HandleMovement(_Coordinates); //Send first chunks
-		setAuthStep(FC_AUTHSTEP_SPAWNPOS);
-		break;
-	case FC_AUTHSTEP_SPAWNPOS:
-		//Send spawnpos & Health
-		_Network.addByte(0x6);
-		_Network.addInt(0); //X
-		_Network.addInt(0); // Y
-		_Network.addInt(0); // Z 
-		_Network.Flush();
-
-		UpdateHealth(20,20,5.0F);
-		setAuthStep(FC_AUTHSTEP_INVENTORY);
-		break;
-	case FC_AUTHSTEP_INVENTORY:
-		//ToDo: send inventory
-		setAuthStep(FC_AUTHSTEP_DONE);
-		break;
-	}
-}
-
 
 /*
 * QUEUE
@@ -439,7 +370,6 @@ void PlayerThread::ProcessQueue() {
 	int iChunkCount = 0;
 
 	//Chat queue
-
 	while (_ChatQueue.size()) {
 		Message = _ChatQueue.front();
 		_ChatQueue.pop();
@@ -459,35 +389,36 @@ void PlayerThread::ProcessQueue() {
 	if (_SendQueue.size() == 0) {return;}
 
 	//packet queue
-	while (_SendQueue.size() && iChunkCount == 0) {
+	//while (_SendQueue.size() && iChunkCount == 0) {
 
-		qJob = _SendQueue.front();
-		_SendQueue.pop();
+	qJob = _SendQueue.front();
+	_SendQueue.pop();
 
-		//cout<<_sName<<" queue size:"<<_SendQueue.size()<<"\n";
+	//cout<<_sName<<" queue size:"<<_SendQueue.size()<<"\n";
 
-		_Connection.sendBytes(qJob.Data.c_str(),qJob.Data.length());
-	
-		Thread::sleep(5);
+	_Connection.sendBytes(qJob.Data.c_str(),qJob.Data.length());
 
-		switch(qJob.Special) {
-		case FC_JOB_NO:
-			break;
-		case FC_JOB_CLOSECONN:
-			Thread::sleep(200); 
-			Disconnect(true);
-			break;
-		default:
-			cout<<"***INTERNAL SERVER ERROR: Unknown job ID: ("<<qJob.Special<<") !"<<"\n";
-			Disconnect(true);
-			break;
-		}
-		//break;
+	//Thread::sleep(5);
+
+	switch(qJob.Special) {
+	case FC_JOB_NO:
+		break;
+	case FC_JOB_CLOSECONN:
+		Thread::sleep(200); 
+		Disconnect(true);
+		break;
+	default:
+		cout<<"***INTERNAL SERVER ERROR: Unknown job ID: ("<<qJob.Special<<") !"<<"\n";
+		Disconnect(true);
+		break;
 	}
+	//break;
+	//}
+
 
 	timer.stop();
 
-	cout<<"Queue flush time for"<<_sName<<": "<<timer.elapsed()/1000<<"\n";
+	cout<<"Queue flush time for \""<<_sName<<"\" : "<<dec<<timer.elapsed()/1000<<"\n";
 }
 
 void PlayerThread::appendQueue(QueueJob& Job) {
@@ -505,21 +436,15 @@ void PlayerThread::Packet0_KeepAlive() {
 void PlayerThread::Packet1_Login() {
 	int iProtocolVersion = 0;
 
-	//Check login order
-	if (getAuthStep() != FC_AUTHSTEP_HANDSHAKE) {
-		Kick("False login order!");
-		return;
-	}
-
 	//Check minecraft version
 	iProtocolVersion = _Network.readInt(); //Protocol Version
 
-	if (iProtocolVersion > _pSettings->getSupportedProtocolVersion()) {
+	if (iProtocolVersion > SettingsHandler::getSupportedProtocolVersion()) {
 		Kick("Outdated server!");
 		return;
 	}
 
-	if (iProtocolVersion < _pSettings->getSupportedProtocolVersion()) {
+	if (iProtocolVersion <  SettingsHandler::getSupportedProtocolVersion()) {
 		Kick("Outdated client!");
 		return;
 	}
@@ -528,7 +453,7 @@ void PlayerThread::Packet1_Login() {
 	_Network.read(16);
 
 	//Check premium 
-	if (_pSettings->isOnlineModeActivated()) {
+	if (SettingsHandler::isOnlineModeActivated()) {
 		string sPath("/game/checkserver.jsp?user=");
 		sPath.append(_sName);
 		sPath.append("&serverId=");
@@ -550,44 +475,67 @@ void PlayerThread::Packet1_Login() {
 		}
 	}
 
-	//Answer
+
+	//YES DUDE, you got it :D
+
+	_PlayerCount++; //There is an new spawned player
+	_iEntityID = _rEntityProvider.Add(FC_ENTITY_PLAYER); //Fetch a new entity id
+	_fSpawned = true;
+	_ChunkProvider.newConnection();
+
+	//Set start coordinates
+	_Coordinates.X = 100.0;
+	_Coordinates.Y = 35.0;
+	_Coordinates.Z = 100.0;
+	_Coordinates.Stance = 35.0;
+	_Coordinates.OnGround = false;
+	_Coordinates.Pitch = 0.0F;
+	_Coordinates.Yaw = 0.0F;
+
+
+	cout<<_sName<<" joined ("<<_sIP<<") EID:"<<_iEntityID<<endl;  //Console log
+	_pPoolMaster->Chat(_sName + " joined game",this,false); //Chat log
+
+	/*
+	* Response
+	*/
+	//Login response
 	_Network.Lock();
 
 	_Network.addByte(0x1);
 	_Network.addInt(_iEntityID);
 	_Network.addString("");
-	_Network.addInt64(1234568);
-	_Network.addInt(_pSettings->getServerMode());
+	_Network.addInt64(SettingsHandler::getMapSeed());
+	_Network.addInt(SettingsHandler::getServerMode());
 	_Network.addByte(0);
-	_Network.addByte(_pSettings->getDifficulty());
-	_Network.addByte(_pSettings->getWorldHeight());
-	_Network.addByte(_pSettings->getMaxClients());
-
+	_Network.addByte(SettingsHandler::getDifficulty());
+	_Network.addByte(SettingsHandler::getWorldHeight());
+	_Network.addByte((unsigned char)SettingsHandler::getPlayerSlotCount());
 	_Network.Flush();
+
+	//compass
+	_Network.addByte(0x6);
+	_Network.addInt(0); //X
+	_Network.addInt(0); // Y
+	_Network.addInt(0); // Z 
+	_Network.Flush();
+
 	_Network.UnLock();
 
-	setAuthStep(FC_AUTHSTEP_TIME); 
-	_ChunkProvider.newConnection();
-	_pPoolMaster->Chat(_sName + " joined game",this,false); //false= no <Name> adding
+	sendTime(); //Time
+
+	UpdateHealth(20,20,5.0F); //Health
+	_ChunkProvider.HandleMovement(_Coordinates); //Send fist chunks and confirm client position
 }
 
 void PlayerThread::Packet2_Handshake() {
-	//Check login order
-	if (getAuthStep() != FC_AUTHSTEP_CONNECTEDONLY) {
-		Kick("False login order!");
-		return;
-	}
 	_sName = _Network.readString();
-
-	PlayerCount++;
-	setAuthStep(FC_AUTHSTEP_HANDSHAKE);
-	_iEntityID = _pEntityProvider->Add(FC_ENTITY_PLAYER); //Fetch a new entity id
 
 	//Send response (Connection Hash)
 	_Network.Lock();
 	_Network.addByte(0x02);
 
-	if (_pSettings->isOnlineModeActivated()) {
+	if (SettingsHandler::isOnlineModeActivated()) {
 		generateConnectionHash();
 		_Network.addString(_sConnectionHash);
 	}else{
@@ -595,7 +543,6 @@ void PlayerThread::Packet2_Handshake() {
 	}
 	_Network.Flush();
 	_Network.UnLock();
-	cout<<_sName<<" joined ("<<_sIP<<") EID:"<<_iEntityID<<endl;
 }
 
 void PlayerThread::Packet3_Chat() {
@@ -604,110 +551,72 @@ void PlayerThread::Packet3_Chat() {
 }
 
 void PlayerThread::Packet10_Player() {
-	switch(isLoginDone()) {
-	case true:
-		_Coordinates.OnGround = _Network.readBool();
-
-		if (!_ChunkProvider.isFullyCircleSpawned()) {
-			_ChunkProvider.HandleMovement(_Coordinates);
-		}
-
-		break;
-	case false:
-		_Network.read(1);
-		break;
-	}
+	_Coordinates.OnGround = _Network.readBool();
 }
 
 void PlayerThread::Packet11_Position() {
 	EntityCoordinates TmpCoord;
-	switch(isLoginDone()) {
-	case true:
-		//Read coordinates in a temporary variable
-		TmpCoord.X = _Network.readDouble();
-		TmpCoord.Y = _Network.readDouble();
-		TmpCoord.Stance = _Network.readDouble();
-		TmpCoord.Z = _Network.readDouble();
-		TmpCoord.OnGround = _Network.readBool();
 
-		//if X and Z ==  8.5000000000000000 , there is crap in the tcp buffer -> ignore it
-		if (TmpCoord.X == 8.5000000000000000 && TmpCoord.Z == 8.5000000000000000) { 
-			return;
-		}else{
-			_Coordinates.X = TmpCoord.X;
-			_Coordinates.Y = TmpCoord.Y;
-			_Coordinates.Stance = TmpCoord.Stance;
-			_Coordinates.Z = TmpCoord.Z;
-			_Coordinates.OnGround = TmpCoord.OnGround;
-			//_ChunkProvider.HandleMovement(_Coordinates);
-		}
-		break;
-	case false:
-		_Network.read(33);
-		break;
+	//Read coordinates in a temporary variable
+	TmpCoord.X = _Network.readDouble();
+	TmpCoord.Y = _Network.readDouble();
+	TmpCoord.Stance = _Network.readDouble();
+	TmpCoord.Z = _Network.readDouble();
+	TmpCoord.OnGround = _Network.readBool();
+
+	//if X and Z ==  8.5000000000000000 , there is crap in the tcp buffer -> ignore it
+	if (TmpCoord.X == 8.5000000000000000 && TmpCoord.Z == 8.5000000000000000) { 
+		return;
+	}else{
+		_Coordinates.X = TmpCoord.X;
+		_Coordinates.Y = TmpCoord.Y;
+		_Coordinates.Stance = TmpCoord.Stance;
+		_Coordinates.Z = TmpCoord.Z;
+		_Coordinates.OnGround = TmpCoord.OnGround;
+		_ChunkProvider.HandleMovement(_Coordinates);
 	}
 }
 
 void PlayerThread::Packet12_Look() {
-	switch(isLoginDone()) {
-	case true:
-		_Coordinates.Yaw = _Network.readFloat();
-		_Coordinates.Pitch = _Network.readFloat();
-		_Coordinates.OnGround = _Network.readBool();
-
-		/*if (!_ChunkProvider.isFullyCircleSpawned()) {
-		//_ChunkProvider.HandleMovement(_Coordinates);
-		}*/
-		break;
-	case false:
-		_Network.read(9);
-		break;
-	}
-
+	_Coordinates.Yaw = _Network.readFloat();
+	_Coordinates.Pitch = _Network.readFloat();
+	_Coordinates.OnGround = _Network.readBool();
 }
 
 void PlayerThread::Packet13_PosAndLook() {
 	EntityCoordinates TmpCoord;
-	switch(isLoginDone()) {
-	case true:
-		//Read coordinates in a temporary variable
-		TmpCoord.X = _Network.readDouble();
-		TmpCoord.Y = _Network.readDouble();
-		TmpCoord.Stance = _Network.readDouble();
-		TmpCoord.Z = _Network.readDouble();
-		TmpCoord.Yaw = _Network.readFloat();
-		TmpCoord.Pitch = _Network.readFloat();
-		TmpCoord.OnGround = _Network.readBool();
 
-		//if X and Z ==  8.5000000000000000 , there is crap in the tcp buffer -> ignore it
-		if (TmpCoord.X == 8.5000000000000000 && TmpCoord.Z == 8.5000000000000000) { 
-			return;
-		}else{
+	//Read coordinates in a temporary variable
+	TmpCoord.X = _Network.readDouble();
+	TmpCoord.Y = _Network.readDouble();
+	TmpCoord.Stance = _Network.readDouble();
+	TmpCoord.Z = _Network.readDouble();
+	TmpCoord.Yaw = _Network.readFloat();
+	TmpCoord.Pitch = _Network.readFloat();
+	TmpCoord.OnGround = _Network.readBool();
 
-			_Coordinates = TmpCoord;
-			//_ChunkProvider.HandleMovement(_Coordinates);
-		}
-		break;
-	case false:
-		_Network.read(41);
-		break;
+	//if X and Z ==  8.5000000000000000 , there is crap in the tcp buffer -> ignore it
+	if (TmpCoord.X == 8.5000000000000000 && TmpCoord.Z == 8.5000000000000000) { 
+		return;
+	}else{
+		_Coordinates = TmpCoord;
+		_ChunkProvider.HandleMovement(_Coordinates);
 	}
-
 }
 
 void PlayerThread::Packet254_ServerListPing() {
 	_sTemp.clear();
-	_sTemp.assign(_pSettings->getServerDescription()); //Server Description
+	_sTemp.assign(SettingsHandler::getServerDescription()); //Server Description
 	_sTemp.append("§");
-	Poco::NumberFormatter::append(_sTemp,PlayerCount); //Player count
+	Poco::NumberFormatter::append(_sTemp,_PlayerCount); //Player count
 	_sTemp.append("§");
-	Poco::NumberFormatter::append(_sTemp,_pSettings->getMaxClients()); //player slots
+	Poco::NumberFormatter::append(_sTemp,SettingsHandler::getPlayerSlotCount()); //player slots
 	_sTemp.append("§");
 
 	Kick(_sTemp);
 }
 
 void PlayerThread::Packet255_Disconnect() {
-					_Network.readString();
-				Disconnect();
+	_Network.readString();
+	Disconnect();
 }

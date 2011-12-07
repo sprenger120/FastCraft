@@ -27,9 +27,8 @@ GNU General Public License for more details.
 #include "NetworkIO.h"
 #include "ChunkProvider.h"
 
-class SettingsHandler;
+
 class EntityProvider;
-class ServerTime;
 class PlayerPool;
 class ChunkRoot;
 class PackingThread;
@@ -48,41 +47,37 @@ private:
 	//Player specific data
 	PlayerFlags _Flags; //Burning,eating...
 	EntityCoordinates _Coordinates; //Coordinates
-	string _sName; //Minecraft.net Username and Ingame Nickname
+	string _sName; //Minecraft.net Username
 	string _sIP; //IP
 	int _iEntityID;
-	char _iLoginProgress;
 	short _iHealth;
 	short _iFood;
 	float _nSaturation;
+    bool _fSpawned;
+
 
 	//TCP stuff
 	Poco::Net::StreamSocket _Connection;
 	string _sTemp;
 	queue<QueueJob> _SendQueue;
 	queue<string> _ChatQueue;
-	NetworkIO _Network;
+	NetworkIO _Network;	
 
-	//Connection Hash
-	string _sConnectionHash;
-
-	//Class pointer
-	SettingsHandler* _pSettings;
-	EntityProvider* _pEntityProvider;
-	ServerTime* _pServerTime;
+	//Needed Classes
+	EntityProvider& _rEntityProvider;
 	PlayerPool* _pPoolMaster;
 
 	ChunkProvider _ChunkProvider;
 
 	//Thread specific
-	bool _fAssigned;//true if a player is assigned to that thread
+	bool _fAssigned;
 	long long _iThreadTicks;
-	int _iThreadID;
-	static int PlayerCount;
+	static int _PlayerCount;
 
 	//Verification
 	Poco::Net::HTTPClientSession _Web_Session;
 	Poco::Net::HTTPResponse _Web_Response;
+	string _sConnectionHash;
 
 	//Time jobs
 	TimeJobs _TimeJobs;
@@ -90,7 +85,7 @@ public:
 	/*
 	* De- / constructor
 	*/
-	PlayerThread(SettingsHandler*,EntityProvider*,ServerTime*,PlayerPool*,ChunkRoot*,PackingThread*);
+	PlayerThread(EntityProvider&,PlayerPool*,ChunkRoot&,PackingThread&);
 	~PlayerThread();
 
 
@@ -150,10 +145,10 @@ public:
 
 
 	/*
-	* Returns true if PlayerPool can spawn Entits
-	* This means that AuthStep FC_AUTHSTEP_PRECHUNKS is reached
+	* Returns true if Player's login is done
 	*/
 	bool isSpawned(); 
+
 
 	/*
 	* Returns Playername
@@ -176,16 +171,10 @@ public:
 	NetworkIO& getConnection();
 
 	/*
-	* Returns Players full coordinates and look
+	* Returns Players coordinates and look
 	*/
 	EntityCoordinates getCoordinates();
 	
-	/*
-	* Returns actual authentication step of player 
-	* For authentication steps, have a look in the wiki or in Constants.h
-	*/ 
-	char getAuthStep();
-
 	/*
 	* Returns count of actual connected players
 	*/
@@ -202,26 +191,26 @@ private:
 	void ClearQueue(); //Clear send queue
 	void ProcessQueue(); 
 
-	//AuthStep
-	void setAuthStep(char);
-	bool isLoginDone(); //returns true if the full login procedure done
-	void ProcessAuthStep();
-	bool isNameSet(); //returns true if name is set
+	//Interval functions
+	void Interval_KeepAlive();
+	void Interval_Time();
 
-	//send... Functions
-	void sendKeepAlive();
-	void sendTime();//Sends time if required
+	
+	void sendTime();
+	void sendCompass();
 
 
 	//Ticks
 	long long getTicks(); 
+
 
 	//Other
 	void generateConnectionHash(); //Generate a new connection hash	
 	template <class T> T fixRange(T,T,T);
 	void Disconnect(bool = false); //Clear Player object
 
-	//Packets
+
+	//Packets - receive only
 	void Packet0_KeepAlive();
 	void Packet1_Login();
 	void Packet2_Handshake();
