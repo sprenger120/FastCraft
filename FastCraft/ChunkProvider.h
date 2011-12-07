@@ -19,7 +19,6 @@ GNU General Public License for more details.
 #include "Structs.h"
 #include <vector>
 
-class PlayerThread;
 class NetworkIO;
 class ChunkRoot;
 class PackingThread;
@@ -33,16 +32,15 @@ private:
 	ChunkCoordinates _PlayerCoordinates;
 	ChunkCoordinates _oldPlayerCoordinates;
 
-	NetworkIO* _pNetwork;
-	ChunkRoot* _pChunkRoot;
-	PackingThread* _pPackingThread;
+	ChunkRoot& _rChunkRoot;
+	NetworkIO& _rNetwork;
+	PackingThread& _rPackingThread;
 	PlayerThread* _pPlayer;
 
-	const int _ViewDistance; //chunk count to each direction
 	bool _fConnected;
 	bool _fNewConnection;
 public:
-	ChunkProvider(ChunkRoot*,NetworkIO*,PackingThread*,PlayerThread*);
+	ChunkProvider(ChunkRoot&,NetworkIO&,PackingThread&,PlayerThread*);
 	~ChunkProvider();
 
 	void newConnection();
