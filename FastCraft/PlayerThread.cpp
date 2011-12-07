@@ -49,13 +49,9 @@ _sName(""),
 	_Web_Response(),
 	_Network(&_SendQueue),
 	_rEntityProvider(rEntityProvider),
+	_Flags(),
 	_ChunkProvider(rChunkRoot,_Network,rPackingThread,this)
 {
-	_Flags.Crouched = false;
-	_Flags.Eating = false;
-	_Flags.OnFire = false;
-	_Flags.Riding = false;
-	_Flags.Sprinting = false;
 	_Coordinates.OnGround = false;
 	_Coordinates.Pitch = 0.0F;
 	_Coordinates.Stance = 0.0;
@@ -182,8 +178,8 @@ void PlayerThread::run() {
 		}
 
 	}
-
 }
+
 void PlayerThread::Disconnect(bool fNoLeaveMessage) {
 	if (isSpawned()) {
 		_ChunkProvider.Disconnect();
@@ -197,11 +193,7 @@ void PlayerThread::Disconnect(bool fNoLeaveMessage) {
 	}
 
 
-	_Flags.Crouched = false;
-	_Flags.Eating = false;
-	_Flags.OnFire = false;
-	_Flags.Riding = false;
-	_Flags.Sprinting = false;
+	_Flags.clear();
 
 	_fSpawned = false;
 	_fAssigned = false;
@@ -232,27 +224,29 @@ void PlayerThread::Connect(Poco::Net::StreamSocket& Sock) {
 }
 
 void PlayerThread::Kick(string sReason) {
-	_Network.Lock();
-	_Network.addByte(0xFF);
-	_Network.addString(sReason);
-	_Network.Flush(FC_JOB_CLOSECONN);
-	_Network.UnLock();
+	_sTemp.clear();
+	_sTemp.append<char>(1,0xFF);
+	NetworkIO::packString(_sTemp,sReason);
+	_Connection.sendBytes(_sTemp.c_str(),_sTemp.length());
 
+	Thread::sleep(50);
 	if (isSpawned()) { // If names is known
 		cout<<_sName<<" was kicked for: "<<sReason<<"\n"; 
 	}
+	Disconnect(true);
 }
 
 void PlayerThread::Kick() {
-	_Network.Lock();
-	_Network.addByte(0xFF);
-	_Network.addString("");
-	_Network.Flush(FC_JOB_CLOSECONN);
-	_Network.UnLock();
+	_sTemp.clear();
+	_sTemp.append<char>(1,0xFF);
+	_sTemp.append<char>(2,0x0);
+	_Connection.sendBytes(_sTemp.c_str(),_sTemp.length());
 
+	Thread::sleep(50);
 	if (isSpawned()) { // If names is known
 		cout<<_sName<<" was kicked"<<"\n"; 
 	}
+	Disconnect(true);
 }
 
 
@@ -401,10 +395,10 @@ void PlayerThread::ProcessQueue() {
 	//Thread::sleep(5);
 
 	switch(qJob.Special) {
-	case FC_JOB_NO:
+	case FC_JOB_NONE:
 		break;
 	case FC_JOB_CLOSECONN:
-		Thread::sleep(200); 
+		Thread::sleep(50); 
 		Disconnect(true);
 		break;
 	default:
@@ -412,6 +406,7 @@ void PlayerThread::ProcessQueue() {
 		Disconnect(true);
 		break;
 	}
+
 	//break;
 	//}
 

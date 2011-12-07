@@ -26,6 +26,7 @@ GNU General Public License for more details.
 #include "Structs.h"
 #include "NetworkIO.h"
 #include "ChunkProvider.h"
+#include "EntityFlags.h"
 
 
 class EntityProvider;
@@ -45,7 +46,7 @@ struct TimeJobs {
 class PlayerThread : public Poco::Runnable {
 private:
 	//Player specific data
-	PlayerFlags _Flags; //Burning,eating...
+	EntityFlags _Flags; //Burning,eating...
 	EntityCoordinates _Coordinates; //Coordinates
 	string _sName; //Minecraft.net Username
 	string _sIP; //IP
