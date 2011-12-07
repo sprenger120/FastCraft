@@ -36,6 +36,7 @@ class PackingThread;
 
 using std::string;
 using std::queue;
+using std::stringstream;
 
 struct TimeJobs {
 	long long LastTimeSend;
@@ -50,6 +51,7 @@ private:
 	EntityCoordinates _Coordinates; //Coordinates
 	string _sName; //Minecraft.net Username
 	string _sIP; //IP
+	string _sLeaveMessage;
 	int _iEntityID;
 	short _iHealth;
 	short _iFood;
@@ -60,14 +62,14 @@ private:
 	//TCP stuff
 	Poco::Net::StreamSocket _Connection;
 	string _sTemp;
-	queue<QueueJob> _SendQueue;
+	queue<string> _SendQueue;
 	queue<string> _ChatQueue;
 	NetworkIO _Network;	
 
 	//Needed Classes
 	EntityProvider& _rEntityProvider;
 	PlayerPool* _pPoolMaster;
-
+	PlayerPoolEvent _ppEvent;
 	ChunkProvider _ChunkProvider;
 
 	//Thread specific
@@ -137,7 +139,7 @@ public:
 
 
 	/*
-	* Interts text into player chat
+	* Interts text into player chat queue
 
 	Parameter:
 	@1 : Text to insert 
@@ -186,7 +188,7 @@ public:
 	* DONT USE THEM
 	*/
 	void sendClientPosition();
-	void appendQueue(QueueJob&);
+	void appendQueue(string&);
 private:
 	//Queue
 	void ClearQueue(); //Clear send queue
@@ -197,6 +199,7 @@ private:
 	void Interval_Time();
 
 	void sendTime();
+	void pushChatEvent(string&);
 
 	//Ticks
 	long long getTicks(); 
@@ -205,7 +208,7 @@ private:
 	//Other
 	void generateConnectionHash(); //Generate a new connection hash	
 	template <class T> T fixRange(T,T,T);
-	void Disconnect(bool = false); //Clear Player object
+	void Disconnect(char); //Clear Player object
 
 
 	//Packets - receive only

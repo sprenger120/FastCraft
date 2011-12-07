@@ -40,6 +40,7 @@ PlayerThread::PlayerThread(EntityProvider& rEntityProvider,
 	) : 
 _sName(""),
 	_sIP(""),
+	_sLeaveMessage(""),
 	_Connection(),
 	_sTemp(""),
 	_SendQueue(),
@@ -97,8 +98,6 @@ EntityCoordinates PlayerThread::getCoordinates() {
 int PlayerThread::getConnectedPlayers() {
 	return _PlayerCount;
 }
-
-
 
 void PlayerThread::run() {
 	unsigned char iPacket;
@@ -172,26 +171,44 @@ void PlayerThread::run() {
 				cout<<"Unknown packet received! 0x"<<std::hex<<int(iPacket)<<endl;
 				break;
 			}
-		} catch (Poco::RuntimeException& err) {
-			cout<<">>>Exception catched:"<<err.message()<<endl;
-			Disconnect();
+		} catch (Poco::RuntimeException) {
+			Disconnect(FC_LEAVE_OTHER);
 		}
 
 	}
 }
 
-void PlayerThread::Disconnect(bool fNoLeaveMessage) {
+
+void PlayerThread::Disconnect(char iLeaveMode) {
+	
 	if (isSpawned()) {
 		_ChunkProvider.Disconnect();
 		_PlayerCount--;
 		_rEntityProvider.Remove(_iEntityID);
 
-		if (!fNoLeaveMessage) {
-			_pPoolMaster->Chat(_sName + " left game",this,false); //false= no <Name> adding
-			cout<<_sName<<" left server."<<"\n"; 
+		//Push disconnect event
+		_ppEvent.Coordinates = _Coordinates;
+		_ppEvent.Job = FC_PPEVENT_DISCONNECT;
+		_ppEvent.pThread = this;
+		_pPoolMaster->Event(_ppEvent);
+		
+		switch (iLeaveMode) {
+		case FC_LEAVE_KICK:
+			break;
+		case FC_LEAVE_QUIT:
+			_sTemp.assign( _sName + " quit game" );
+			pushChatEvent(_sTemp);
+			cout<<_sName<<" left server. ("<<_sLeaveMessage<<")"<<"\n"; 
+			break;
+		case FC_LEAVE_OTHER:
+			_sTemp.assign( _sName + " closed connection (unknown reason)" );
+			pushChatEvent(_sTemp);
+			cout<<_sName<<"  closed connection (unknown reason)"<<"\n"; 
+			break;
+		default:
+			cout<<"***INTERNAL SERVER WARNING: Unknown disconnect mode"<<"\n";
 		}
 	}
-
 
 	_Flags.clear();
 
@@ -212,7 +229,7 @@ void PlayerThread::Disconnect(bool fNoLeaveMessage) {
 void PlayerThread::Connect(Poco::Net::StreamSocket& Sock) {
 	if (_fAssigned) {
 		cout<<"***INTERNAL SERVER WARNING: PlayerPool tryed to assign an already assigned player thread"<<"\n";
-		Disconnect();
+		Disconnect(FC_LEAVE_OTHER);
 	}
 	_fAssigned=true;
 
@@ -233,7 +250,7 @@ void PlayerThread::Kick(string sReason) {
 	if (isSpawned()) { // If names is known
 		cout<<_sName<<" was kicked for: "<<sReason<<"\n"; 
 	}
-	Disconnect(true);
+	Disconnect(FC_LEAVE_KICK);
 }
 
 void PlayerThread::Kick() {
@@ -246,7 +263,7 @@ void PlayerThread::Kick() {
 	if (isSpawned()) { // If names is known
 		cout<<_sName<<" was kicked"<<"\n"; 
 	}
-	Disconnect(true);
+	Disconnect(FC_LEAVE_KICK);
 }
 
 
@@ -338,14 +355,17 @@ template <class T> T PlayerThread::fixRange(T val,T min,T max) {
 }
 
 
-
 bool PlayerThread::isSpawned() {
 	return _fSpawned;
 }
 
+
 /*
 * QUEUE
 */
+void PlayerThread::appendQueue(string& rString) {
+	_SendQueue.push(rString);
+}
 
 void PlayerThread::insertChat(string& rString) {
 	_ChatQueue.push(rString);
@@ -358,7 +378,6 @@ void PlayerThread::ClearQueue() {
 }
 
 void PlayerThread::ProcessQueue() {
-	QueueJob qJob;
 	string Buffer("");
 	string Message("");
 	int iChunkCount = 0;
@@ -376,48 +395,20 @@ void PlayerThread::ProcessQueue() {
 		_Connection.sendBytes(Buffer.c_str(),Buffer.length());
 	}
 
-	Poco::Stopwatch timer;
-
-	timer.start();
-
-
-	if (_SendQueue.size() == 0) {return;}
-
 	//packet queue
 	while (_SendQueue.size()) {
-		qJob = _SendQueue.front();
+		_Connection.sendBytes(_SendQueue.front().c_str(),_SendQueue.front().length());
+		
+		if (_SendQueue.front().c_str()[0] == 0x32) { 
+			_SendQueue.pop();
+			continue; 
+		} //Pre chunks are so tiny, they  can be send in a row
+
 		_SendQueue.pop();
-
-
-
-		_Connection.sendBytes(qJob.Data.c_str(),qJob.Data.length());
-
-		if (qJob.Data.c_str()[0] == 0x32) { continue; }
-
-		switch(qJob.Special) {
-		case FC_JOB_NONE:
-			break;
-		case FC_JOB_CLOSECONN:
-			Thread::sleep(100); 
-			Disconnect(true);
-			break;
-		default:
-			cout<<"***INTERNAL SERVER ERROR: Unknown job ID: ("<<qJob.Special<<") !"<<"\n";
-			Disconnect(true);
-			break;
-		}
 		break;
 	}
-
-
-	timer.stop();
-
-	cout<<"Queue flush time for \""<<_sName<<"\" : "<<dec<<timer.elapsed()/1000<<"\n";
 }
 
-void PlayerThread::appendQueue(QueueJob& Job) {
-	_SendQueue.push(Job);
-}
 
 /*
 * Packets
@@ -477,6 +468,7 @@ void PlayerThread::Packet1_Login() {
 	_fSpawned = true;
 	_ChunkProvider.newConnection();
 
+
 	//Set start coordinates
 	_Coordinates.X = 100.0;
 	_Coordinates.Y = 35.0;
@@ -487,8 +479,16 @@ void PlayerThread::Packet1_Login() {
 	_Coordinates.Yaw = 0.0F;
 
 
+	//Push PlayerPool Join event
+	_ppEvent.Coordinates = _Coordinates;
+	_ppEvent.Job = FC_PPEVENT_JOIN;
+	_ppEvent.pThread = this;
+	_pPoolMaster->Event(_ppEvent);
+
+
 	cout<<_sName<<" joined ("<<_sIP<<") EID:"<<_iEntityID<<endl;  //Console log
-	_pPoolMaster->Chat(_sName + " joined game",this,false); //Chat log
+	_sTemp.assign(  _sName + " joined game" );
+	pushChatEvent(_sTemp);
 
 	/*
 	* Response
@@ -531,6 +531,11 @@ void PlayerThread::Packet1_Login() {
 void PlayerThread::Packet2_Handshake() {
 	_sName = _Network.readString();
 
+	if (_sName.length() > 16) {
+		Kick("Username too long");
+		return;
+	}
+
 	//Send response (Connection Hash)
 	_Network.Lock();
 	_Network.addByte(0x02);
@@ -546,8 +551,20 @@ void PlayerThread::Packet2_Handshake() {
 }
 
 void PlayerThread::Packet3_Chat() {
-	_sTemp.assign(_Network.readString());
-	_pPoolMaster->Chat(_sTemp,this);
+	string Message("");
+	
+	Message = _Network.readString();
+	if (Message.length() > 100) {
+		Kick("Received string too long");
+		return;
+	}
+
+	_sTemp.assign("<");
+	_sTemp.append(_sName);
+	_sTemp.append("> ");
+	_sTemp.append(Message); 
+
+	pushChatEvent(_sTemp);
 }
 
 void PlayerThread::Packet10_Player() {
@@ -617,6 +634,14 @@ void PlayerThread::Packet254_ServerListPing() {
 }
 
 void PlayerThread::Packet255_Disconnect() {
-	_Network.readString();
-	Disconnect();
+	_sLeaveMessage = _Network.readString();
+	Disconnect(FC_LEAVE_QUIT);
+}
+
+void PlayerThread::pushChatEvent(string& rString) {
+	_ppEvent.Coordinates = _Coordinates;
+	_ppEvent.Job = FC_PPEVENT_CHAT;
+	_ppEvent.Message.assign(rString);
+	_ppEvent.pThread = this;
+	_pPoolMaster->Event(_ppEvent);
 }
