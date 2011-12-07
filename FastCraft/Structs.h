@@ -19,6 +19,8 @@ GNU General Public License for more details.
 #include <iostream>
 #include "Constants.h"
 
+class PlayerThread;
+
 struct EntityCoordinates {
 	double X;
 	double Y;
@@ -40,10 +42,6 @@ struct ChunkCoordinates {
 	int Z;
 };
 
-struct QueueJob {
-	std::string Data;
-	int Special;
-};
 
 struct EntityType {
 	int EntityID;
@@ -63,5 +61,13 @@ struct MapChunk {
 struct Block {
 	char BlockID;
 	char Metadata;
+};
+
+struct PlayerPoolEvent {
+	std::string Message; //Used for chat 
+	EntityCoordinates Coordinates; //Used for Move and chat
+	char Job;
+	int ID; //Used for Animation
+	PlayerThread* pThread; //Pointer to affected class
 };
 #endif
