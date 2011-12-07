@@ -19,14 +19,6 @@ GNU General Public License for more details.
 #include <iostream>
 #include "Constants.h"
 
-struct PlayerFlags {
-	bool OnFire;
-	bool Crouched;
-	bool Riding;
-	bool Sprinting;
-	bool Eating;
-};
-
 struct EntityCoordinates {
 	double X;
 	double Y;
