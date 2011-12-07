@@ -24,7 +24,7 @@ GNU General Public License for more details.
 
 using Poco::RuntimeException;
 
-NetworkIO::NetworkIO(std::queue<QueueJob>* p) : 
+NetworkIO::NetworkIO(std::queue<string>* p) : 
 _Connection(),
 	_sBuffer(""),
 	_fConnected(false),
@@ -272,11 +272,8 @@ bool NetworkIO::exceptionSaveReading(int iLenght) {
 	return true;
 }
 
-void NetworkIO::Flush(int iSpecial) {
-	_Job.Data.assign(_sBuffer);
-	_Job.Special = iSpecial;
-	_pSendQueue->push(_Job);
-
+void NetworkIO::Flush() {
+	_pSendQueue->push(_sBuffer);
 
 	_iWriteTraffic += _sBuffer.length();
 	_sBuffer.clear();
