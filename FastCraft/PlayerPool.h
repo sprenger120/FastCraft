@@ -36,19 +36,11 @@ using std::vector;
 using std::string;
 using std::queue;
 
-/*
-struct ChatEntry {
-	std::string Message;
-	int X;
-	int Z;
-};
-*/
-
 class PlayerPool : public Poco::Runnable {
 private:
 	Poco::ThreadPool _ThreadPool;
 	vector<PlayerThread*> _vPlayerThreads;
-	queue<string> _qChat;
+	queue<PlayerPoolEvent> _qEventQueue;
 	
 	EntityProvider _EntityProvider;
 	PackingThread& _PackingThread;
@@ -62,7 +54,7 @@ public:
 	bool isAnySlotFree(); //Returns true if there is any free slot
 	void Assign(Poco::Net::StreamSocket&); //Assigns a connection to a free thread
 
-	void Chat(string,PlayerThread*,bool = true);
+	void Event(PlayerPoolEvent&);
 private:
 	int getFreeSlot(); //Returns -1 if there is no free slot
 	void sendMessageToAll(string&);

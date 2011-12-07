@@ -31,7 +31,7 @@ PlayerPool::PlayerPool(PackingThread& rPackingThread):
 	_vPlayerThreads(0),
 	_ThreadPool("PlayerThreads",1,SettingsHandler::getPlayerSlotCount()),
 	_EntityProvider(),
-	_qChat(),
+	_qEventQueue(),
 	_ChunkRoot(),
 	_PackingThread(rPackingThread) 
 {	
@@ -64,19 +64,36 @@ PlayerPool::~PlayerPool() {
 
 void PlayerPool::run() {
 	std::string sData;
+	PlayerPoolEvent Event;
 
 	while (1) {
-		/*if (_qChat.size() == 0) {
-			Thread::sleep(100);
+		if (_qEventQueue.size() == 0) {
+			Thread::sleep(50);
 			continue;
 		}
 
-		ChatEntry = _qChat.front();
-		_qChat.pop();
+		Event = _qEventQueue.front();
+		_qEventQueue.pop();
 
-		sendMessageToAll(ChatEntry.Message);
-		cout<<"Chat: "<<ChatEntry.Message<<endl; //Server console
-		*/
+
+		switch (Event.Job) {
+		case FC_PPEVENT_CHAT:
+			cout<<"Chat: "<<Event.Message<<endl; //Server console
+			sendMessageToAll(Event.Message);
+			break;
+		case FC_PPEVENT_MOVE:
+			cout<<"PP: move event"<<"\n";
+			break;
+		case FC_PPEVENT_JOIN:
+			cout<<"PP: Join event"<<"\n";
+			break;
+		case FC_PPEVENT_DISCONNECT:
+			cout<<"PP: disconnect event"<<"\n";
+			break;
+		case FC_PPEVENT_ANIMATION:
+			cout<<"PP: animation event"<<"\n";
+			break;
+		}
 	}
 }
 
@@ -108,23 +125,8 @@ int PlayerPool::getFreeSlot() {
 	return -1;
 }
 
-void PlayerPool::Chat(string String,PlayerThread* pPlayer,bool fAppendName) {
-	/*ChatEntry Entry;
-
-	Entry.Message.clear();
-
-	if (fAppendName) {
-		Entry.Message.assign("<");
-		Entry.Message.append( pPlayer->getUsername());
-		Entry.Message.append("> ");
-	}
-	Entry.Message.append(String);
-
-	Entry.X = int(pPlayer->getCoordinates().X);
-	Entry.Z = int(pPlayer->getCoordinates().Z);
-
-	_qChat.push(Entry);
-	*/
+void PlayerPool::Event(PlayerPoolEvent& rEvent) {
+	_qEventQueue.push(rEvent);
 }
 
 void PlayerPool::sendMessageToAll(string& rString) {
