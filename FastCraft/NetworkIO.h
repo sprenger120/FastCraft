@@ -66,7 +66,7 @@ public:
 	string readString();
 	void read(int); 
 
-	void Flush(int = FC_JOB_NO); 
+	void Flush(int = FC_JOB_NONE); 
 
 	//Connection adding / closing
 	bool isConnected();
