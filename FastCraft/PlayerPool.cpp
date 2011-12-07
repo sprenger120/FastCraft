@@ -16,8 +16,10 @@ GNU General Public License for more details.
 #include "PlayerPool.h"
 #include "PlayerThread.h"
 #include "SettingsHandler.h"
-#include "ChunkRoot.h"
+#include "PackingThread.h"
 #include "Structs.h"
+
+
 #include <Poco/Thread.h>
 #include <Poco/Exception.h>
 #include <iostream>
@@ -25,29 +27,27 @@ GNU General Public License for more details.
 using Poco::Thread;
 using std::cout;
 
-PlayerPool::PlayerPool(SettingsHandler* pSettingsHandler):
-_vPlayerThreads(0),
-	_ThreadPool("PlayerThreads",1,pSettingsHandler->getMaxClients()),
+PlayerPool::PlayerPool(PackingThread& rPackingThread):
+	_vPlayerThreads(0),
+	_ThreadPool("PlayerThreads",1,SettingsHandler::getPlayerSlotCount()),
 	_EntityProvider(),
-	_ServerTime(),
 	_qChat(),
-	_PackingThread()
-{
-	//Create ChunkRoot obj
+	_ChunkRoot(),
+	_PackingThread(rPackingThread) 
+{	
 	try {
-		_pChunkRoot = new ChunkRoot;
-		_pChunkRoot->generateMap(0,0,20,20);
+		_ChunkRoot.generateMap(0,0,20,20);
 	} catch (Poco::RuntimeException) {
 		throw Poco::RuntimeException("Chunk generation failed");
 	}
 
-	int iSlotCount = pSettingsHandler->getMaxClients();
+	int iSlotCount = SettingsHandler::getPlayerSlotCount();
 
 	_vPlayerThreads.resize(iSlotCount); //Resize to slot count
 
 	//Create Threads
 	for (int x=0;x<=_vPlayerThreads.size()-1;x++) {
-		_vPlayerThreads[x] = new PlayerThread(pSettingsHandler,&_EntityProvider,&_ServerTime,this,_pChunkRoot,&_PackingThread);
+		_vPlayerThreads[x] = new PlayerThread(_EntityProvider,this,_ChunkRoot,_PackingThread);
 
 		_ThreadPool.defaultPool().start(*_vPlayerThreads[x]);
 	}
@@ -63,20 +63,10 @@ PlayerPool::~PlayerPool() {
 
 
 void PlayerPool::run() {
-	//Create Servertime thread
-	Poco::Thread threadServerTime;
-	ServerTime ServerTime;
-	threadServerTime.start(ServerTime);
-
-	//Create Packing Thread
-	Poco::Thread threadPackingThread;
-	threadPackingThread.start(_PackingThread);
-
-	ChatEntry ChatEntry;
 	std::string sData;
 
 	while (1) {
-		if (_qChat.size() == 0) {
+		/*if (_qChat.size() == 0) {
 			Thread::sleep(100);
 			continue;
 		}
@@ -86,6 +76,7 @@ void PlayerPool::run() {
 
 		sendMessageToAll(ChatEntry.Message);
 		cout<<"Chat: "<<ChatEntry.Message<<endl; //Server console
+		*/
 	}
 }
 
@@ -118,7 +109,7 @@ int PlayerPool::getFreeSlot() {
 }
 
 void PlayerPool::Chat(string String,PlayerThread* pPlayer,bool fAppendName) {
-	ChatEntry Entry;
+	/*ChatEntry Entry;
 
 	Entry.Message.clear();
 
@@ -133,6 +124,7 @@ void PlayerPool::Chat(string String,PlayerThread* pPlayer,bool fAppendName) {
 	Entry.Z = int(pPlayer->getCoordinates().Z);
 
 	_qChat.push(Entry);
+	*/
 }
 
 void PlayerPool::sendMessageToAll(string& rString) {

@@ -25,36 +25,36 @@ GNU General Public License for more details.
 #include <Poco/ThreadPool.h>
 #include <Poco/Runnable.h>
 #include "EntityProvider.h"
-#include "ServerTime.h"
-#include "PackingThread.h"
+#include "ChunkRoot.h"
 
-class SettingsHandler;
+
 class PlayerThread;
-class ChunkRoot;
+class PackingThread;
 struct QueueJob;
 
 using std::vector;
 using std::string;
 using std::queue;
 
+/*
 struct ChatEntry {
 	std::string Message;
 	int X;
 	int Z;
 };
+*/
 
 class PlayerPool : public Poco::Runnable {
 private:
-	EntityProvider _EntityProvider;
 	Poco::ThreadPool _ThreadPool;
-	ServerTime _ServerTime;
 	vector<PlayerThread*> _vPlayerThreads;
-	queue<ChatEntry> _qChat;
-	PackingThread _PackingThread;
-
-	ChunkRoot* _pChunkRoot;
+	queue<string> _qChat;
+	
+	EntityProvider _EntityProvider;
+	PackingThread& _PackingThread;
+	ChunkRoot _ChunkRoot;
 public:
-	PlayerPool(SettingsHandler*); //Constructor
+	PlayerPool(PackingThread&); //Constructor
 	~PlayerPool(); //Destructor
 
 	virtual void run(); // Thread main
