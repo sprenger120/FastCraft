@@ -40,4 +40,15 @@ GNU General Public License for more details.
 #define FC_CHUNK_NIBBLECOUNT			16384
 #define FC_CHUNK_DATACOUNT              81920
 
+//Disconnect modes
+#define FC_LEAVE_KICK					1
+#define FC_LEAVE_QUIT					2
+#define FC_LEAVE_OTHER					3
+
+//PlayerPool Events
+#define FC_PPEVENT_CHAT					1
+#define FC_PPEVENT_MOVE					2
+#define FC_PPEVENT_JOIN					3
+#define FC_PPEVENT_DISCONNECT			4
+#define FC_PPEVENT_ANIMATION			5
 #endif
