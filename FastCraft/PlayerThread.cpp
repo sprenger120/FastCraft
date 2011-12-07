@@ -246,7 +246,6 @@ void PlayerThread::Kick(string sReason) {
 	NetworkIO::packString(_sTemp,sReason);
 	_Connection.sendBytes(_sTemp.c_str(),_sTemp.length());
 
-//	Thread::sleep(100);
 	if (isSpawned()) { // If names is known
 		cout<<_sName<<" was kicked for: "<<sReason<<"\n"; 
 	}
@@ -259,7 +258,6 @@ void PlayerThread::Kick() {
 	_sTemp.append<char>(2,0x0);
 	_Connection.sendBytes(_sTemp.c_str(),_sTemp.length());
 
-	//Thread::sleep(100);
 	if (isSpawned()) { // If names is known
 		cout<<_sName<<" was kicked"<<"\n"; 
 	}
@@ -628,7 +626,6 @@ void PlayerThread::Packet254_ServerListPing() {
 	Poco::NumberFormatter::append(_sTemp,_PlayerCount); //Player count
 	_sTemp.append("§");
 	Poco::NumberFormatter::append(_sTemp,SettingsHandler::getPlayerSlotCount()); //player slots
-	_sTemp.append("§");
 
 	Kick(_sTemp);
 }
