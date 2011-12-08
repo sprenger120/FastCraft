@@ -222,6 +222,7 @@ void NetworkIO::read(int iLenght) {
 
 bool NetworkIO::exceptionSaveReading(int iLenght) {
 	int iReadedLenght = 0;
+	int iUnderflowCount=0;
 	bool fUnderflow = false;
 
 	if (iLenght == 0) { 
@@ -260,7 +261,11 @@ bool NetworkIO::exceptionSaveReading(int iLenght) {
 			return false;
 		}
 		if (iReadedLenght != iLenght) {
-			std::cout<<"underflow: r:"<<iReadedLenght<<" l:"<<iLenght<<"\n";
+			iUnderflowCount++;
+			if (iUnderflowCount > 10) {
+				std::cout<<"underflow disconnect"<<"\n";
+				return false;
+			}
 			fUnderflow = true;
 		}
 	}
