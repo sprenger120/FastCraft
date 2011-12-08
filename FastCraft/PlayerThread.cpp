@@ -61,14 +61,17 @@ _sName(""),
 	_Coordinates.Yaw = 0.0F;
 	_Coordinates.Z = 0.0;
 
-	_TimeJobs.LastTimeSend = 0;
-	_TimeJobs.LastKeepAliveSend = 0;
+	_TimeJobs.LastTimeSend = 0L;
+	_TimeJobs.LastKeepAliveSend = 0L;
+	_TimeJobs.LastHandleMovement = 0L;
 
 	_iEntityID=0;
+	_Spawned_PlayerInfoList = 0;
 	_pPoolMaster = pPoolMaster;
 
 	_fSpawned = false;
 	_fAssigned = false;
+	_fQueueLocked = false;
 	_iThreadTicks = 0;
 }
 
@@ -122,6 +125,7 @@ void PlayerThread::run() {
 
 			Interval_KeepAlive(); 
 			Interval_Time();
+			Interval_HandleMovement();
 			ProcessQueue();
 
 			iPacket = _Network.readByte();
@@ -220,6 +224,7 @@ void PlayerThread::Disconnect(char iLeaveMode) {
 
 	_TimeJobs.LastKeepAliveSend = 0;
 	_TimeJobs.LastTimeSend = 0;
+	_TimeJobs.LastHandleMovement = 0;
 
 	ClearQueue();
 	_Network.closeConnection();
@@ -278,6 +283,13 @@ void PlayerThread::Interval_Time() {
 	}
 }
 
+void PlayerThread::Interval_HandleMovement() {
+	if (!isSpawned()) {return;}
+	if (_TimeJobs.LastHandleMovement + FC_INTERVAL_HANDLEMOVEMENT <= getTicks()) {
+		_TimeJobs.LastHandleMovement = getTicks();
+		_ChunkProvider.HandleMovement(_Coordinates);
+	}
+}
 
 void PlayerThread::sendTime() {
 	_Network.Lock();
@@ -375,10 +387,14 @@ void PlayerThread::ClearQueue() {
 	}
 }
 
-void PlayerThread::ProcessQueue() {
+void PlayerThread::ProcessQueue(bool fFull) {
 	string Buffer("");
 	string Message("");
 	int iChunkCount = 0;
+
+	while (_fQueueLocked) {
+	}
+	_fQueueLocked = true;
 
 	//Chat queue
 	while (_ChatQueue.size()) {
@@ -403,8 +419,12 @@ void PlayerThread::ProcessQueue() {
 		} //Pre chunks are so tiny, they  can be send in a row
 
 		_SendQueue.pop();
-		break;
+		if (!fFull) {
+			break;
+		}
 	}
+
+	_fQueueLocked = false;
 }
 
 
@@ -522,6 +542,17 @@ void PlayerThread::Packet1_Login() {
 	//Health
 	UpdateHealth(20,20,5.0F); //Health
 
+	//Spawn PlayerInfo
+	vector<string> vNames;
+	vNames = _pPoolMaster->ListPlayers(60);
+
+	for ( int x = 0;x<= vNames.size()-1;x++) {
+		PlayerInfoList(true,vNames[x]);
+	}
+
+	//Send login packages
+	ProcessQueue(true);
+
 	//Chunks
 	_ChunkProvider.HandleMovement(_Coordinates);
 }
@@ -588,7 +619,6 @@ void PlayerThread::Packet11_Position() {
 		_Coordinates.Stance = TmpCoord.Stance;
 		_Coordinates.Z = TmpCoord.Z;
 		_Coordinates.OnGround = TmpCoord.OnGround;
-		_ChunkProvider.HandleMovement(_Coordinates);
 	}
 }
 
@@ -615,7 +645,6 @@ void PlayerThread::Packet13_PosAndLook() {
 		return;
 	}else{
 		_Coordinates = TmpCoord;
-		_ChunkProvider.HandleMovement(_Coordinates);
 	}
 }
 
@@ -641,4 +670,21 @@ void PlayerThread::pushChatEvent(string& rString) {
 	_ppEvent.Message.assign(rString);
 	_ppEvent.pThread = this;
 	_pPoolMaster->Event(_ppEvent);
+}
+
+void PlayerThread::PlayerInfoList(bool fSpawn,string& rName) {
+	if (fSpawn) {
+		if (_Spawned_PlayerInfoList == 60) {return;} //Workaround for a Minecraft render bug
+		_Spawned_PlayerInfoList++;
+	}else{
+		_Spawned_PlayerInfoList--;
+	}
+	
+	_Network.Lock();
+	_Network.addByte(0xc9);
+	_Network.addString(rName);
+	_Network.addBool(fSpawn);
+	_Network.addShort(10);
+	_Network.Flush();
+	_Network.UnLock();
 }

@@ -57,7 +57,7 @@ private:
 	short _iFood;
 	float _nSaturation;
     bool _fSpawned;
-
+	int _Spawned_PlayerInfoList;
 
 	//TCP stuff
 	Poco::Net::StreamSocket _Connection;
@@ -65,6 +65,7 @@ private:
 	queue<string> _SendQueue;
 	queue<string> _ChatQueue;
 	NetworkIO _Network;	
+	bool _fQueueLocked;
 
 	//Needed Classes
 	EntityProvider& _rEntityProvider;
@@ -183,6 +184,26 @@ public:
 	*/
 	static int getConnectedPlayers();
 
+
+	/*
+	* Adds/Removes player from PlayerInfo List (Press Tab in Client)
+
+	Parameters:
+	@1 : true for spawn player, false for despawn player
+	@2 : player name
+	*/
+	void PlayerInfoList(bool,string&);
+
+
+	/*
+	* Pops an element from packet queue and send it 
+
+	Parameter: 
+	@1 : true for full queue processing, false for only one element
+	*/
+	void ProcessQueue(bool = false);
+
+
 	/*
 	* These are internal functions 
 	* DONT USE THEM
@@ -192,11 +213,11 @@ public:
 private:
 	//Queue
 	void ClearQueue(); //Clear send queue
-	void ProcessQueue(); 
-
+	 
 	//Interval functions
 	void Interval_KeepAlive();
 	void Interval_Time();
+	void Interval_HandleMovement();
 
 	void sendTime();
 	void pushChatEvent(string&);
