@@ -28,7 +28,7 @@ using Poco::Thread;
 using std::cout;
 
 PlayerPool::PlayerPool(PackingThread& rPackingThread):
-	_vPlayerThreads(0),
+_vPlayerThreads(0),
 	_ThreadPool("PlayerThreads",1,SettingsHandler::getPlayerSlotCount()),
 	_EntityProvider(),
 	_qEventQueue(),
@@ -67,6 +67,12 @@ void PlayerPool::run() {
 	PlayerPoolEvent Event;
 
 	while (1) {
+		//Call processqueue for faster packet delivering
+		for (int x=0;x<=_vPlayerThreads.size()-1;x++) {
+			if( _vPlayerThreads[x]->isAssigned() && _vPlayerThreads[x]->isSpawned()) {
+				_vPlayerThreads[x]->ProcessQueue();
+			}
+		}
 		if (_qEventQueue.size() == 0) {
 			Thread::sleep(50);
 			continue;
@@ -85,10 +91,19 @@ void PlayerPool::run() {
 			cout<<"PP: move event"<<"\n";
 			break;
 		case FC_PPEVENT_JOIN:
-			cout<<"PP: Join event"<<"\n";
+			//Update PlayerLists
+			for (int x=0;x<=_vPlayerThreads.size()-1;x++) {
+				if( _vPlayerThreads[x]->isAssigned() && _vPlayerThreads[x]->isSpawned()) {
+					_vPlayerThreads[x]->PlayerInfoList(true,Event.pThread->getUsername());
+				}
+			}
 			break;
 		case FC_PPEVENT_DISCONNECT:
-			cout<<"PP: disconnect event"<<"\n";
+			for (int x=0;x<=_vPlayerThreads.size()-1;x++) {
+				if( _vPlayerThreads[x]->isAssigned() && _vPlayerThreads[x]->isSpawned()) {
+					_vPlayerThreads[x]->PlayerInfoList(false,Event.pThread->getUsername());
+				}
+			}
 			break;
 		case FC_PPEVENT_ANIMATION:
 			cout<<"PP: animation event"<<"\n";
@@ -131,10 +146,29 @@ void PlayerPool::Event(PlayerPoolEvent& rEvent) {
 
 void PlayerPool::sendMessageToAll(string& rString) {
 	for (int x=0;x<=_vPlayerThreads.size()-1;x++) {
-		if( _vPlayerThreads[x]->isAssigned()) {
-			if ( _vPlayerThreads[x]->isSpawned()) {
-				_vPlayerThreads[x]->insertChat(rString);
+		if( _vPlayerThreads[x]->isAssigned() && _vPlayerThreads[x]->isSpawned()) {
+			_vPlayerThreads[x]->insertChat(rString);
+		}
+	}
+}
+
+vector<string> PlayerPool::ListPlayers(int iMax) {
+	int iElements = 0;
+	vector<string> vNames(0);
+
+	if (iMax <= 0) {
+		return vNames;
+	}
+
+	for (int x=0;x<=_vPlayerThreads.size()-1;x++) {
+		if( _vPlayerThreads[x]->isAssigned() && _vPlayerThreads[x]->isSpawned()) {
+			vNames.push_back(_vPlayerThreads[x]->getUsername());
+			iElements++;
+			if (iElements == iMax) {
+				break;
 			}
 		}
 	}
+
+	return vNames;
 }

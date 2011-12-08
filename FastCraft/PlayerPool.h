@@ -46,15 +46,53 @@ private:
 	PackingThread& _PackingThread;
 	ChunkRoot _ChunkRoot;
 public:
+	/*
+	* De/constructor
+	*/
 	PlayerPool(PackingThread&); //Constructor
 	~PlayerPool(); //Destructor
 
+
+	/*
+	* Thread Main
+	* This thread boosts packet delivering and handles Player sent events
+	*/
 	virtual void run(); // Thread main
 	
+
+	/*
+	* Returns true if there is a free slot
+	*/
 	bool isAnySlotFree(); //Returns true if there is any free slot
+
+
+	/*
+	* Assign a new connection to a free PlayerThread
+
+	Parameter:
+	@1 : Reference to a connected StreamSocket
+	*/
 	void Assign(Poco::Net::StreamSocket&); //Assigns a connection to a free thread
 
+
+	/*
+	* Adds an event to playerpool's event queue
+	* Coordinates,Job and pThread have to be filled with valid data !
+	
+	Parameter:
+	@1 : Reference to a PlayerPoolEvent struct
+	*/
 	void Event(PlayerPoolEvent&);
+
+
+	/*
+	* List all connected players
+	* Returns a string vector
+
+	Parameter:
+	@1 : Maxiaml size of vector
+	*/
+	vector<string> ListPlayers(int);
 private:
 	int getFreeSlot(); //Returns -1 if there is no free slot
 	void sendMessageToAll(string&);
