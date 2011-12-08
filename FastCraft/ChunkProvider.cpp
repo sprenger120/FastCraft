@@ -187,6 +187,10 @@ bool ChunkProvider::CheckChunkSet() {
 		SquareEnd.X = SquareStart.X + iViewDistance;
 		SquareEnd.Z = SquareStart.Z + iViewDistance;
 
+		
+		
+		
+		
 		for ( int X = SquareStart.X;X<=SquareEnd.X;X++) {
 			for ( int Z = SquareStart.Z;Z<=SquareEnd.Z;Z++) {
 				Temp.X = X;
@@ -211,6 +215,9 @@ bool ChunkProvider::CheckChunkSet() {
 				}
 			}
 		}
+
+
+
 	}catch(Poco::RuntimeException&err ) {
 		cout<<"error:"<<err.message()<<"\n";
 		return false;
@@ -241,7 +248,7 @@ bool ChunkProvider::CheckChunkSet() {
 void ChunkProvider::CheckSpawnedChunkList() {
 	if (_vSpawnedChunks.size() == 0) { return; }
 	for (int x=0;x<=_vSpawnedChunks.size()-1;x++) {
-		if(  ChunkMath::Distance(_PlayerCoordinates,_vSpawnedChunks[x]) > ( SettingsHandler::getViewDistance()/2)) {
+		if(  ChunkMath::Distance(_PlayerCoordinates,_vSpawnedChunks[x]) > ( SettingsHandler::getViewDistance()/2 +1 )) {
 			sendDespawn(_vSpawnedChunks[x].X,_vSpawnedChunks[x].Z);
 		}
 	}
