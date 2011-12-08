@@ -256,6 +256,8 @@ bool NetworkIO::exceptionSaveReading(int iLenght) {
 		}catch(Poco::TimeoutException) {
 			std::cout<<"NETWORKIO: timeout"<<"\n";
 			return false;
+		}catch(Poco::Net::ConnectionResetException) {
+			return false;
 		}
 		if (iReadedLenght != iLenght) {
 			std::cout<<"underflow: r:"<<iReadedLenght<<" l:"<<iLenght<<"\n";
