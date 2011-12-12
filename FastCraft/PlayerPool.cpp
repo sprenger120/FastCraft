@@ -67,13 +67,7 @@ void PlayerPool::run() {
 	PlayerPoolEvent Event;
 
 	while (1) {
-		//Call processqueue for faster packet delivering
-		for (int x=0;x<=_vPlayerThreads.size()-1;x++) {
-			if( _vPlayerThreads[x]->isAssigned() && _vPlayerThreads[x]->isSpawned()) {
-				_vPlayerThreads[x]->ProcessQueue();
-			}
-		}
-		if (_qEventQueue.size() == 0) {
+		if (_qEventQueue.empty()) {
 			Thread::sleep(50);
 			continue;
 		}
