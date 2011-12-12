@@ -24,7 +24,7 @@ GNU General Public License for more details.
 
 using Poco::RuntimeException;
 
-NetworkIO::NetworkIO(std::queue<string>* p) : 
+NetworkIO::NetworkIO(ThreadSafeQueue<string>* p) : 
 _Connection(),
 	_sBuffer(""),
 	_fConnected(false),
@@ -258,6 +258,8 @@ bool NetworkIO::exceptionSaveReading(int iLenght) {
 			std::cout<<"NETWORKIO: timeout"<<"\n";
 			return false;
 		}catch(Poco::Net::ConnectionResetException) {
+			return false;
+		}catch(Poco::IOException) {
 			return false;
 		}
 		if (iReadedLenght != iLenght) {

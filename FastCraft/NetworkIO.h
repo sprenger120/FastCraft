@@ -17,10 +17,12 @@ GNU General Public License for more details.
 #define _FASTCRAFTHEADER_NETWORKIO
 #include <Poco/Net/StreamSocket.h>
 #include <string>
-#include <queue>
+#include "ThreadSafeQueue.h"
 
 using Poco::Net::StreamSocket;
 using std::string;
+
+
 
 //This class sets the streamsocket automaticly to blocking
 class NetworkIO {
@@ -30,7 +32,7 @@ private:
 	char _charBuffer[4096];
 	char _sEndianBuffer[8];
 
-	std::queue<string>* _pSendQueue;
+	ThreadSafeQueue<string>* _pSendQueue;
 
 	bool _fConnected;
 	bool _fLocked;
@@ -39,7 +41,7 @@ private:
 	static unsigned long long _iReadTraffic;
 	static unsigned long long _iWriteTraffic;
 public:
-	NetworkIO(std::queue<string>*); //Init NetworkIO without connection
+	NetworkIO(ThreadSafeQueue<string>*); //Init NetworkIO without connection
 	~NetworkIO();
 
 	//Write part
