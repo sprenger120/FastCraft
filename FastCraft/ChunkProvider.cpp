@@ -34,9 +34,9 @@ using Poco::DeflatingOutputStream;
 
 ChunkProvider::ChunkProvider(ChunkRoot& rChunkRoot,NetworkIO& rNetworkIO,PackingThread& rPackingThread,PlayerThread* pPlayer) :
 _vSpawnedChunks(0),
-_rChunkRoot(rChunkRoot),
-_rNetwork(rNetworkIO),
-_rPackingThread(rPackingThread)
+	_rChunkRoot(rChunkRoot),
+	_rNetwork(rNetworkIO),
+	_rPackingThread(rPackingThread)
 {
 	_pPlayer = pPlayer;
 	_fNewConnection = false;
@@ -123,14 +123,6 @@ void ChunkProvider::sendDespawn(int X,int Z){
 	_rNetwork.addBool(false);
 	_rNetwork.Flush();
 	_rNetwork.UnLock();
-
-	//Remove from spawned list
-	for (int x=0;x<=_vSpawnedChunks.size()-1;x++) {
-		if(_vSpawnedChunks[x].X == X && _vSpawnedChunks[x].Z == Z) {
-			_vSpawnedChunks.erase(_vSpawnedChunks.begin()+x);
-			break;
-		}
-	}
 }
 
 bool ChunkProvider::isConnected() {
@@ -150,9 +142,9 @@ bool ChunkProvider::isSpawned(ChunkCoordinates coord) {
 bool ChunkProvider::CheckChunkSet() {
 	MapChunk* pChunk;
 	PackJob Job;
-	ChunkCoordinates SquareStart,SquareEnd,Temp;
+	ChunkCoordinates CircleRoot,Temp;
 	int iPlayerChunkVectorIndex = -1;
-	
+
 	vector<PackJob> vJobs;
 
 
@@ -173,7 +165,7 @@ bool ChunkProvider::CheckChunkSet() {
 			Job.pChunk = pChunk;
 
 			sendSpawn(Job.X,Job.Z);
-			
+
 			vJobs.push_back(Job);
 			iPlayerChunkVectorIndex = vJobs.size()-1;
 
@@ -181,21 +173,22 @@ bool ChunkProvider::CheckChunkSet() {
 		}
 		int iViewDistance = SettingsHandler::getViewDistance();
 
-		SquareStart.X = _PlayerCoordinates.X - (iViewDistance/2) - 1;
-		SquareStart.Z = _PlayerCoordinates.Z - (iViewDistance/2) - 1;
+		int X;
+		int Z;
 
-		SquareEnd.X = SquareStart.X + iViewDistance;
-		SquareEnd.Z = SquareStart.Z + iViewDistance;
+		for ( int iCircle = 1;iCircle<=iViewDistance;iCircle++) {
+			X = CircleRoot.X = _PlayerCoordinates.X + iCircle;
+			Z = CircleRoot.Z = _PlayerCoordinates.Z + iCircle;
 
-		
-		
-		
-		
-		for ( int X = SquareStart.X;X<=SquareEnd.X;X++) {
-			for ( int Z = SquareStart.Z;Z<=SquareEnd.Z;Z++) {
+			int iStep = 1;
+
+			while(1) {
 				Temp.X = X;
 				Temp.Z = Z;
-				
+
+				//cout<<"X:"<<X<<" Z:"<<Z<<" Step:"<<iStep<<"\n";
+
+
 				if ( ! isSpawned(Temp)) {
 					pChunk = _rChunkRoot.getChunk(X,Z);
 					if (pChunk==NULL) {
@@ -213,11 +206,48 @@ bool ChunkProvider::CheckChunkSet() {
 
 					AddChunkToList(X,Z);
 				}
+
+				switch (iStep){
+				case 1:
+					if (X == CircleRoot.X-(iCircle*2)) {
+						Z--;
+						iStep++;
+						break;
+					}
+					X--;
+					break;
+				case 2:
+					if (Z == CircleRoot.Z-(iCircle*2)) {
+						X++;
+						iStep++;
+						break;
+					}
+					Z--;
+					break;
+				case 3:
+					if (X == CircleRoot.X) {
+						Z++;
+						iStep++;
+						break;			
+					}
+					X++;
+					break;
+				case 4:
+					if (Z == CircleRoot.Z-1) {
+						iStep++;
+						break;			
+					}
+					Z++;
+					break;
+				}
+
+
+				if (iStep==5) {
+					break;
+				}
+
 			}
 		}
-
-
-
 	}catch(Poco::RuntimeException&err ) {
 		cout<<"error:"<<err.message()<<"\n";
 		return false;
@@ -247,10 +277,31 @@ bool ChunkProvider::CheckChunkSet() {
 
 void ChunkProvider::CheckSpawnedChunkList() {
 	if (_vSpawnedChunks.size() == 0) { return; }
+	
+	bool fDespawn=false;
+	int iViewDistance = SettingsHandler::getViewDistance();
+
+
+
 	for (int x=0;x<=_vSpawnedChunks.size()-1;x++) {
-		if(  ChunkMath::Distance(_PlayerCoordinates,_vSpawnedChunks[x]) > ( SettingsHandler::getViewDistance()/2 +1 )) {
+			
+
+		if (_vSpawnedChunks[x].X < _PlayerCoordinates.X - iViewDistance) {fDespawn=true;}
+		if (_vSpawnedChunks[x].X > _PlayerCoordinates.X + iViewDistance) {fDespawn=true;}
+		if (_vSpawnedChunks[x].Z < _PlayerCoordinates.Z - iViewDistance) {fDespawn=true;}
+		if (_vSpawnedChunks[x].Z > _PlayerCoordinates.Z + iViewDistance) {fDespawn=true;}
+
+		if(fDespawn) {
+			cout<<"Despawn Chunk X:"<<_vSpawnedChunks[x].X<<" Z:"<<_vSpawnedChunks[x].Z<<
+				" PlayerChunk X:"<<_PlayerCoordinates.X<<" Z:"<<_PlayerCoordinates.Z<<"\n";
+
+
 			sendDespawn(_vSpawnedChunks[x].X,_vSpawnedChunks[x].Z);
+			_vSpawnedChunks.erase(_vSpawnedChunks.begin()+x);
 		}
+
+
+		fDespawn = false;
 	}
 }
 
