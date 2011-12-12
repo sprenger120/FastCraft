@@ -25,7 +25,6 @@ GNU General Public License for more details.
 #include <istream>
 #include <Poco/Timespan.h>
 #include <Poco/Net/NetException.h>
-#include <Poco/Thread.h>
 #include <Poco/Stopwatch.h>
 
 using Poco::Thread;
@@ -44,14 +43,15 @@ _sName(""),
 	_Connection(),
 	_sTemp(""),
 	_SendQueue(),
-	_ChatQueue(),
 	_sConnectionHash(""),
 	_Web_Session("session.minecraft.net"),
 	_Web_Response(),
 	_Network(&_SendQueue),
 	_rEntityProvider(rEntityProvider),
 	_Flags(),
-	_ChunkProvider(rChunkRoot,_Network,rPackingThread,this)
+	_ChunkProvider(rChunkRoot,_Network,rPackingThread,this),
+	_threadNetworkWriter("NetworkWriter"),
+	_NetworkWriter(_SendQueue,_Connection,this)
 {
 	_Coordinates.OnGround = false;
 	_Coordinates.Pitch = 0.0F;
@@ -71,8 +71,10 @@ _sName(""),
 
 	_fSpawned = false;
 	_fAssigned = false;
-	_fQueueLocked = false;
 	_iThreadTicks = 0;
+
+	//Start NetworkWriter Thread
+	_threadNetworkWriter.start(_NetworkWriter);
 }
 
 int PlayerThread::_PlayerCount = 0;
@@ -126,7 +128,6 @@ void PlayerThread::run() {
 			Interval_KeepAlive(); 
 			Interval_Time();
 			Interval_HandleMovement();
-			ProcessQueue();
 
 			iPacket = _Network.readByte();
 
@@ -184,7 +185,7 @@ void PlayerThread::run() {
 
 
 void PlayerThread::Disconnect(char iLeaveMode) {
-	
+
 	if (isSpawned()) {
 		_ChunkProvider.Disconnect();
 		_PlayerCount--;
@@ -195,9 +196,10 @@ void PlayerThread::Disconnect(char iLeaveMode) {
 		_ppEvent.Job = FC_PPEVENT_DISCONNECT;
 		_ppEvent.pThread = this;
 		_pPoolMaster->Event(_ppEvent);
-		
+
 		switch (iLeaveMode) {
 		case FC_LEAVE_KICK:
+			cout<<"kicked"<<"\n";
 			break;
 		case FC_LEAVE_QUIT:
 			_sTemp.assign( _sName + " quit game" );
@@ -249,11 +251,33 @@ void PlayerThread::Kick(string sReason) {
 	_sTemp.clear();
 	_sTemp.append<char>(1,0xFF);
 	NetworkIO::packString(_sTemp,sReason);
-	_Connection.sendBytes(_sTemp.c_str(),_sTemp.length());
+
+	try {
+		_Connection.sendBytes(_sTemp.c_str(),_sTemp.length());
+	}catch(Poco::Net::ConnectionAbortedException) {
+		Disconnect(FC_LEAVE_OTHER);
+		return;
+	}catch(Poco::Net::InvalidSocketException) {
+		Disconnect(FC_LEAVE_OTHER);
+		return;
+	}catch(Poco::TimeoutException) {
+		Disconnect(FC_LEAVE_OTHER);
+		return;
+	}catch(Poco::Net::ConnectionResetException) {
+		Disconnect(FC_LEAVE_OTHER);
+		return;
+	}catch(Poco::IOException) {
+		Disconnect(FC_LEAVE_OTHER);
+		return;
+	}
+
 
 	if (isSpawned()) { // If names is known
 		cout<<_sName<<" was kicked for: "<<sReason<<"\n"; 
 	}
+
+	Thread::sleep(10);
+
 	Disconnect(FC_LEAVE_KICK);
 }
 
@@ -261,19 +285,42 @@ void PlayerThread::Kick() {
 	_sTemp.clear();
 	_sTemp.append<char>(1,0xFF);
 	_sTemp.append<char>(2,0x0);
-	_Connection.sendBytes(_sTemp.c_str(),_sTemp.length());
+
+	try {
+		_Connection.sendBytes(_sTemp.c_str(),_sTemp.length());
+	}catch(Poco::Net::ConnectionAbortedException) {
+		Disconnect(FC_LEAVE_OTHER);
+		return;
+	}catch(Poco::Net::InvalidSocketException) {
+		Disconnect(FC_LEAVE_OTHER);
+		return;
+	}catch(Poco::TimeoutException) {
+		Disconnect(FC_LEAVE_OTHER);
+		return;
+	}catch(Poco::Net::ConnectionResetException) {
+		Disconnect(FC_LEAVE_OTHER);
+		return;
+	}catch(Poco::IOException) {
+		Disconnect(FC_LEAVE_OTHER);
+		return;
+	}
+
 
 	if (isSpawned()) { // If names is known
 		cout<<_sName<<" was kicked"<<"\n"; 
 	}
+
+	Thread::sleep(10);
+
 	Disconnect(FC_LEAVE_KICK);
 }
 
 
-void PlayerThread::generateConnectionHash() {
+string PlayerThread::generateConnectionHash() {
 	std::stringstream StringStream;
 	StringStream<<std::hex<< Random::uInt64();
 	_sConnectionHash.assign(StringStream.str());
+	return _sConnectionHash;
 }
 
 void PlayerThread::Interval_Time() {
@@ -378,53 +425,45 @@ void PlayerThread::appendQueue(string& rString) {
 }
 
 void PlayerThread::insertChat(string& rString) {
-	_ChatQueue.push(rString);
+	_Network.Lock();
+	_Network.addByte(0x3);
+	_Network.addString(rString);
+	_Network.Flush();
+	_Network.UnLock();
 }
 
 void PlayerThread::ClearQueue() {
-	while (_SendQueue.size()){	
-		_SendQueue.pop();
-	}
+	_SendQueue.clear();
 }
 
-void PlayerThread::ProcessQueue(bool fFull) {
-	string Buffer("");
-	string Message("");
-	int iChunkCount = 0;
+void PlayerThread::ProcessQueue() {		
+	//cout<<"manual call isSpawned:"<<isSpawned()<<"\n";
+	
+	while (!_SendQueue.empty()) {
+		string & rJob = _SendQueue.front();
 
-	while (_fQueueLocked) {
-	}
-	_fQueueLocked = true;
+		try {
+			_Connection.sendBytes(rJob.c_str(),rJob.length()); //Send
+		}catch(Poco::Net::ConnectionAbortedException) {
+			Disconnect(FC_LEAVE_OTHER);
+			return;
+		}catch(Poco::Net::InvalidSocketException) {
+			Disconnect(FC_LEAVE_OTHER);
+			return;
+		}catch(Poco::TimeoutException) {
+			Disconnect(FC_LEAVE_OTHER);
+			return;
+		}catch(Poco::Net::ConnectionResetException) {
+			Disconnect(FC_LEAVE_OTHER);
+			return;
+		}catch(Poco::IOException) {
+			Disconnect(FC_LEAVE_OTHER);
+			return;
+		}
 
-	//Chat queue
-	while (_ChatQueue.size()) {
-		Message = _ChatQueue.front();
-		_ChatQueue.pop();
-
-		Buffer.clear();
-		Buffer.append<char>(1,3);
-
-		NetworkIO::packString(Buffer,Message);
-
-		_Connection.sendBytes(Buffer.c_str(),Buffer.length());
-	}
-
-	//packet queue
-	while (_SendQueue.size()) {
-		_Connection.sendBytes(_SendQueue.front().c_str(),_SendQueue.front().length());
-		
-		if (_SendQueue.front().c_str()[0] == 0x32) { 
-			_SendQueue.pop();
-			continue; 
-		} //Pre chunks are so tiny, they  can be send in a row
 
 		_SendQueue.pop();
-		if (!fFull) {
-			break;
-		}
 	}
-
-	_fQueueLocked = false;
 }
 
 
@@ -442,13 +481,14 @@ void PlayerThread::Packet1_Login() {
 	//Check minecraft version
 	iProtocolVersion = _Network.readInt(); //Protocol Version
 
+
 	if (iProtocolVersion > SettingsHandler::getSupportedProtocolVersion()) {
-		Kick("Outdated server!");
+		Kick("Outdated server! Needed Version: " + SettingsHandler::getSupportedMCVersion());
 		return;
 	}
 
 	if (iProtocolVersion <  SettingsHandler::getSupportedProtocolVersion()) {
-		Kick("Outdated client!");
+		Kick("Outdated client! Needed Version: " + SettingsHandler::getSupportedMCVersion());
 		return;
 	}
 
@@ -480,17 +520,15 @@ void PlayerThread::Packet1_Login() {
 
 
 	//YES DUDE, you got it :D
-
 	_PlayerCount++; //There is an new spawned player
 	_iEntityID = _rEntityProvider.Add(FC_ENTITY_PLAYER); //Fetch a new entity id
-	_fSpawned = true;
 	_ChunkProvider.newConnection();
 
 
 	//Set start coordinates
-	_Coordinates.X = 100.0;
+	_Coordinates.X = 5.0;
 	_Coordinates.Y = 35.0;
-	_Coordinates.Z = 100.0;
+	_Coordinates.Z = 5.0;
 	_Coordinates.Stance = 35.0;
 	_Coordinates.OnGround = false;
 	_Coordinates.Pitch = 0.0F;
@@ -535,10 +573,10 @@ void PlayerThread::Packet1_Login() {
 
 	//Client position
 	sendClientPosition(); //Make client leave downloading map screen | chunk provider will send clients position again, after spawning chunk who standing on
-	
+
 	//Time
 	sendTime(); 
-	
+
 	//Health
 	UpdateHealth(20,20,5.0F); //Health
 
@@ -546,12 +584,16 @@ void PlayerThread::Packet1_Login() {
 	vector<string> vNames;
 	vNames = _pPoolMaster->ListPlayers(60);
 
-	for ( int x = 0;x<= vNames.size()-1;x++) {
-		PlayerInfoList(true,vNames[x]);
+	if (vNames.size() > 0) {
+		for ( int x = 0;x<= vNames.size()-1;x++) {
+			PlayerInfoList(true,vNames[x]);
+		}
 	}
 
 	//Send login packages
-	ProcessQueue(true);
+	ProcessQueue();
+	_fSpawned = true;
+
 
 	//Chunks
 	_ChunkProvider.HandleMovement(_Coordinates);
@@ -570,18 +612,19 @@ void PlayerThread::Packet2_Handshake() {
 	_Network.addByte(0x02);
 
 	if (SettingsHandler::isOnlineModeActivated()) {
-		generateConnectionHash();
-		_Network.addString(_sConnectionHash);
+		_Network.addString(generateConnectionHash());
 	}else{
 		_Network.addString("-");
 	}
 	_Network.Flush();
 	_Network.UnLock();
+
+	ProcessQueue();
 }
 
 void PlayerThread::Packet3_Chat() {
 	string Message("");
-	
+
 	Message = _Network.readString();
 	if (Message.length() > 100) {
 		Kick("Received string too long");
@@ -679,7 +722,7 @@ void PlayerThread::PlayerInfoList(bool fSpawn,string& rName) {
 	}else{
 		_Spawned_PlayerInfoList--;
 	}
-	
+
 	_Network.Lock();
 	_Network.addByte(0xc9);
 	_Network.addString(rName);

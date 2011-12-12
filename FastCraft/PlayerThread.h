@@ -16,18 +16,19 @@ GNU General Public License for more details.
 #ifndef _FASTCRAFTHEADER_PLAYERTHREAD
 #define _FASTCRAFTHEADER_PLAYERTHREAD
 #include <iostream>
-#include <Poco/NumberFormatter.h>
 #include <Poco/Net/HTTPClientSession.h>
 #include <Poco/Net/HTTPRequest.h>
 #include <Poco/Net/HTTPResponse.h>
-#include <Poco/Runnable.h>
 #include <Poco/Net/StreamSocket.h>
-#include <queue>
+#include <Poco/Runnable.h>
+#include <Poco/NumberFormatter.h>
+#include <Poco/Thread.h>
+#include "ThreadSafeQueue.h"
 #include "Structs.h"
 #include "NetworkIO.h"
 #include "ChunkProvider.h"
 #include "EntityFlags.h"
-
+#include "NetworkWriter.h"
 
 class EntityProvider;
 class PlayerPool;
@@ -35,7 +36,6 @@ class ChunkRoot;
 class PackingThread;
 
 using std::string;
-using std::queue;
 using std::stringstream;
 
 struct TimeJobs {
@@ -60,12 +60,13 @@ private:
 	int _Spawned_PlayerInfoList;
 
 	//TCP stuff
-	Poco::Net::StreamSocket _Connection;
 	string _sTemp;
-	queue<string> _SendQueue;
-	queue<string> _ChatQueue;
+	Poco::Net::StreamSocket _Connection;
+	ThreadSafeQueue<string> _SendQueue;
 	NetworkIO _Network;	
-	bool _fQueueLocked;
+
+	NetworkWriter _NetworkWriter;
+	Poco::Thread _threadNetworkWriter;
 
 	//Needed Classes
 	EntityProvider& _rEntityProvider;
@@ -174,11 +175,13 @@ public:
 	*/
 	NetworkIO& getConnection();
 
+
 	/*
 	* Returns Players coordinates and look
 	*/
 	EntityCoordinates getCoordinates();
 	
+
 	/*
 	* Returns count of actual connected players
 	*/
@@ -194,15 +197,13 @@ public:
 	*/
 	void PlayerInfoList(bool,string&);
 
-
 	/*
-	* Pops an element from packet queue and send it 
+	* Closes connection and clears object
 
-	Parameter: 
-	@1 : true for full queue processing, false for only one element
+	Parameter:
+	@1 : Disconnect Reason - look in Constants.h  (FC_LEAVE_)
 	*/
-	void ProcessQueue(bool = false);
-
+	void Disconnect(char);
 
 	/*
 	* These are internal functions 
@@ -212,7 +213,8 @@ public:
 	void appendQueue(string&);
 private:
 	//Queue
-	void ClearQueue(); //Clear send queue
+	void ClearQueue();
+	void ProcessQueue();
 	 
 	//Interval functions
 	void Interval_KeepAlive();
@@ -227,9 +229,8 @@ private:
 
 
 	//Other
-	void generateConnectionHash(); //Generate a new connection hash	
+	string generateConnectionHash(); //Generate a new connection hash, write it to _ConnectionHash	
 	template <class T> T fixRange(T,T,T);
-	void Disconnect(char); //Clear Player object
 
 
 	//Packets - receive only
