@@ -33,7 +33,7 @@ using Poco::DeflatingOutputStream;
 
 
 ChunkProvider::ChunkProvider(ChunkRoot& rChunkRoot,NetworkIO& rNetworkIO,PackingThread& rPackingThread,PlayerThread* pPlayer) :
-	_rChunkRoot(rChunkRoot),
+_rChunkRoot(rChunkRoot),
 	_rNetwork(rNetworkIO),
 	_rPackingThread(rPackingThread),
 	_vSpawnedChunks(0)
@@ -69,7 +69,6 @@ void ChunkProvider::HandleMovement(const EntityCoordinates& PlayerCoordinates) {
 
 
 	if (_oldPlayerCoordinates.X != _PlayerCoordinates.X ||  _oldPlayerCoordinates.Z != _PlayerCoordinates.Z) {
-		cout<<"moved"<<"\n";
 		CheckSpawnedChunkList(); //Check spawned chunks and despawn if too distant
 		if (!CheckChunkCircle()) { //check player's chunk circle and spawn if there is a hole
 			throw Poco::RuntimeException("Chunk delivering failed");
@@ -133,7 +132,7 @@ bool ChunkProvider::CheckChunkCircle() {
 		if ( ! isSpawned(_PlayerCoordinates)) {
 			pChunk = _rChunkRoot.getChunk(_PlayerCoordinates.X,_PlayerCoordinates.Z);
 			if (pChunk==NULL) {
-				cout<<"nullpointer"<<"\n";
+				cout<<"CheckChunkCircle nullpointer"<<"\n";
 				//Todo: end of world reached message in players chat
 				return true;
 			}
@@ -164,13 +163,13 @@ bool ChunkProvider::CheckChunkCircle() {
 				Temp.X = X;
 				Temp.Z = Z;
 
-				//cout<<"X:"<<X<<" Z:"<<Z<<" Step:"<<iStep<<"\n";
-
-
 				if ( ! isSpawned(Temp)) {
+					/*cout<<"Spawn Chunk X:"<<X<<" Z:"<<Z<<
+					"\t"<<"Array:"<<_vSpawnedChunks.size()<<"\n";
+					*/
 					pChunk = _rChunkRoot.getChunk(X,Z);
 					if (pChunk==NULL) {
-						cout<<"nullpointer"<<"\n";
+						cout<<"CheckChunkCircle nullpointer"<<"\n";
 						//Todo: end of world reached message in players chat
 						return true;
 					}
@@ -227,7 +226,7 @@ bool ChunkProvider::CheckChunkCircle() {
 			}
 		}
 	}catch(Poco::RuntimeException&err ) {
-		cout<<"error:"<<err.message()<<"\n";
+		cout<<"CheckChunkCircle error:"<<err.message()<<"\n";
 		return false;
 	}
 
@@ -237,7 +236,7 @@ bool ChunkProvider::CheckChunkCircle() {
 		vJobs.erase(vJobs.begin() + iPlayerChunkVectorIndex);
 	}
 
-	if (_fNewPlayer) {
+	if (_fNewPlayer) { //Prevent suffocation if chunk who player stands on wasn't transmitted yet
 		_pPlayer->sendLowClientPosition();
 		_fNewPlayer = false;
 	}
@@ -253,29 +252,20 @@ bool ChunkProvider::CheckChunkCircle() {
 
 void ChunkProvider::CheckSpawnedChunkList() {
 	if (_vSpawnedChunks.size() == 0) { return; }
-	
+
 	bool fDespawn=false;
-	int iViewDistance = SettingsHandler::getViewDistance();
+	int iViewDistance = SettingsHandler::getViewDistance(),x;
 
-
-
-	for (int x=0;x<=_vSpawnedChunks.size()-1;x++) {
-			
-
+	for (x=_vSpawnedChunks.size()-1;x>=0;x--) {
 		if (_vSpawnedChunks[x].X < _PlayerCoordinates.X - iViewDistance) {fDespawn=true;}
 		if (_vSpawnedChunks[x].X > _PlayerCoordinates.X + iViewDistance) {fDespawn=true;}
 		if (_vSpawnedChunks[x].Z < _PlayerCoordinates.Z - iViewDistance) {fDespawn=true;}
 		if (_vSpawnedChunks[x].Z > _PlayerCoordinates.Z + iViewDistance) {fDespawn=true;}
 
 		if(fDespawn) {
-			cout<<"Despawn Chunk X:"<<_vSpawnedChunks[x].X<<" Z:"<<_vSpawnedChunks[x].Z<<
-				" PlayerChunk X:"<<_PlayerCoordinates.X<<" Z:"<<_PlayerCoordinates.Z<<"\n";
-
-
 			sendDespawn(_vSpawnedChunks[x].X,_vSpawnedChunks[x].Z);
 			_vSpawnedChunks.erase(_vSpawnedChunks.begin()+x);
 		}
-
 
 		fDespawn = false;
 	}
