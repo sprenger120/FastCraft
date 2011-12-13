@@ -33,69 +33,54 @@ using Poco::DeflatingOutputStream;
 
 
 ChunkProvider::ChunkProvider(ChunkRoot& rChunkRoot,NetworkIO& rNetworkIO,PackingThread& rPackingThread,PlayerThread* pPlayer) :
-_vSpawnedChunks(0),
 	_rChunkRoot(rChunkRoot),
 	_rNetwork(rNetworkIO),
-	_rPackingThread(rPackingThread)
+	_rPackingThread(rPackingThread),
+	_vSpawnedChunks(0)
 {
 	_pPlayer = pPlayer;
-	_fNewConnection = false;
-	_fConnected = false;
 }
 
 ChunkProvider::~ChunkProvider() {
 	_vSpawnedChunks.clear();
 }
 
-void ChunkProvider::newConnection() {
-	if (_fConnected) {
-		throw Poco::RuntimeException("ChunkProvider: Already connected");
-	}
-	_fConnected = true;
-	_fNewConnection = true;
+void ChunkProvider::HandleNewPlayer() {
+	_fNewPlayer = true;
 }
 
-void ChunkProvider::Disconnect() {
-	_fConnected = false;
+void ChunkProvider::HandleDisconnect() {
 	_vSpawnedChunks.clear();
+	_fNewPlayer = false;
 }
 
 void ChunkProvider::HandleMovement(const EntityCoordinates& PlayerCoordinates) {
-	if (!isConnected()) { return; }
-
 	_PlayerCoordinates = ChunkMath::toChunkCoords(PlayerCoordinates);
 
-	if (_fNewConnection) {
+
+	if (isChunkListEmpty()) {
+		if (!CheckChunkCircle()) {
+			throw Poco::RuntimeException("Chunk delivering failed");
+		}
+
 		_oldPlayerCoordinates = _PlayerCoordinates;
-	}
-
-
-	bool fFullCircle = isFullyCircleSpawned();
-	bool fMoved = playerChangedPosition();
-
-	if (fFullCircle && !fMoved) {
 		return;
 	}
 
 
-	if ( fFullCircle && fMoved || //all chunks delivered, moved to another chunk
-		!fFullCircle && fMoved || //not all chunks delvered,  in same chunk 
-		!fFullCircle && !fMoved // not all chunks delvered, moved to another chunk	
-		) {
-			if (fMoved) {
-				CheckSpawnedChunkList();
-			}
-
-			if (!CheckChunkSet()) {
-				throw Poco::RuntimeException("Chunk delivering failed");
-			}
+	if (_oldPlayerCoordinates.X != _PlayerCoordinates.X ||  _oldPlayerCoordinates.Z != _PlayerCoordinates.Z) {
+		cout<<"moved"<<"\n";
+		CheckSpawnedChunkList(); //Check spawned chunks and despawn if too distant
+		if (!CheckChunkCircle()) { //check player's chunk circle and spawn if there is a hole
+			throw Poco::RuntimeException("Chunk delivering failed");
+		}
+		_oldPlayerCoordinates = _PlayerCoordinates;
+		return;
 	}
-
-	_oldPlayerCoordinates = _PlayerCoordinates;
 }
 
-bool ChunkProvider::isFullyCircleSpawned() {
-	return (_vSpawnedChunks.size() >= CalculateChunkCount());
+bool ChunkProvider::isChunkListEmpty() {
+	return (_vSpawnedChunks.size() == 0);
 }
 
 
@@ -112,10 +97,6 @@ void ChunkProvider::sendSpawn(int X,int Z) {
 }
 
 void ChunkProvider::sendDespawn(int X,int Z){
-	if (!isConnected()) {
-		throw Poco::Exception("Not connected");
-	}
-
 	_rNetwork.Lock();
 	_rNetwork.addByte(0x32);
 	_rNetwork.addInt(X);
@@ -125,9 +106,6 @@ void ChunkProvider::sendDespawn(int X,int Z){
 	_rNetwork.UnLock();
 }
 
-bool ChunkProvider::isConnected() {
-	return _fConnected;
-}
 
 bool ChunkProvider::isSpawned(ChunkCoordinates coord) {
 	if(_vSpawnedChunks.size() == 0 ) {return false;}
@@ -139,7 +117,7 @@ bool ChunkProvider::isSpawned(ChunkCoordinates coord) {
 	return false;
 }
 
-bool ChunkProvider::CheckChunkSet() {
+bool ChunkProvider::CheckChunkCircle() {
 	MapChunk* pChunk;
 	PackJob Job;
 	ChunkCoordinates CircleRoot,Temp;
@@ -259,12 +237,10 @@ bool ChunkProvider::CheckChunkSet() {
 		vJobs.erase(vJobs.begin() + iPlayerChunkVectorIndex);
 	}
 
-
-	if (_fNewConnection) {
-		_pPlayer->sendClientPosition(); //fix potential in block suffocation
-		_fNewConnection = false;
+	if (_fNewPlayer) {
+		_pPlayer->sendLowClientPosition();
+		_fNewPlayer = false;
 	}
-
 
 	for (int x=0;x<=vJobs.size()-1;x++) {
 		_rPackingThread.AddJob(vJobs[x]);
@@ -303,19 +279,6 @@ void ChunkProvider::CheckSpawnedChunkList() {
 
 		fDespawn = false;
 	}
-}
-
-bool ChunkProvider::playerChangedPosition() {
-	if (_oldPlayerCoordinates.X == _PlayerCoordinates.X && _oldPlayerCoordinates.Z == _PlayerCoordinates.Z) {
-		return false;
-	}else{
-		return true;
-	}
-}
-
-int ChunkProvider::CalculateChunkCount() {
-	int iVD =  SettingsHandler::getViewDistance() / 2;
-	return iVD * 4 + (iVD * iVD) * 4 + 1; 
 }
 
 void ChunkProvider::AddChunkToList(int X,int Z) {

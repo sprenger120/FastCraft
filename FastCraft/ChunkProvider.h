@@ -32,34 +32,28 @@ private:
 	ChunkCoordinates _PlayerCoordinates;
 	ChunkCoordinates _oldPlayerCoordinates;
 
+	bool _fNewPlayer;
 	ChunkRoot& _rChunkRoot;
 	NetworkIO& _rNetwork;
 	PackingThread& _rPackingThread;
 	PlayerThread* _pPlayer;
-
-	bool _fConnected;
-	bool _fNewConnection;
 public:
 	ChunkProvider(ChunkRoot&,NetworkIO&,PackingThread&,PlayerThread*);
 	~ChunkProvider();
 
-	void newConnection();
-	void Disconnect();
+	void HandleNewPlayer();
+	void HandleDisconnect();
 
 	void HandleMovement(const EntityCoordinates&);
-	bool isFullyCircleSpawned();
+	
 public: 
+	bool CheckChunkCircle();
+	void CheckSpawnedChunkList();
 	void sendDespawn(int,int);
 	void sendSpawn(int,int);
-	
-	bool isConnected();
-	bool isSpawned(ChunkCoordinates);
-	bool CheckChunkSet();
-	void CheckSpawnedChunkList();
-
-	bool playerChangedPosition();
-	int CalculateChunkCount();
-
 	void AddChunkToList(int,int);
+	
+	bool isSpawned(ChunkCoordinates);
+	bool isChunkListEmpty();
 };
 #endif
