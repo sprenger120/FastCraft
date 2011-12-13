@@ -62,8 +62,10 @@ private:
 	//TCP stuff
 	string _sTemp;
 	Poco::Net::StreamSocket _Connection;
-	ThreadSafeQueue<string> _SendQueue;
-	NetworkIO _Network;	
+	ThreadSafeQueue<string> _lowLevelSendQueue;
+	ThreadSafeQueue<string> _highLevelSendQueue;
+	NetworkIO _lowNetwork;	
+	NetworkIO _highNetwork;
 
 	NetworkWriter _NetworkWriter;
 	Poco::Thread _threadNetworkWriter;

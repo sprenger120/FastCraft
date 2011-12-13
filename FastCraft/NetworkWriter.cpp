@@ -23,8 +23,9 @@ GNU General Public License for more details.
 
 using Poco::Thread;
 
-NetworkWriter::NetworkWriter(ThreadSafeQueue<string>& q,Poco::Net::StreamSocket& s,PlayerThread* p) :
-_rQ(q),
+NetworkWriter::NetworkWriter(ThreadSafeQueue<string>& lowQ,ThreadSafeQueue<string>& highQ,Poco::Net::StreamSocket& s,PlayerThread* p) :
+_rlowQ(lowQ),
+_rhighQ(highQ),
 _rStrm(s),
 _pPlayer(p)
 {
@@ -34,29 +35,43 @@ NetworkWriter::~NetworkWriter() {
 }
 
 void NetworkWriter::run() {
-	//Poco::Stopwatch sw;
-	//sw.start();
 	while (1) {
 		if (!_pPlayer->isSpawned()) {
 			Thread::sleep(50);
 			continue;
 		}
-		/*if (sw.elapsed()/1000 >= 500) {
-			sw.stop();
-			sw.reset();
-			sw.start();
-			std::cout<<"Queue Size of '"<<_pPlayer->getUsername()<<"' :"<<_rQ.size()<<"\n";
+
+		//Process high level queue
+		while (!_rhighQ.empty()) {
+			string & rStr = _rhighQ.front();
+
+			try {
+				_rStrm.sendBytes(rStr.c_str(),rStr.length()); //Send
+			}catch(Poco::Net::ConnectionAbortedException) {
+				_pPlayer->Disconnect(FC_LEAVE_OTHER);
+			}catch(Poco::Net::InvalidSocketException) {
+				_pPlayer->Disconnect(FC_LEAVE_OTHER);
+			}catch(Poco::TimeoutException) {
+				_pPlayer->Disconnect(FC_LEAVE_OTHER);
+			}catch(Poco::Net::ConnectionResetException) {
+				_pPlayer->Disconnect(FC_LEAVE_OTHER);
+			}catch(Poco::IOException) {
+				_pPlayer->Disconnect(FC_LEAVE_OTHER);
+			}
+
+			_rhighQ.pop();
 		}
-		*/
-		if (_rQ.empty()) {
+
+
+		if (_rlowQ.empty()) {
 			Thread::sleep(5);
 			continue;
 		}
 
-		string & rJob = _rQ.front();
+		string & rStr = _rlowQ.front();
 
 		try {
-			_rStrm.sendBytes(rJob.c_str(),rJob.length()); //Send
+			_rStrm.sendBytes(rStr.c_str(),rStr.length()); //Send
 		}catch(Poco::Net::ConnectionAbortedException) {
 			_pPlayer->Disconnect(FC_LEAVE_OTHER);
 		}catch(Poco::Net::InvalidSocketException) {
@@ -70,6 +85,6 @@ void NetworkWriter::run() {
 		}
 
 
-		_rQ.pop();
+		_rlowQ.pop();
 	}
 }

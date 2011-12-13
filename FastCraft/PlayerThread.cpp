@@ -42,16 +42,20 @@ _sName(""),
 	_sLeaveMessage(""),
 	_Connection(),
 	_sTemp(""),
-	_SendQueue(),
 	_sConnectionHash(""),
+
+	_lowLevelSendQueue(),
+	_highLevelSendQueue(),
+	_lowNetwork(_lowLevelSendQueue,_Connection),
+	_highNetwork(_highLevelSendQueue,_Connection),
+	_NetworkWriter(_lowLevelSendQueue,_highLevelSendQueue,_Connection,this),
+	
 	_Web_Session("session.minecraft.net"),
 	_Web_Response(),
-	_Network(&_SendQueue),
 	_rEntityProvider(rEntityProvider),
 	_Flags(),
-	_ChunkProvider(rChunkRoot,_Network,rPackingThread,this),
-	_threadNetworkWriter("NetworkWriter"),
-	_NetworkWriter(_SendQueue,_Connection,this)
+	_ChunkProvider(rChunkRoot,_lowNetwork,rPackingThread,this),
+	_threadNetworkWriter("NetworkWriter")
 {
 	_Coordinates.OnGround = false;
 	_Coordinates.Pitch = 0.0F;
@@ -129,7 +133,7 @@ void PlayerThread::run() {
 			Interval_Time();
 			Interval_HandleMovement();
 
-			iPacket = _Network.readByte();
+			iPacket = _lowNetwork.readByte();
 
 			//cout<<"Package recovered:"<<std::hex<<int(iPacket)<<"\n";
 			switch (iPacket) {
@@ -229,7 +233,7 @@ void PlayerThread::Disconnect(char iLeaveMode) {
 	_TimeJobs.LastHandleMovement = 0;
 
 	ClearQueue();
-	_Network.closeConnection();
+	_Connection.close();
 }
 
 
@@ -239,9 +243,7 @@ void PlayerThread::Connect(Poco::Net::StreamSocket& Sock) {
 		Disconnect(FC_LEAVE_OTHER);
 	}
 	_fAssigned=true;
-
 	_Connection = Sock; 
-	_Network.newConnection(Sock);
 
 	_sIP.assign(_Connection.peerAddress().toString());
 	_iThreadTicks = 0;
@@ -339,11 +341,11 @@ void PlayerThread::Interval_HandleMovement() {
 }
 
 void PlayerThread::sendTime() {
-	_Network.Lock();
-	_Network.addByte(0x4);
-	_Network.addInt64(ServerTime::getTime());
-	_Network.Flush();
-	_Network.UnLock();
+	_highNetwork.Lock();
+	_highNetwork.addByte(0x4);
+	_highNetwork.addInt64(ServerTime::getTime());
+	_highNetwork.Flush();
+	_highNetwork.UnLock();
 }
 
 long long PlayerThread::getTicks() {
@@ -351,34 +353,34 @@ long long PlayerThread::getTicks() {
 }
 
 NetworkIO& PlayerThread::getConnection() {
-	return _Network;
+	return _lowNetwork;
 }
 
 void PlayerThread::sendClientPosition() {
-	_Network.Lock();
+	_highNetwork.Lock();
 
-	_Network.addByte(0x0D);
-	_Network.addDouble(_Coordinates.X);
-	_Network.addDouble(_Coordinates.Stance);
-	_Network.addDouble(_Coordinates.Y);
-	_Network.addDouble(_Coordinates.Z);
-	_Network.addFloat(_Coordinates.Yaw);
-	_Network.addFloat(_Coordinates.Pitch);
-	_Network.addBool(_Coordinates.OnGround);
-	_Network.Flush();
+	_highNetwork.addByte(0x0D);
+	_highNetwork.addDouble(_Coordinates.X);
+	_highNetwork.addDouble(_Coordinates.Stance);
+	_highNetwork.addDouble(_Coordinates.Y);
+	_highNetwork.addDouble(_Coordinates.Z);
+	_highNetwork.addFloat(_Coordinates.Yaw);
+	_highNetwork.addFloat(_Coordinates.Pitch);
+	_highNetwork.addBool(_Coordinates.OnGround);
+	_highNetwork.Flush();
 
-	_Network.UnLock();
+	_highNetwork.UnLock();
 }
 
 void PlayerThread::Interval_KeepAlive() {
 	if (_TimeJobs.LastKeepAliveSend + FC_INTERVAL_KEEPACTIVE <= getTicks()) { //Send new keep alive
 		_TimeJobs.LastKeepAliveSend = getTicks();
 
-		_Network.Lock();
-		_Network.addByte(0x0);
-		_Network.addInt(Random::Int());
-		_Network.Flush();
-		_Network.UnLock();
+		_highNetwork.Lock();
+		_highNetwork.addByte(0x0);
+		_highNetwork.addInt(Random::Int());
+		_highNetwork.Flush();
+		_highNetwork.UnLock();
 	}
 }
 
@@ -388,13 +390,13 @@ void PlayerThread::UpdateHealth(short iHealth,short iFood,float nSaturation) {
 	_iFood = fixRange<short>(iFood,0,20);
 	_nSaturation = fixRange<float>(iFood,0.0F,5.0F);
 
-	_Network.Lock();
-	_Network.addByte(0x8);
-	_Network.addShort(_iHealth);
-	_Network.addShort(_iFood);
-	_Network.addFloat(_nSaturation);
-	_Network.Flush();
-	_Network.UnLock();
+	_highNetwork.Lock();
+	_highNetwork.addByte(0x8);
+	_highNetwork.addShort(_iHealth);
+	_highNetwork.addShort(_iFood);
+	_highNetwork.addFloat(_nSaturation);
+	_highNetwork.Flush();
+	_highNetwork.UnLock();
 }
 
 
@@ -421,26 +423,27 @@ bool PlayerThread::isSpawned() {
 * QUEUE
 */
 void PlayerThread::appendQueue(string& rString) {
-	_SendQueue.push(rString);
+	_lowLevelSendQueue.push(rString);
 }
 
 void PlayerThread::insertChat(string& rString) {
-	_Network.Lock();
-	_Network.addByte(0x3);
-	_Network.addString(rString);
-	_Network.Flush();
-	_Network.UnLock();
+	_highNetwork.Lock();
+	_highNetwork.addByte(0x3);
+	_highNetwork.addString(rString);
+	_highNetwork.Flush();
+	_highNetwork.UnLock();
 }
 
 void PlayerThread::ClearQueue() {
-	_SendQueue.clear();
+	_highLevelSendQueue.clear();
+	_lowLevelSendQueue.clear();
 }
 
 void PlayerThread::ProcessQueue() {		
 	//cout<<"manual call isSpawned:"<<isSpawned()<<"\n";
 	
-	while (!_SendQueue.empty()) {
-		string & rJob = _SendQueue.front();
+	while (!_highLevelSendQueue.empty()) {
+		string & rJob = _highLevelSendQueue.front();
 
 		try {
 			_Connection.sendBytes(rJob.c_str(),rJob.length()); //Send
@@ -462,7 +465,7 @@ void PlayerThread::ProcessQueue() {
 		}
 
 
-		_SendQueue.pop();
+		_highLevelSendQueue.pop();
 	}
 }
 
@@ -472,14 +475,14 @@ void PlayerThread::ProcessQueue() {
 */
 
 void PlayerThread::Packet0_KeepAlive() {
-	_Network.readInt(); //Get id
+	_lowNetwork.readInt(); //Get id
 }
 
 void PlayerThread::Packet1_Login() {
 	int iProtocolVersion = 0;
 
 	//Check minecraft version
-	iProtocolVersion = _Network.readInt(); //Protocol Version
+	iProtocolVersion = _lowNetwork.readInt(); //Protocol Version
 
 
 	if (iProtocolVersion > SettingsHandler::getSupportedProtocolVersion()) {
@@ -492,8 +495,8 @@ void PlayerThread::Packet1_Login() {
 		return;
 	}
 
-	_Network.readString(); //Username (already known)	
-	_Network.read(16);
+	_lowNetwork.readString(); //Username (already known)	
+	_lowNetwork.read(16);
 
 	//Check premium 
 	if (SettingsHandler::isOnlineModeActivated()) {
@@ -550,26 +553,26 @@ void PlayerThread::Packet1_Login() {
 	* Response
 	*/
 	//Login response
-	_Network.Lock();
+	_highNetwork.Lock();
 
-	_Network.addByte(0x1);
-	_Network.addInt(_iEntityID);
-	_Network.addString("");
-	_Network.addInt64(SettingsHandler::getMapSeed());
-	_Network.addInt(SettingsHandler::getServerMode());
-	_Network.addByte(0);
-	_Network.addByte(SettingsHandler::getDifficulty());
-	_Network.addByte(SettingsHandler::getWorldHeight());
-	_Network.addByte((unsigned char)SettingsHandler::getPlayerSlotCount());
-	_Network.Flush();
+	_highNetwork.addByte(0x1);
+	_highNetwork.addInt(_iEntityID);
+	_highNetwork.addString("");
+	_highNetwork.addInt64(SettingsHandler::getMapSeed());
+	_highNetwork.addInt(SettingsHandler::getServerMode());
+	_highNetwork.addByte(0);
+	_highNetwork.addByte(SettingsHandler::getDifficulty());
+	_highNetwork.addByte(SettingsHandler::getWorldHeight());
+	_highNetwork.addByte((unsigned char)SettingsHandler::getPlayerSlotCount());
+	_highNetwork.Flush();
 
 	//compass
-	_Network.addByte(0x6);
-	_Network.addInt(0); //X
-	_Network.addInt(0); // Y
-	_Network.addInt(0); // Z 
-	_Network.Flush();
-	_Network.UnLock();
+	_highNetwork.addByte(0x6);
+	_highNetwork.addInt(0); //X
+	_highNetwork.addInt(0); // Y
+	_highNetwork.addInt(0); // Z 
+	_highNetwork.Flush();
+	_highNetwork.UnLock();
 
 	//Client position
 	sendClientPosition(); //Make client leave downloading map screen | chunk provider will send clients position again, after spawning chunk who standing on
@@ -600,7 +603,7 @@ void PlayerThread::Packet1_Login() {
 }
 
 void PlayerThread::Packet2_Handshake() {
-	_sName = _Network.readString();
+	_sName = _highNetwork.readString();
 
 	if (_sName.length() > 16) {
 		Kick("Username too long");
@@ -608,16 +611,16 @@ void PlayerThread::Packet2_Handshake() {
 	}
 
 	//Send response (Connection Hash)
-	_Network.Lock();
-	_Network.addByte(0x02);
+	_highNetwork.Lock();
+	_highNetwork.addByte(0x02);
 
 	if (SettingsHandler::isOnlineModeActivated()) {
-		_Network.addString(generateConnectionHash());
+		_highNetwork.addString(generateConnectionHash());
 	}else{
-		_Network.addString("-");
+		_highNetwork.addString("-");
 	}
-	_Network.Flush();
-	_Network.UnLock();
+	_highNetwork.Flush();
+	_highNetwork.UnLock();
 
 	ProcessQueue();
 }
@@ -625,7 +628,7 @@ void PlayerThread::Packet2_Handshake() {
 void PlayerThread::Packet3_Chat() {
 	string Message("");
 
-	Message = _Network.readString();
+	Message = _lowNetwork.readString();
 	if (Message.length() > 100) {
 		Kick("Received string too long");
 		return;
@@ -640,18 +643,18 @@ void PlayerThread::Packet3_Chat() {
 }
 
 void PlayerThread::Packet10_Player() {
-	_Coordinates.OnGround = _Network.readBool();
+	_Coordinates.OnGround = _lowNetwork.readBool();
 }
 
 void PlayerThread::Packet11_Position() {
 	EntityCoordinates TmpCoord;
 
 	//Read coordinates in a temporary variable
-	TmpCoord.X = _Network.readDouble();
-	TmpCoord.Y = _Network.readDouble();
-	TmpCoord.Stance = _Network.readDouble();
-	TmpCoord.Z = _Network.readDouble();
-	TmpCoord.OnGround = _Network.readBool();
+	TmpCoord.X = _lowNetwork.readDouble();
+	TmpCoord.Y = _lowNetwork.readDouble();
+	TmpCoord.Stance = _lowNetwork.readDouble();
+	TmpCoord.Z = _lowNetwork.readDouble();
+	TmpCoord.OnGround = _lowNetwork.readBool();
 
 	//if X and Z ==  8.5000000000000000 , there is crap in the tcp buffer -> ignore it
 	if (TmpCoord.X == 8.5000000000000000 && TmpCoord.Z == 8.5000000000000000) { 
@@ -666,22 +669,22 @@ void PlayerThread::Packet11_Position() {
 }
 
 void PlayerThread::Packet12_Look() {
-	_Coordinates.Yaw = _Network.readFloat();
-	_Coordinates.Pitch = _Network.readFloat();
-	_Coordinates.OnGround = _Network.readBool();
+	_Coordinates.Yaw = _lowNetwork.readFloat();
+	_Coordinates.Pitch = _lowNetwork.readFloat();
+	_Coordinates.OnGround = _lowNetwork.readBool();
 }
 
 void PlayerThread::Packet13_PosAndLook() {
 	EntityCoordinates TmpCoord;
 
 	//Read coordinates in a temporary variable
-	TmpCoord.X = _Network.readDouble();
-	TmpCoord.Y = _Network.readDouble();
-	TmpCoord.Stance = _Network.readDouble();
-	TmpCoord.Z = _Network.readDouble();
-	TmpCoord.Yaw = _Network.readFloat();
-	TmpCoord.Pitch = _Network.readFloat();
-	TmpCoord.OnGround = _Network.readBool();
+	TmpCoord.X = _lowNetwork.readDouble();
+	TmpCoord.Y = _lowNetwork.readDouble();
+	TmpCoord.Stance = _lowNetwork.readDouble();
+	TmpCoord.Z = _lowNetwork.readDouble();
+	TmpCoord.Yaw = _lowNetwork.readFloat();
+	TmpCoord.Pitch = _lowNetwork.readFloat();
+	TmpCoord.OnGround = _lowNetwork.readBool();
 
 	//if X and Z ==  8.5000000000000000 , there is crap in the tcp buffer -> ignore it
 	if (TmpCoord.X == 8.5000000000000000 && TmpCoord.Z == 8.5000000000000000) { 
@@ -703,7 +706,7 @@ void PlayerThread::Packet254_ServerListPing() {
 }
 
 void PlayerThread::Packet255_Disconnect() {
-	_sLeaveMessage = _Network.readString();
+	_sLeaveMessage = _lowNetwork.readString();
 	Disconnect(FC_LEAVE_QUIT);
 }
 
@@ -723,11 +726,11 @@ void PlayerThread::PlayerInfoList(bool fSpawn,string& rName) {
 		_Spawned_PlayerInfoList--;
 	}
 
-	_Network.Lock();
-	_Network.addByte(0xc9);
-	_Network.addString(rName);
-	_Network.addBool(fSpawn);
-	_Network.addShort(10);
-	_Network.Flush();
-	_Network.UnLock();
+	_highNetwork.Lock();
+	_highNetwork.addByte(0xc9);
+	_highNetwork.addString(rName);
+	_highNetwork.addBool(fSpawn);
+	_highNetwork.addShort(10);
+	_highNetwork.Flush();
+	_highNetwork.UnLock();
 }

@@ -23,25 +23,22 @@ using Poco::Net::StreamSocket;
 using std::string;
 
 
-
-//This class sets the streamsocket automaticly to blocking
 class NetworkIO {
 private:
-	StreamSocket _Connection;
+	StreamSocket& _rSocket;
 	string _sBuffer;
 	char _charBuffer[4096];
 	char _sEndianBuffer[8];
 
-	ThreadSafeQueue<string>* _pSendQueue;
+	ThreadSafeQueue<string>& _rQueue;
 
-	bool _fConnected;
 	bool _fLocked;
 	const int _iTimeout;
 
 	static unsigned long long _iReadTraffic;
 	static unsigned long long _iWriteTraffic;
 public:
-	NetworkIO(ThreadSafeQueue<string>*); //Init NetworkIO without connection
+	NetworkIO(ThreadSafeQueue<string>&,StreamSocket&); //Init NetworkIO without connection
 	~NetworkIO();
 
 	//Write part
@@ -67,10 +64,6 @@ public:
 
 	void Flush(); 
 
-	//Connection adding / closing
-	bool isConnected();
-	void closeConnection();
-	void newConnection(StreamSocket&);
 
 	//Lock & unlock
 	void Lock();

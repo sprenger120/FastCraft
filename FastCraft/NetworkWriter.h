@@ -25,11 +25,12 @@ using std::string;
 
 class NetworkWriter : public Poco::Runnable { 
 private:
-	ThreadSafeQueue<string>& _rQ;
+	ThreadSafeQueue<string>& _rlowQ;
+	ThreadSafeQueue<string>& _rhighQ;
 	Poco::Net::StreamSocket& _rStrm;
 	PlayerThread* _pPlayer;
 public:
-	NetworkWriter(ThreadSafeQueue<string>&,Poco::Net::StreamSocket&,PlayerThread*);
+	NetworkWriter(ThreadSafeQueue<string>&,ThreadSafeQueue<string>&,Poco::Net::StreamSocket&,PlayerThread*);
 	~NetworkWriter();
 
 	void run();

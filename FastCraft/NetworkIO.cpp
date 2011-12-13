@@ -24,20 +24,16 @@ GNU General Public License for more details.
 
 using Poco::RuntimeException;
 
-NetworkIO::NetworkIO(ThreadSafeQueue<string>* p) : 
-_Connection(),
+NetworkIO::NetworkIO(ThreadSafeQueue<string>& r,StreamSocket& rSock) : 
+	_rSocket(rSock),
 	_sBuffer(""),
-	_fConnected(false),
 	_iTimeout(10), //10 seconds
-	_pSendQueue(p)
+	_rQueue(r)
 {
 	_fLocked = false;
 }
 
 NetworkIO::~NetworkIO() {
-	if (_fConnected) {
-		_Connection.close();
-	}
 	_sBuffer.clear();
 }
 
@@ -225,29 +221,18 @@ bool NetworkIO::exceptionSaveReading(int iLenght) {
 	int iUnderflowCount=0;
 	bool fUnderflow = false;
 
-	if (iLenght == 0) { 
-		std::cout<<"NETWORKIO: recv lenght zero"<<"\n";
-		return true;
-	}
-
-	if (iLenght < 0) { 
-		std::cout<<"NETWORKIO: recv lenght lower than zero"<<"\n";
+	if (iLenght <= 0 || iLenght > 4096) { 
 		return false;
 	}
-
-	if (iLenght > 4096) {
-		return false;
-	}
-
 
 	while ( iReadedLenght < iLenght) {
 		try {
 			switch(fUnderflow) {
 			case false:
-				iReadedLenght = _Connection.receiveBytes(_charBuffer,iLenght);
+				iReadedLenght = _rSocket.receiveBytes(_charBuffer,iLenght);
 				break;
 			case true:
-				iReadedLenght += _Connection.receiveBytes(&_charBuffer[iReadedLenght], iLenght - iReadedLenght);
+				iReadedLenght += _rSocket.receiveBytes(&_charBuffer[iReadedLenght], iLenght - iReadedLenght);
 				break;
 			}
 		}catch(Poco::Net::ConnectionAbortedException) {
@@ -255,7 +240,6 @@ bool NetworkIO::exceptionSaveReading(int iLenght) {
 		}catch(Poco::Net::InvalidSocketException) {
 			return false;
 		}catch(Poco::TimeoutException) {
-			std::cout<<"NETWORKIO: timeout"<<"\n";
 			return false;
 		}catch(Poco::Net::ConnectionResetException) {
 			return false;
@@ -265,16 +249,10 @@ bool NetworkIO::exceptionSaveReading(int iLenght) {
 		if (iReadedLenght != iLenght) {
 			iUnderflowCount++;
 			if (iUnderflowCount > 10) {
-				std::cout<<"underflow disconnect"<<"\n";
 				return false;
 			}
 			fUnderflow = true;
 		}
-	}
-
-	if (fUnderflow) {
-		std::cout<<"solved"<<"\n";
-		std::cout<<"r:"<<iReadedLenght<<" l:"<<iLenght<<"\n";
 	}
 
 	_iReadTraffic += iLenght;
@@ -282,26 +260,10 @@ bool NetworkIO::exceptionSaveReading(int iLenght) {
 }
 
 void NetworkIO::Flush() {
-	_pSendQueue->push(_sBuffer);
+	_rQueue.push(_sBuffer);
 
 	_iWriteTraffic += _sBuffer.length();
 	_sBuffer.clear();
-}
-
-bool NetworkIO::isConnected() {
-	return _fConnected;
-}
-
-void NetworkIO::closeConnection() {
-	_Connection.close();
-	_fConnected = false;
-}
-
-void NetworkIO::newConnection(StreamSocket& Sock) {
-	_Connection = StreamSocket(Sock);
-	_fConnected = true;
-	_Connection.setReceiveTimeout( Poco::Timespan( 1000 * 5000) );
-	_Connection.setBlocking(true);
 }
 
 unsigned long long NetworkIO::getReadTraffic() {
