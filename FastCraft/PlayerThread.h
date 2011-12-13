@@ -49,6 +49,8 @@ private:
 	//Player specific data
 	EntityFlags _Flags; //Burning,eating...
 	EntityCoordinates _Coordinates; //Coordinates
+	EntityCoordinates _lastCoordinates;
+	ChunkCoordinates _lastChunkCoordinates;
 	string _sName; //Minecraft.net Username
 	string _sIP; //IP
 	string _sLeaveMessage;
@@ -211,7 +213,7 @@ public:
 	* These are internal functions 
 	* DONT USE THEM
 	*/
-	void sendClientPosition();
+	void sendLowClientPosition();
 	void appendQueue(string&);
 private:
 	//Queue
@@ -225,15 +227,14 @@ private:
 
 	void sendTime();
 	void pushChatEvent(string&);
+	void sendClientPosition();
 
 	//Ticks
 	long long getTicks(); 
 
-
 	//Other
 	string generateConnectionHash(); //Generate a new connection hash, write it to _ConnectionHash	
 	template <class T> T fixRange(T,T,T);
-
 
 	//Packets - receive only
 	void Packet0_KeepAlive();

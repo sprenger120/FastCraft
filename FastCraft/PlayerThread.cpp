@@ -191,7 +191,7 @@ void PlayerThread::run() {
 void PlayerThread::Disconnect(char iLeaveMode) {
 
 	if (isSpawned()) {
-		_ChunkProvider.Disconnect();
+		_ChunkProvider.HandleDisconnect();
 		_PlayerCount--;
 		_rEntityProvider.Remove(_iEntityID);
 
@@ -522,11 +522,10 @@ void PlayerThread::Packet1_Login() {
 	}
 
 
-	//YES DUDE, you got it :D
+	//YES DUDE, you got it !
 	_PlayerCount++; //There is an new spawned player
 	_iEntityID = _rEntityProvider.Add(FC_ENTITY_PLAYER); //Fetch a new entity id
-	_ChunkProvider.newConnection();
-
+	_ChunkProvider.HandleNewPlayer();
 
 	//Set start coordinates
 	_Coordinates.X = 5.0;
@@ -733,4 +732,20 @@ void PlayerThread::PlayerInfoList(bool fSpawn,string& rName) {
 	_highNetwork.addShort(10);
 	_highNetwork.Flush();
 	_highNetwork.UnLock();
+}
+
+void PlayerThread::sendLowClientPosition() {
+	_lowNetwork.Lock();
+
+	_lowNetwork.addByte(0x0D);
+	_lowNetwork.addDouble(_Coordinates.X);
+	_lowNetwork.addDouble(_Coordinates.Stance);
+	_lowNetwork.addDouble(_Coordinates.Y);
+	_lowNetwork.addDouble(_Coordinates.Z);
+	_lowNetwork.addFloat(_Coordinates.Yaw);
+	_lowNetwork.addFloat(_Coordinates.Pitch);
+	_lowNetwork.addBool(_Coordinates.OnGround);
+	_lowNetwork.Flush();
+
+	_lowNetwork.UnLock();
 }
