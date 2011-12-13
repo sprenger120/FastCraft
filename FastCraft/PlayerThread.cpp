@@ -49,7 +49,7 @@ _sName(""),
 	_lowNetwork(_lowLevelSendQueue,_Connection),
 	_highNetwork(_highLevelSendQueue,_Connection),
 	_NetworkWriter(_lowLevelSendQueue,_highLevelSendQueue,_Connection,this),
-	
+
 	_Web_Session("session.minecraft.net"),
 	_Web_Response(),
 	_rEntityProvider(rEntityProvider),
@@ -203,7 +203,6 @@ void PlayerThread::Disconnect(char iLeaveMode) {
 
 		switch (iLeaveMode) {
 		case FC_LEAVE_KICK:
-			cout<<"kicked"<<"\n";
 			break;
 		case FC_LEAVE_QUIT:
 			_sTemp.assign( _sName + " quit game" );
@@ -439,9 +438,7 @@ void PlayerThread::ClearQueue() {
 	_lowLevelSendQueue.clear();
 }
 
-void PlayerThread::ProcessQueue() {		
-	//cout<<"manual call isSpawned:"<<isSpawned()<<"\n";
-	
+void PlayerThread::ProcessQueue() {			
 	while (!_highLevelSendQueue.empty()) {
 		string & rJob = _highLevelSendQueue.front();
 
@@ -481,128 +478,136 @@ void PlayerThread::Packet0_KeepAlive() {
 void PlayerThread::Packet1_Login() {
 	int iProtocolVersion = 0;
 
-	//Check minecraft version
-	iProtocolVersion = _lowNetwork.readInt(); //Protocol Version
+	try {
+		//Check minecraft version
+		iProtocolVersion = _lowNetwork.readInt(); //Protocol Version
 
 
-	if (iProtocolVersion > SettingsHandler::getSupportedProtocolVersion()) {
-		Kick("Outdated server! Needed Version: " + SettingsHandler::getSupportedMCVersion());
-		return;
-	}
-
-	if (iProtocolVersion <  SettingsHandler::getSupportedProtocolVersion()) {
-		Kick("Outdated client! Needed Version: " + SettingsHandler::getSupportedMCVersion());
-		return;
-	}
-
-	_lowNetwork.readString(); //Username (already known)	
-	_lowNetwork.read(16);
-
-	//Check premium 
-	if (SettingsHandler::isOnlineModeActivated()) {
-		string sPath("/game/checkserver.jsp?user=");
-		sPath.append(_sName);
-		sPath.append("&serverId=");
-		sPath.append(_sConnectionHash);
-
-		Poco::Net::HTTPRequest Request ( 
-			Poco::Net::HTTPRequest::HTTP_GET, 
-			sPath,
-			Poco::Net::HTTPMessage::HTTP_1_1);
-
-		_Web_Session.sendRequest(Request);
-		std::istream &is = _Web_Session.receiveResponse(_Web_Response);
-		string sErg;
-		is>>sErg;
-
-		if (sErg.compare("YES") != 0) {
-			Kick("Failed to verify username!");
+		if (iProtocolVersion > SettingsHandler::getSupportedProtocolVersion()) {
+			Kick("Outdated server! Needed Version: " + SettingsHandler::getSupportedMCVersion());
 			return;
 		}
-	}
 
-
-	//YES DUDE, you got it !
-	_PlayerCount++; //There is an new spawned player
-	_iEntityID = _rEntityProvider.Add(FC_ENTITY_PLAYER); //Fetch a new entity id
-	_ChunkProvider.HandleNewPlayer();
-
-	//Set start coordinates
-	_Coordinates.X = 5.0;
-	_Coordinates.Y = 35.0;
-	_Coordinates.Z = 5.0;
-	_Coordinates.Stance = 35.0;
-	_Coordinates.OnGround = false;
-	_Coordinates.Pitch = 0.0F;
-	_Coordinates.Yaw = 0.0F;
-
-
-	//Push PlayerPool Join event
-	_ppEvent.Coordinates = _Coordinates;
-	_ppEvent.Job = FC_PPEVENT_JOIN;
-	_ppEvent.pThread = this;
-	_pPoolMaster->Event(_ppEvent);
-
-
-	cout<<_sName<<" joined ("<<_sIP<<") EID:"<<_iEntityID<<endl;  //Console log
-	_sTemp.assign(  _sName + " joined game" );
-	pushChatEvent(_sTemp);
-
-	/*
-	* Response
-	*/
-	//Login response
-	_highNetwork.Lock();
-
-	_highNetwork.addByte(0x1);
-	_highNetwork.addInt(_iEntityID);
-	_highNetwork.addString("");
-	_highNetwork.addInt64(SettingsHandler::getMapSeed());
-	_highNetwork.addInt(SettingsHandler::getServerMode());
-	_highNetwork.addByte(0);
-	_highNetwork.addByte(SettingsHandler::getDifficulty());
-	_highNetwork.addByte(SettingsHandler::getWorldHeight());
-	_highNetwork.addByte((unsigned char)SettingsHandler::getPlayerSlotCount());
-	_highNetwork.Flush();
-
-	//compass
-	_highNetwork.addByte(0x6);
-	_highNetwork.addInt(0); //X
-	_highNetwork.addInt(0); // Y
-	_highNetwork.addInt(0); // Z 
-	_highNetwork.Flush();
-	_highNetwork.UnLock();
-
-	//Client position
-	sendClientPosition(); //Make client leave downloading map screen | chunk provider will send clients position again, after spawning chunk who standing on
-
-	//Time
-	sendTime(); 
-
-	//Health
-	UpdateHealth(20,20,5.0F); //Health
-
-	//Spawn PlayerInfo
-	vector<string> vNames;
-	vNames = _pPoolMaster->ListPlayers(60);
-
-	if (vNames.size() > 0) {
-		for ( int x = 0;x<= vNames.size()-1;x++) {
-			PlayerInfoList(true,vNames[x]);
+		if (iProtocolVersion <  SettingsHandler::getSupportedProtocolVersion()) {
+			Kick("Outdated client! Needed Version: " + SettingsHandler::getSupportedMCVersion());
+			return;
 		}
+
+		_lowNetwork.readString(); //Username (already known)	
+		_lowNetwork.read(16);
+
+		//Check premium 
+		if (SettingsHandler::isOnlineModeActivated()) {
+			string sPath("/game/checkserver.jsp?user=");
+			sPath.append(_sName);
+			sPath.append("&serverId=");
+			sPath.append(_sConnectionHash);
+
+			Poco::Net::HTTPRequest Request ( 
+				Poco::Net::HTTPRequest::HTTP_GET, 
+				sPath,
+				Poco::Net::HTTPMessage::HTTP_1_1);
+
+			_Web_Session.sendRequest(Request);
+			std::istream &is = _Web_Session.receiveResponse(_Web_Response);
+			string sErg;
+			is>>sErg;
+
+			if (sErg.compare("YES") != 0) {
+				Kick("Failed to verify username!");
+				return;
+			}
+		}
+
+
+		//YES DUDE, you got it !
+		_PlayerCount++; //There is an new spawned player
+		_iEntityID = _rEntityProvider.Add(FC_ENTITY_PLAYER); //Fetch a new entity id
+		_ChunkProvider.HandleNewPlayer();
+
+		//Set start coordinates
+		_Coordinates.X = 5.0;
+		_Coordinates.Y = 35.0;
+		_Coordinates.Z = 5.0;
+		_Coordinates.Stance = 35.0;
+		_Coordinates.OnGround = false;
+		_Coordinates.Pitch = 0.0F;
+		_Coordinates.Yaw = 0.0F;
+
+
+		//Push PlayerPool Join event
+		_ppEvent.Coordinates = _Coordinates;
+		_ppEvent.Job = FC_PPEVENT_JOIN;
+		_ppEvent.pThread = this;
+		_pPoolMaster->Event(_ppEvent);
+
+
+		cout<<_sName<<" joined ("<<_sIP<<") EID:"<<_iEntityID<<endl;  //Console log
+		_sTemp.assign(  _sName + " joined game" );
+		pushChatEvent(_sTemp);
+
+		/*
+		* Response
+		*/
+		//Login response
+		_highNetwork.Lock();
+
+		_highNetwork.addByte(0x1);
+		_highNetwork.addInt(_iEntityID);
+		_highNetwork.addString("");
+		_highNetwork.addInt64(SettingsHandler::getMapSeed());
+		_highNetwork.addInt(SettingsHandler::getServerMode());
+		_highNetwork.addByte(0);
+		_highNetwork.addByte(SettingsHandler::getDifficulty());
+		_highNetwork.addByte(SettingsHandler::getWorldHeight());
+		_highNetwork.addByte((unsigned char)SettingsHandler::getPlayerSlotCount());
+		_highNetwork.Flush();
+
+		//compass
+		_highNetwork.addByte(0x6);
+		_highNetwork.addInt(0); //X
+		_highNetwork.addInt(0); // Y
+		_highNetwork.addInt(0); // Z 
+		_highNetwork.Flush();
+		_highNetwork.UnLock();
+
+		//Client position
+		sendClientPosition(); //Make client leave downloading map screen | chunk provider will send clients position again, after spawning chunk who standing on
+
+		//Time
+		sendTime(); 
+
+		//Health
+		UpdateHealth(20,20,5.0F); //Health
+
+		//Spawn PlayerInfo
+		vector<string> vNames;
+		vNames = _pPoolMaster->ListPlayers(60);
+
+		if (vNames.size() > 0) {
+			for ( int x = 0;x<= vNames.size()-1;x++) {
+				PlayerInfoList(true,vNames[x]);
+			}
+		}
+
+		//Send login packages
+		ProcessQueue();
+		_fSpawned = true;
+
+
+		//Chunks
+		_ChunkProvider.HandleMovement(_Coordinates);
+	} catch(Poco::RuntimeException) {
+		Disconnect(FC_LEAVE_OTHER);
 	}
-
-	//Send login packages
-	ProcessQueue();
-	_fSpawned = true;
-
-
-	//Chunks
-	_ChunkProvider.HandleMovement(_Coordinates);
 }
 
 void PlayerThread::Packet2_Handshake() {
-	_sName = _highNetwork.readString();
+	try {
+		_sName = _highNetwork.readString();
+	} catch(Poco::RuntimeException) {
+		Disconnect(FC_LEAVE_OTHER);
+	}
 
 	if (_sName.length() > 16) {
 		Kick("Username too long");
@@ -627,10 +632,14 @@ void PlayerThread::Packet2_Handshake() {
 void PlayerThread::Packet3_Chat() {
 	string Message("");
 
-	Message = _lowNetwork.readString();
-	if (Message.length() > 100) {
-		Kick("Received string too long");
-		return;
+	try {
+		Message = _lowNetwork.readString();
+		if (Message.length() > 100) {
+			Kick("Received string too long");
+			return;
+		}
+	} catch(Poco::RuntimeException) {
+		Disconnect(FC_LEAVE_OTHER);
 	}
 
 	_sTemp.assign("<");
@@ -642,54 +651,70 @@ void PlayerThread::Packet3_Chat() {
 }
 
 void PlayerThread::Packet10_Player() {
-	_Coordinates.OnGround = _lowNetwork.readBool();
+	try {
+		_Coordinates.OnGround = _lowNetwork.readBool();
+	} catch(Poco::RuntimeException) {
+		Disconnect(FC_LEAVE_OTHER);
+	}
 }
 
 void PlayerThread::Packet11_Position() {
 	EntityCoordinates TmpCoord;
 
-	//Read coordinates in a temporary variable
-	TmpCoord.X = _lowNetwork.readDouble();
-	TmpCoord.Y = _lowNetwork.readDouble();
-	TmpCoord.Stance = _lowNetwork.readDouble();
-	TmpCoord.Z = _lowNetwork.readDouble();
-	TmpCoord.OnGround = _lowNetwork.readBool();
+	try {
+		//Read coordinates in a temporary variable
+		TmpCoord.X = _lowNetwork.readDouble();
+		TmpCoord.Y = _lowNetwork.readDouble();
+		TmpCoord.Stance = _lowNetwork.readDouble();
+		TmpCoord.Z = _lowNetwork.readDouble();
+		TmpCoord.OnGround = _lowNetwork.readBool();
 
-	//if X and Z ==  8.5000000000000000 , there is crap in the tcp buffer -> ignore it
-	if (TmpCoord.X == 8.5000000000000000 && TmpCoord.Z == 8.5000000000000000) { 
-		return;
-	}else{
-		_Coordinates.X = TmpCoord.X;
-		_Coordinates.Y = TmpCoord.Y;
-		_Coordinates.Stance = TmpCoord.Stance;
-		_Coordinates.Z = TmpCoord.Z;
-		_Coordinates.OnGround = TmpCoord.OnGround;
+		//if X and Z ==  8.5000000000000000 , there is crap in the tcp buffer -> ignore it
+		if (TmpCoord.X == 8.5000000000000000 && TmpCoord.Z == 8.5000000000000000) { 
+			return;
+		}else{
+			_Coordinates.X = TmpCoord.X;
+			_Coordinates.Y = TmpCoord.Y;
+			_Coordinates.Stance = TmpCoord.Stance;
+			_Coordinates.Z = TmpCoord.Z;
+			_Coordinates.OnGround = TmpCoord.OnGround;
+		}
+	} catch(Poco::RuntimeException) {
+		Disconnect(FC_LEAVE_OTHER);
 	}
 }
 
 void PlayerThread::Packet12_Look() {
-	_Coordinates.Yaw = _lowNetwork.readFloat();
-	_Coordinates.Pitch = _lowNetwork.readFloat();
-	_Coordinates.OnGround = _lowNetwork.readBool();
+	try {
+		_Coordinates.Yaw = _lowNetwork.readFloat();
+		_Coordinates.Pitch = _lowNetwork.readFloat();
+		_Coordinates.OnGround = _lowNetwork.readBool();
+	} catch(Poco::RuntimeException) {
+		Disconnect(FC_LEAVE_OTHER);
+	}
 }
 
 void PlayerThread::Packet13_PosAndLook() {
 	EntityCoordinates TmpCoord;
 
 	//Read coordinates in a temporary variable
-	TmpCoord.X = _lowNetwork.readDouble();
-	TmpCoord.Y = _lowNetwork.readDouble();
-	TmpCoord.Stance = _lowNetwork.readDouble();
-	TmpCoord.Z = _lowNetwork.readDouble();
-	TmpCoord.Yaw = _lowNetwork.readFloat();
-	TmpCoord.Pitch = _lowNetwork.readFloat();
-	TmpCoord.OnGround = _lowNetwork.readBool();
+	try {
+		TmpCoord.X = _lowNetwork.readDouble();
+		TmpCoord.Y = _lowNetwork.readDouble();
+		TmpCoord.Stance = _lowNetwork.readDouble();
+		TmpCoord.Z = _lowNetwork.readDouble();
+		TmpCoord.Yaw = _lowNetwork.readFloat();
+		TmpCoord.Pitch = _lowNetwork.readFloat();
+		TmpCoord.OnGround = _lowNetwork.readBool();
 
-	//if X and Z ==  8.5000000000000000 , there is crap in the tcp buffer -> ignore it
-	if (TmpCoord.X == 8.5000000000000000 && TmpCoord.Z == 8.5000000000000000) { 
-		return;
-	}else{
-		_Coordinates = TmpCoord;
+		//if X and Z ==  8.5000000000000000 , there is crap in the tcp buffer -> ignore it
+		if (TmpCoord.X == 8.5000000000000000 && TmpCoord.Z == 8.5000000000000000) { 
+			return;
+		}else{
+			_Coordinates = TmpCoord;
+		}
+	} catch(Poco::RuntimeException) {
+		Disconnect(FC_LEAVE_OTHER);
 	}
 }
 
@@ -705,7 +730,11 @@ void PlayerThread::Packet254_ServerListPing() {
 }
 
 void PlayerThread::Packet255_Disconnect() {
-	_sLeaveMessage = _lowNetwork.readString();
+	try {
+		_sLeaveMessage = _lowNetwork.readString();
+	} catch(Poco::RuntimeException) {
+		Disconnect(FC_LEAVE_OTHER);
+	}
 	Disconnect(FC_LEAVE_QUIT);
 }
 
