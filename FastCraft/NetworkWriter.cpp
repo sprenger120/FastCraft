@@ -40,7 +40,8 @@ void NetworkWriter::run() {
 			Thread::sleep(50);
 			continue;
 		}
-
+		
+		try{
 		//Process high level queue
 		while (!_rhighQ.empty()) {
 			string & rStr = _rhighQ.front();
@@ -57,6 +58,8 @@ void NetworkWriter::run() {
 				_pPlayer->Disconnect(FC_LEAVE_OTHER);
 			}catch(Poco::IOException) {
 				_pPlayer->Disconnect(FC_LEAVE_OTHER);
+			}catch(Poco::RuntimeException& err) {
+				std::cout<<err.message()<<"\n";
 			}
 
 			_rhighQ.pop();
@@ -86,5 +89,9 @@ void NetworkWriter::run() {
 
 
 		_rlowQ.pop();
+
+		}catch(Poco::RuntimeException) {
+			continue; //Queue exception
+		}
 	}
 }
