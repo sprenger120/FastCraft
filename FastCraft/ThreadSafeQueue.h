@@ -19,6 +19,7 @@ GNU General Public License for more details.
 #include <Poco/Mutex.h>
 #include <queue>
 #include <Poco/Exception.h>
+#include <iostream>
 
 using Poco::RuntimeException;
 using std::queue;
@@ -52,7 +53,8 @@ template <class T>
 inline void ThreadSafeQueue<T>::pop() {
 	_Mutex.lock();
 	if (_q.empty()) { 
-		throw RuntimeException("Queue is empty");
+		std::cout<<"POP exception, queue is empty"<<"\n";
+		throw Poco::RuntimeException("Queue is empty");
 	}
 	_q.pop();
 	_Mutex.unlock();
@@ -72,7 +74,8 @@ inline T& ThreadSafeQueue<T>::front() {
 	_Mutex.lock();
 
 	if (_q.empty()) { 
-		throw RuntimeException("Queue is empty");
+		std::cout<<"FRONT exception, queue is empty"<<"\n";
+		throw Poco::RuntimeException("Queue is empty");
 	}
 
 	T& rT = _q.front();
