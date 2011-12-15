@@ -70,4 +70,11 @@ struct PlayerPoolEvent {
 	int ID; //Used for Animation
 	PlayerThread* pThread; //Pointer to affected class
 };
+
+struct Item {
+	short ItemID;
+	char Count;
+	short Usage;
+	short Enchantment;
+};
 #endif
