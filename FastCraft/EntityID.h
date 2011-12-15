@@ -13,27 +13,17 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 */
 
-#ifndef _FASTCRAFTHEADER_ENTITYPROVIDER
-#define _FASTCRAFTHEADER_ENTITYPROVIDER
+#ifndef _FASTCRAFTHEADER_ENTITYID	
+#define _FASTCRAFTHEADER_ENTITYID
 
-#include <vector>
-#include "Structs.h"
-
-using std::vector;
-
-class EntityProvider {
+class EntityID {
 private:
-	vector<EntityType> _vEntitys;
-	int _iCount;
+	static int _iVal;
+
+	EntityID();
+	~EntityID();
 public:
-	//De- / constructor
-	EntityProvider();
-	~EntityProvider();
-
-	int Add(char); //Adds a new entity to the list and returns its EID
-	void Remove(int); //Delete entity from list
-
-	char getType(int); //returns type of EID
+	static int New();
 };
 
 
