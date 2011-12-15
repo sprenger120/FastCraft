@@ -49,17 +49,18 @@ void NetworkWriter::run() {
 			try {
 				_rStrm.sendBytes(rStr.c_str(),rStr.length()); //Send
 			}catch(Poco::Net::ConnectionAbortedException) {
-				_pPlayer->Disconnect(FC_LEAVE_OTHER);
+				continue;
 			}catch(Poco::Net::InvalidSocketException) {
-				_pPlayer->Disconnect(FC_LEAVE_OTHER);
+				continue;
 			}catch(Poco::TimeoutException) {
-				_pPlayer->Disconnect(FC_LEAVE_OTHER);
+				continue;
 			}catch(Poco::Net::ConnectionResetException) {
-				_pPlayer->Disconnect(FC_LEAVE_OTHER);
+				continue;
 			}catch(Poco::IOException) {
-				_pPlayer->Disconnect(FC_LEAVE_OTHER);
+				continue;
 			}catch(Poco::RuntimeException& err) {
 				std::cout<<err.message()<<"\n";
+				continue;
 			}
 
 			_rhighQ.pop();
@@ -76,15 +77,15 @@ void NetworkWriter::run() {
 		try {
 			_rStrm.sendBytes(rStr.c_str(),rStr.length()); //Send
 		}catch(Poco::Net::ConnectionAbortedException) {
-			_pPlayer->Disconnect(FC_LEAVE_OTHER);
+			continue;
 		}catch(Poco::Net::InvalidSocketException) {
-			_pPlayer->Disconnect(FC_LEAVE_OTHER);
+			continue;
 		}catch(Poco::TimeoutException) {
-			_pPlayer->Disconnect(FC_LEAVE_OTHER);
+			continue;
 		}catch(Poco::Net::ConnectionResetException) {
-			_pPlayer->Disconnect(FC_LEAVE_OTHER);
+			continue;
 		}catch(Poco::IOException) {
-			_pPlayer->Disconnect(FC_LEAVE_OTHER);
+			continue;
 		}
 
 
