@@ -29,6 +29,7 @@ GNU General Public License for more details.
 #include "ChunkProvider.h"
 #include "EntityFlags.h"
 #include "NetworkWriter.h"
+#include "PlayerInventory.h"
 
 class EntityProvider;
 class PlayerPool;
@@ -60,6 +61,7 @@ private:
 	float _nSaturation;
     bool _fSpawned;
 	int _Spawned_PlayerInfoList;
+	PlayerInventory _Inventory;
 
 	//TCP stuff
 	string _sTemp;
@@ -73,7 +75,6 @@ private:
 	Poco::Thread _threadNetworkWriter;
 
 	//Needed Classes
-	EntityProvider& _rEntityProvider;
 	PlayerPool* _pPoolMaster;
 	PlayerPoolEvent _ppEvent;
 	ChunkProvider _ChunkProvider;
@@ -94,7 +95,7 @@ public:
 	/*
 	* De- / constructor
 	*/
-	PlayerThread(EntityProvider&,PlayerPool*,ChunkRoot&,PackingThread&);
+	PlayerThread(PlayerPool*,ChunkRoot&,PackingThread&);
 	~PlayerThread();
 
 
@@ -245,6 +246,7 @@ private:
 	void Packet11_Position();
 	void Packet12_Look();
 	void Packet13_PosAndLook();
+	void Packet16_HoldingChange();
 	void Packet254_ServerListPing();
 	void Packet255_Disconnect();
 };

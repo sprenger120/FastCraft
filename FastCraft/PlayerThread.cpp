@@ -14,7 +14,7 @@ GNU General Public License for more details.
 */
 
 #include "PlayerThread.h"
-#include "EntityProvider.h"
+#include "EntityID.h"
 #include "SettingsHandler.h"
 #include "ServerTime.h"
 #include "PlayerPool.h"
@@ -32,8 +32,7 @@ using std::cout;
 using std::endl;
 using std::dec;
 
-PlayerThread::PlayerThread(EntityProvider& rEntityProvider,
-	PlayerPool* pPoolMaster,
+PlayerThread::PlayerThread(PlayerPool* pPoolMaster,
 	ChunkRoot& rChunkRoot,
 	PackingThread& rPackingThread
 	) : 
@@ -52,10 +51,10 @@ _sName(""),
 
 	_Web_Session("session.minecraft.net"),
 	_Web_Response(),
-	_rEntityProvider(rEntityProvider),
 	_Flags(),
 	_ChunkProvider(rChunkRoot,_lowNetwork,rPackingThread,this),
-	_threadNetworkWriter("NetworkWriter")
+	_threadNetworkWriter("NetworkWriter"),
+	_Inventory(_highNetwork)
 {
 	_Coordinates.OnGround = false;
 	_Coordinates.Pitch = 0.0F;
@@ -169,6 +168,9 @@ void PlayerThread::run() {
 			case 0xd: 
 				Packet13_PosAndLook();
 				break;
+			case 0x10: 
+				Packet16_HoldingChange();
+				break;
 			case 0xFE: //Server List Ping
 				Packet254_ServerListPing();
 				break;
@@ -189,12 +191,13 @@ void PlayerThread::run() {
 
 
 void PlayerThread::Disconnect(char iLeaveMode) {
-
+	if (!_fAssigned) {
+		cout<<"double disconnect!"<<"\n";
+	}
 	if (isSpawned()) {
 		_ChunkProvider.HandleDisconnect();
 		_PlayerCount--;
-		_rEntityProvider.Remove(_iEntityID);
-
+		
 		//Push disconnect event
 		_ppEvent.Coordinates = _Coordinates;
 		_ppEvent.Job = FC_PPEVENT_DISCONNECT;
@@ -522,7 +525,7 @@ void PlayerThread::Packet1_Login() {
 
 		//YES DUDE, you got it !
 		_PlayerCount++; //There is an new spawned player
-		_iEntityID = _rEntityProvider.Add(FC_ENTITY_PLAYER); //Fetch a new entity id
+		_iEntityID = EntityID::New(); //Fetch a new ID
 		_ChunkProvider.HandleNewPlayer();
 
 		//Set start coordinates
@@ -579,6 +582,15 @@ void PlayerThread::Packet1_Login() {
 
 		//Health
 		UpdateHealth(20,20,5.0F); //Health
+
+		//Inventory
+		
+		//Give player a stack of stone
+		Item Item;
+		Item.Count = 64;
+		Item.ItemID = 1;
+		_Inventory.setSlot(36,Item); //Slot 36: Left Action Slot  
+		_Inventory.synchronizeInventory();
 
 		//Spawn PlayerInfo
 		vector<string> vNames;
@@ -777,4 +789,14 @@ void PlayerThread::sendLowClientPosition() {
 	_lowNetwork.Flush();
 
 	_lowNetwork.UnLock();
+}
+
+void PlayerThread::Packet16_HoldingChange() {
+	short iSlot;
+	iSlot = _lowNetwork.readShort();
+	if (iSlot < 0 || iSlot > 8) {
+		Kick("Illegal holding slotID");
+		return;
+	}
+	_Inventory.setSlotSelection(iSlot);
 }
