@@ -23,7 +23,6 @@ GNU General Public License for more details.
 #include "PlayerPool.h"
 #include "PackingThread.h"
 #include "ServerTime.h"
-#include <Poco/StreamCopier.h>
 
 using std::cout;
 using std::stringstream;
@@ -57,6 +56,7 @@ int main() {
 	//Create player pool thread
 	PlayerPool PPool(Packer);
 	threadPlayerPool.start(PPool);
+
 
 	//Acceptor thread
 	AcceptThread Acceptor(PPool);
