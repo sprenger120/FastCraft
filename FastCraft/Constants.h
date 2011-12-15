@@ -19,9 +19,6 @@ GNU General Public License for more details.
 #define FC_JOB_NONE						0
 #define FC_JOB_CLOSECONN				1
 
-//Entitys
-#define FC_ENTITY_PLAYER				1
-
 //Properties
 #define FC_SERVMODE_SURVIVAL			0
 #define FC_SERVMODE_CREATIVE			1
