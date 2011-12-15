@@ -24,8 +24,8 @@ GNU General Public License for more details.
 #include <Poco/Net/StreamSocket.h>
 #include <Poco/ThreadPool.h>
 #include <Poco/Runnable.h>
-#include "EntityProvider.h"
 #include "ChunkRoot.h"
+#include "Structs.h"
 
 
 class PlayerThread;
@@ -42,7 +42,6 @@ private:
 	vector<PlayerThread*> _vPlayerThreads;
 	queue<PlayerPoolEvent> _qEventQueue;
 	
-	EntityProvider _EntityProvider;
 	PackingThread& _PackingThread;
 	ChunkRoot _ChunkRoot;
 public:

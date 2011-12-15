@@ -17,8 +17,6 @@ GNU General Public License for more details.
 #include "PlayerThread.h"
 #include "SettingsHandler.h"
 #include "PackingThread.h"
-#include "Structs.h"
-
 
 #include <Poco/Thread.h>
 #include <Poco/Exception.h>
@@ -30,7 +28,6 @@ using std::cout;
 PlayerPool::PlayerPool(PackingThread& rPackingThread):
 _vPlayerThreads(0),
 	_ThreadPool("PlayerThreads",1,SettingsHandler::getPlayerSlotCount()),
-	_EntityProvider(),
 	_qEventQueue(),
 	_ChunkRoot(),
 	_PackingThread(rPackingThread) 
@@ -47,7 +44,7 @@ _vPlayerThreads(0),
 
 	//Create Threads
 	for (int x=0;x<=_vPlayerThreads.size()-1;x++) {
-		_vPlayerThreads[x] = new PlayerThread(_EntityProvider,this,_ChunkRoot,_PackingThread);
+		_vPlayerThreads[x] = new PlayerThread(this,_ChunkRoot,_PackingThread);
 
 		_ThreadPool.defaultPool().start(*_vPlayerThreads[x]);
 	}
