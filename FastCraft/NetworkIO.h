@@ -41,6 +41,18 @@ public:
 	NetworkIO(ThreadSafeQueue<string>&,StreamSocket&); //Init NetworkIO without connection
 	~NetworkIO();
 
+	//Static members>
+	static void addByte(string&,char);
+	static void addByte(string&,unsigned char);
+	static void addBool(string&,bool);
+	static void addShort(string&,short);
+	static void addInt(string&,int);
+	static void addInt64(string&,long long);
+	static void addFloat(string&,float);
+	static void addDouble(string&,double);
+	static void addString(string&,string);
+
+
 	//Write part
 	void addByte(char);
 	void addBool(bool);

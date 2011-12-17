@@ -236,19 +236,25 @@ bool NetworkIO::exceptionSaveReading(int iLenght) {
 				break;
 			}
 		}catch(Poco::Net::ConnectionAbortedException) {
+			std::cout<<"NetworkIO error!"<<"\n";
 			return false;
 		}catch(Poco::Net::InvalidSocketException) {
+			std::cout<<"NetworkIO error!"<<"\n";
 			return false;
 		}catch(Poco::TimeoutException) {
+			std::cout<<"NetworkIO error!"<<"\n";
 			return false;
 		}catch(Poco::Net::ConnectionResetException) {
+			std::cout<<"NetworkIO error!"<<"\n";
 			return false;
 		}catch(Poco::IOException) {
+			std::cout<<"NetworkIO error!"<<"\n";
 			return false;
 		}
 		if (iReadedLenght != iLenght) {
 			iUnderflowCount++;
 			if (iUnderflowCount > 10) {
+				std::cout<<"error! u"<<"\n";
 				return false;
 			}
 			fUnderflow = true;
@@ -303,4 +309,78 @@ void NetworkIO::Lock() {
 
 void NetworkIO::UnLock() {
 	_fLocked = false;
+}
+
+
+
+
+void NetworkIO::addByte(string& rBuff,char Byte) {
+	rBuff.append<char>(1,Byte);
+}
+
+void NetworkIO::addByte(string& rBuff,unsigned char Byte) {
+	rBuff.append<char>(1,Byte);
+}
+
+void NetworkIO::addBool(string& rBuff,bool Bool) {
+	if (Bool) {
+		rBuff.append<char>(1,1);
+	}else{
+		rBuff.append<char>(1,0);
+	}
+}
+
+void NetworkIO::addShort(string& rBuff,short Short) {
+	rBuff.append<char>(1, char(Short>>8)); 
+	rBuff.append<char>(1, char(Short));
+}
+
+
+void NetworkIO::addInt(string& rBuff,int iInt) {
+	char EndianBuffer[4];
+	iInt = Poco::ByteOrder::toBigEndian(iInt);
+	memcpy(EndianBuffer,&iInt,4);
+	rBuff.append(EndianBuffer,4);
+}
+
+void NetworkIO::addInt64(string& rBuff,long long iInt) {
+	char EndianBuffer[8];
+	iInt = Poco::ByteOrder::toBigEndian(iInt);
+	memcpy(EndianBuffer,&iInt,8);
+	rBuff.append(EndianBuffer,8);
+}
+
+void NetworkIO::addFloat(string& rBuff,float dVal) {
+	int iBuff;
+	char EndianBuffer[4];
+
+	memcpy(&iBuff,&dVal,4);
+	iBuff = Poco::ByteOrder::toBigEndian(iBuff);
+	memcpy(EndianBuffer,&iBuff,4);
+	rBuff.append(EndianBuffer,4);
+}
+
+
+void NetworkIO::addDouble(string& rBuff,double dVal) {
+	long long iBuff;
+	char EndianBuffer[8];
+
+	memcpy(&iBuff,&dVal,8); //copy double to an int64
+	iBuff = Poco::ByteOrder::toBigEndian(iBuff); //switch endian
+	memcpy(EndianBuffer,&iBuff,8);//copy to endian buffer
+	rBuff.append(EndianBuffer,8);//append
+}
+
+void NetworkIO::addString(string& rBuff,string sString) {
+	short iDataLength;
+
+	iDataLength = sString.length();
+	addShort(rBuff,iDataLength);
+
+	if ( sString.length() == 0) {return;}
+
+	for (int x=0;x<=sString.length()-1;x++) {
+		rBuff.append<char>(1,0);
+		rBuff.append(sString,x,1);
+	}	
 }
