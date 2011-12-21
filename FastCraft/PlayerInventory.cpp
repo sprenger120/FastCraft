@@ -14,31 +14,22 @@ GNU General Public License for more details.
 */
 #include "PlayerInventory.h"
 #include "NetworkIO.h"
+#include "PlayerThread.h"
+#include "ItemInfoStorage.h"
+#include "ItemSlot.h"
+//#include "NBT.h"
 #include <iostream>
+
+using std::cout;
 
 PlayerInventory::PlayerInventory(NetworkIO& rNtwk) :
 _vItemStack(45),
-	_rNetwork(rNtwk)
+	_rNetwork(rNtwk),
+	_ItemInHand()
 {
 	_iSlotSelection = 0;
 	clear();
 }
-
-const short PlayerInventory::_EnchantableItems[40] = {
-	256,257,258,267,268,269,270,271,272,273,
-	274,275,276,277,278,279,283,284,285,286,
-	298,299,300,301,302,303,304,305,306,307,
-	308,309,310,311,312,313,314,315,316,317
-};
-
-const short PlayerInventory::_DestructibleItems[49] = {
-	256,257,258,267,268,269,270,271,272,273,
-	274,275,276,277,278,279,283,284,285,286,
-	298,299,300,301,302,303,304,305,306,307,
-	308,309,310,311,312,313,314,315,316,317,
-	290,291,292,293,294, //Hoes
-	259,261,346,359 //Flint&Stone,Bow,Fishing Rod,Shears
-};
 
 PlayerInventory::~PlayerInventory() {
 	_vItemStack.clear();
@@ -53,17 +44,25 @@ void PlayerInventory::synchronizeInventory() {
 	//Build payload
 	short iItemID= 0;
 	for (int x=0;x<=_vItemStack.size()-1;x++){
-		iItemID = _vItemStack[x].ItemID;
+		iItemID = _vItemStack[x].getItemID();
 		if (iItemID == 0) { //Slot is empty
 			_rNetwork.addShort(-1);
 		}else{
 			_rNetwork.addShort(iItemID);
-			_rNetwork.addByte(_vItemStack[x].Count);
-			_rNetwork.addShort(_vItemStack[x].Usage);
+			_rNetwork.addByte(_vItemStack[x].getStackSize());
+			_rNetwork.addShort(_vItemStack[x].getUsage());
 
-			if (isDestructible(iItemID)) { //Item has a usage bar
+			if (ItemInfoStorage::isDamageable(iItemID)) { //Item has a usage bar
+				_rNetwork.addShort(-1); //enchantments are not supported yet - a java nullpointer exception blocks the enchantment phrasing in client
+
+				/*
 				//Add nbt tag
-				std::cout<<"NBT TAGS ARE NOT SUPPORTED YET!!"<<"\n";
+				Enchantment Ench;
+				Ench.EnchID = 19;
+				Ench.Level = 1;
+				NBT::writeEnchantment(Ench,_rNetwork);
+				//	std::cout<<"NBT TAGS ARE NOT SUPPORTED YET!!"<<"\n";
+				*/
 			}
 		}
 	}
@@ -75,54 +74,154 @@ void PlayerInventory::synchronizeInventory() {
 }
 
 void PlayerInventory::clear() {
-	if (_vItemStack.size()==0 || _vItemStack.size() != 45) {
+	if (_vItemStack.size() != 45) {
 		std::cout<<"Invalid inventory array!"<<"\n";
+		throw Poco::RuntimeException("Invalid inventory array!");
 	}
 	for(int x=0;x<=_vItemStack.size()-1;x++) {
-		_vItemStack[x].Count = 0;
-		_vItemStack[x].Enchantment = 0;
-		_vItemStack[x].ItemID = 0;
-		_vItemStack[x].Usage = 0;
+		_vItemStack[x].clear();
 	}
 }
 
-void PlayerInventory::setSlot(short iSlot,Item& rItem) {
+void PlayerInventory::setSlot(short iSlot,ItemSlot& rItem) {
 	if (iSlot < 0 || iSlot > 44) {
-		std::cout<<"PlayerInventory::setSlot: illegal slot id"<<"\n";
-		return;
+		std::cout<<"PlayerInventory::setSlot illegal slot id"<<"\n";
+		throw Poco::RuntimeException("Invalid slot ID");
 	}
-	//ToDo: Add Item verfication
 
 	_vItemStack[iSlot] = rItem;
 }
 
-
-bool PlayerInventory::isDestructible(short iID) {
-	for (int x = 0;x<=48;x++) {
-		if (_DestructibleItems[x]==iID) {
-			return true;
-		}
+ItemSlot PlayerInventory::getSlot(short iSlot) {
+	if (iSlot < 0 || iSlot > 44) {
+		std::cout<<"PlayerInventory::getSlot illegal slot id"<<"\n";
+		throw Poco::RuntimeException("Invalid slot ID");
 	}
-	return false;
+	return _vItemStack[iSlot];
 }
 
-bool PlayerInventory::isEnchantable(short iID) {
-	for (int x = 0;x<=39;x++) {
-		if (_DestructibleItems[x]==iID) {
-			return true;
-		}
+void PlayerInventory::clearSlot(short iSlot) {
+	if (iSlot < 0 || iSlot > 44) {
+		std::cout<<"PlayerInventory::clearSlot: illegal slot id"<<"\n";
+		throw Poco::RuntimeException("Invalid slot ID");
 	}
-	return false;
-}
-
-void PlayerInventory::setSlotSelection(short iSel) {
-	if (iSel < 0 || iSel > 8) {
-		std::cout<<"PlayerInventory::setSlotSelection: illegal slot id"<<"\n";
-		return;
-	}
-	_iSlotSelection = iSel;
+	_vItemStack[iSlot].clear();
 }
 
 short PlayerInventory::getSlotSelection() {
 	return _iSlotSelection;
+}
+
+
+void PlayerInventory::HandleWindowClick(PlayerThread* pPlayer) {
+	char iWindowID;
+	short iSlot,iActionNumber;
+	bool fShift,fRightClick;
+	ItemSlot Item;
+
+	try{
+		iWindowID = _rNetwork.readByte();
+		iSlot = _rNetwork.readShort();
+		fRightClick = _rNetwork.readBool();
+		iActionNumber = _rNetwork.readShort();
+		fShift = _rNetwork.readBool();
+
+		Item.readFromNetwork(_rNetwork);
+
+		//Check data
+		if (iWindowID != 0) {
+			pPlayer->Kick("Unsupported window type");
+			return;
+		}
+		if (iSlot < 0 || iSlot > 45) { //Invalid slot id, caused by clicking out of inventory field
+			return;
+		}
+
+		switch(fRightClick) {
+		case false: //Left klick
+			if (_ItemInHand.isEmpty()) { //Player took item to cursor
+				_ItemInHand = Item;
+				clearSlot(iSlot);
+			}else{ //Player put it into a new slot
+				if (_vItemStack[iSlot].isEmpty()) { //Slot is empty
+					_vItemStack[iSlot] = _ItemInHand;
+					_ItemInHand.clear();
+				}else{ //Not empty 
+					if (_vItemStack[iSlot].getItemID() ==  _ItemInHand.getItemID()) { // Merge stacks
+						short iItemMaxStackSize = ItemInfoStorage::getMaxStackSize(_ItemInHand.getItemID());
+						short iItemSum = _vItemStack[iSlot].getStackSize() +  _ItemInHand.getStackSize();
+
+						if (iItemSum <= iItemMaxStackSize) {//Merge stacks into one slot
+							_vItemStack[iSlot].setStackSize(iItemSum);
+							_ItemInHand.clear(); //Hand is empty now
+						}else{//Slot size is excessed
+							iItemSum -= iItemMaxStackSize;
+							_vItemStack[iSlot].setStackSize(iItemMaxStackSize); //Stack in inventory is full
+							_ItemInHand.setStackSize(iItemSum); //Subtract items from in hand stack
+						}
+					}else{ //Switch stacks
+						ItemSlot Temp = _ItemInHand;
+						_ItemInHand = _vItemStack[iSlot];
+						_vItemStack[iSlot] = Temp;
+					}
+				}
+			}
+			break;
+		case true: //right klick
+			if (_ItemInHand.isEmpty()) { //Hand is empty -> stack split action
+				if(_vItemStack[iSlot].getStackSize() == 1) { //Single item stacks can not splited -> items in hand get transfered to slot
+					return;
+				}
+
+				char iFullStackSize = _vItemStack[iSlot].getStackSize();
+				_ItemInHand = _vItemStack[iSlot]; //Copy informations
+
+				_vItemStack[iSlot].setStackSize(iFullStackSize/2);//Interger division - without decimal places
+				_ItemInHand.setStackSize(iFullStackSize/2  +  ( iFullStackSize%2 ? 1 : 0 ) ); //if stack size odd: bigger part is in players hand
+			}else{//item in hand -> put one item into other stack
+				if (_vItemStack[iSlot].getItemID() == 0) { //Put one item into an empty slot
+					
+					_vItemStack[iSlot].setItemID(_ItemInHand.getItemID());
+					_vItemStack[iSlot].setStackSize(1);
+
+					_ItemInHand.setStackSize(_ItemInHand.getStackSize()-1);
+					return;
+				}
+				if (_vItemStack[iSlot].getItemID() ==  _ItemInHand.getItemID()) { //If stack types are equal
+					if(ItemInfoStorage::getMaxStackSize(_vItemStack[iSlot].getItemID()) ==  _vItemStack[iSlot].getStackSize() ) {
+						return; //max stack size reached
+					}
+
+					_vItemStack[iSlot].setStackSize(_vItemStack[iSlot].getStackSize()+1);
+					_ItemInHand.setStackSize(_ItemInHand.getStackSize()-1);
+				}else{//Switch stacks
+					ItemSlot Temp = _ItemInHand;
+					_ItemInHand = _vItemStack[iSlot];
+					_vItemStack[iSlot] = Temp;
+				}
+
+			}
+			break;
+		}
+	} catch(Poco::RuntimeException& ex) {
+		std::cout<<"PlayerInventory::HandleWindowClick exception:"<<ex.message()<<"\n";
+		pPlayer->Disconnect(FC_LEAVE_OTHER);
+	}
+}
+
+void PlayerInventory::HandleDisconnect() {
+	_ItemInHand.clear();
+}
+
+void PlayerInventory::HandleWindowClose(PlayerPool* pPool) {
+	_ItemInHand.clear();
+	//ToDo: Add pickup spawn
+}
+
+void PlayerInventory::HandleSelectionChange(short iSel) {
+	if (iSel < 0 || iSel > 8) {
+		throw Poco::RuntimeException("Illegal holding slotID");
+		return;
+	}
+	_iSlotSelection = iSel;
 }

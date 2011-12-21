@@ -32,7 +32,7 @@ void ItemInfoStorage::addBasicIDSet() {
 		return;
 	}
 	_fBasicItemsAdded=true;
-
+	addItem(0,"Air",false,false,64,0);
 	addItem(1,"Stone",false,false,64,0);
 	addItem(2,"Grass",false,false,64,0);
 	addItem(3,"Dirt",false,false,64,0);

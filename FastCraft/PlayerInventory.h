@@ -16,14 +16,17 @@ GNU General Public License for more details.
 #ifndef _FASTCRAFTHEADER_PLAYERINVENTORY
 #define _FASTCRAFTHEADER_PLAYERINVENTORY
 #include <vector>
-#include "Structs.h"
+#include "ItemSlot.h"
 
 using std::vector;
 class NetworkIO;
+class PlayerThread;
+class PlayerPool;
 
 class PlayerInventory {
 private:
-	vector<Item> _vItemStack;
+	vector<ItemSlot> _vItemStack;
+	ItemSlot _ItemInHand;
 	short _iSlotSelection;
 	NetworkIO& _rNetwork;
 
@@ -54,38 +57,38 @@ public:
 	/*
 	* Sets slot 
 	* Doesn't synchronize with player!
-	* Throws Poco::RuntimeException
+	* Will throw Poco::RuntimeException if slot id is invalid
 
 	Parameter:
 	@1 : Slot ID
 	@2 : Item
 	*/
-	void setSlot(short,Item&);
+	void setSlot(short,ItemSlot&);
 
 
 	/*
 	* Returns Item struct of slot
+	* Will throw Poco::RuntimeException if slot id is invalid
 
 	Parameter:
 	@1 : SlotID
 	*/
-	Item getSlot(short);
+	ItemSlot getSlot(short);
 
 
 	/*
-	* Sets actual selected slot. 
-	* Only purpose of this function: Container for this information
-	* Range: 0-8
+	* Clears slot at given position
+	* Doesn't synchronize with player!
+	* Will throw Poco::RuntimeException if slot id is invalid
 
-	Parameters:
-	@1 : Slot ID 
+	Parameter:
+	@1: Slot ID
 	*/
-	void setSlotSelection(short);
+	void clearSlot(short);
 
 
 	/*
-	* Returns actual selected slot
-	* Range: 0-8
+	* Returns actual selected slot id (0-8)
 	*/
 	short getSlotSelection();
 
@@ -98,21 +101,38 @@ public:
 
 
 	/*
-	* Returns true if user can enchant given item
+	* Handles Window click
+	* throws Poco::RuntimeException if connection gets aborded 
 
 	Parameter:
-	@1 : ItemID
+	@1 : this Pointer of class that calls this function
 	*/
-	static bool isEnchantable(short);
+	void HandleWindowClick(PlayerThread*);
 
 
 	/*
-	* Returns true if given item has a usage bar
+	* Event function for disconnect
+	*/
+	void HandleDisconnect();
+
+
+	/*
+	* Event function for closing inventory
 
 	Parameter:
-	@1 : ItemID
+	@1 : this pointer to class that called this function
 	*/
-	static bool isDestructible(short);
+	void HandleWindowClose(PlayerPool*);
+
+
+	/*
+	* Event function for selection change
+	* Throws Poco::RuntimeException if slot id is invalid
+
+	Parameter:
+	@1 : New selected slot id
+	*/
+	void HandleSelectionChange(short);
 };
 
 #endif

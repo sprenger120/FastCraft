@@ -30,6 +30,7 @@ GNU General Public License for more details.
 #include "EntityFlags.h"
 #include "NetworkWriter.h"
 #include "PlayerInventory.h"
+#include "ItemSlot.h"
 
 class EntityProvider;
 class PlayerPool;
@@ -62,6 +63,7 @@ private:
     bool _fSpawned;
 	int _Spawned_PlayerInfoList;
 	PlayerInventory _Inventory;
+
 
 	//TCP stuff
 	string _sTemp;
@@ -247,6 +249,8 @@ private:
 	void Packet12_Look();
 	void Packet13_PosAndLook();
 	void Packet16_HoldingChange();
+	void Packet101_CloseWindow();
+	void Packet102_WindowClick();
 	void Packet254_ServerListPing();
 	void Packet255_Disconnect();
 };

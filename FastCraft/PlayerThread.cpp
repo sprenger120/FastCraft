@@ -21,6 +21,7 @@ GNU General Public License for more details.
 #include "Constants.h"
 #include "Random.h"
 #include "ChunkRoot.h"
+#include "ItemInfoStorage.h"
 #include <sstream>
 #include <istream>
 #include <Poco/Timespan.h>
@@ -171,10 +172,17 @@ void PlayerThread::run() {
 			case 0x10: 
 				Packet16_HoldingChange();
 				break;
+			case 0x65: 
+				Packet101_CloseWindow();
+				break;
+			case 0x66:
+				Packet102_WindowClick();
+				break;
 			case 0xFE: //Server List Ping
 				Packet254_ServerListPing();
 				break;
 			case 0xFF: //Disconnect
+				cout<<"0xFF - disconnected by client"<<"\n";
 				Packet255_Disconnect();
 				break;
 			default: 
@@ -196,8 +204,9 @@ void PlayerThread::Disconnect(char iLeaveMode) {
 	}
 	if (isSpawned()) {
 		_ChunkProvider.HandleDisconnect();
+		_Inventory.HandleDisconnect();
 		_PlayerCount--;
-		
+
 		//Push disconnect event
 		_ppEvent.Coordinates = _Coordinates;
 		_ppEvent.Job = FC_PPEVENT_DISCONNECT;
@@ -246,6 +255,7 @@ void PlayerThread::Connect(Poco::Net::StreamSocket& Sock) {
 	}
 	_fAssigned=true;
 	_Connection = Sock; 
+	_Inventory.clear();
 
 	_sIP.assign(_Connection.peerAddress().toString());
 	_iThreadTicks = 0;
@@ -584,12 +594,15 @@ void PlayerThread::Packet1_Login() {
 		UpdateHealth(20,20,5.0F); //Health
 
 		//Inventory
-		
-		//Give player a stack of stone
-		Item Item;
-		Item.Count = 64;
-		Item.ItemID = 1;
-		_Inventory.setSlot(36,Item); //Slot 36: Left Action Slot  
+
+		ItemSlot Item1(1,34);
+		ItemSlot Item2(1,50);
+		ItemSlot Item3(3,3);
+
+		_Inventory.setSlot(36,Item1); 
+		_Inventory.setSlot(37,Item2);   
+		_Inventory.setSlot(38,Item3);  
+
 		_Inventory.synchronizeInventory();
 
 		//Spawn PlayerInfo
@@ -793,10 +806,34 @@ void PlayerThread::sendLowClientPosition() {
 
 void PlayerThread::Packet16_HoldingChange() {
 	short iSlot;
-	iSlot = _lowNetwork.readShort();
-	if (iSlot < 0 || iSlot > 8) {
-		Kick("Illegal holding slotID");
-		return;
+	try{
+		iSlot = _lowNetwork.readShort();
+		if (iSlot < 0 || iSlot > 8) {
+			Kick("Illegal holding slotID");
+			return;
+		}
+		_Inventory.HandleSelectionChange(iSlot);
+	} catch(Poco::RuntimeException) {
+		Disconnect(FC_LEAVE_OTHER);
 	}
-	_Inventory.setSlotSelection(iSlot);
+}
+
+void PlayerThread::Packet101_CloseWindow() {
+	try {	
+		char iWinID = _lowNetwork.readByte();
+		if (iWinID == 0) {
+			_Inventory.HandleWindowClose(_pPoolMaster);
+		}
+	} catch(Poco::RuntimeException) {
+		Disconnect(FC_LEAVE_OTHER);
+	}
+}
+
+void PlayerThread::Packet102_WindowClick() {
+	_Inventory.HandleWindowClick(this);	
+
+	/*ItemSlot Item(_Inventory.getSlot(1).getItemID() + 10,1);
+	_Inventory.setSlot(1,Item);
+	*/
+	_Inventory.synchronizeInventory();
 }
