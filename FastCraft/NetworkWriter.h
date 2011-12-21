@@ -29,6 +29,8 @@ private:
 	ThreadSafeQueue<string>& _rhighQ;
 	Poco::Net::StreamSocket& _rStrm;
 	PlayerThread* _pPlayer;
+
+	void waitTillDisconnected(); //Waits till fSpawned is false
 public:
 	NetworkWriter(ThreadSafeQueue<string>&,ThreadSafeQueue<string>&,Poco::Net::StreamSocket&,PlayerThread*);
 	~NetworkWriter();

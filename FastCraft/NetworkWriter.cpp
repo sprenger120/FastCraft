@@ -25,9 +25,9 @@ using Poco::Thread;
 
 NetworkWriter::NetworkWriter(ThreadSafeQueue<string>& lowQ,ThreadSafeQueue<string>& highQ,Poco::Net::StreamSocket& s,PlayerThread* p) :
 _rlowQ(lowQ),
-_rhighQ(highQ),
-_rStrm(s),
-_pPlayer(p)
+	_rhighQ(highQ),
+	_rStrm(s),
+	_pPlayer(p)
 {
 }
 
@@ -40,59 +40,76 @@ void NetworkWriter::run() {
 			Thread::sleep(50);
 			continue;
 		}
-		
+
 		try{
-		//Process high level queue
-		while (!_rhighQ.empty()) {
-			string & rStr = _rhighQ.front();
+			//Process high level queue
+			while (!_rhighQ.empty()) {
+				string & rStr = _rhighQ.front();
+
+				try {
+					_rStrm.sendBytes(rStr.c_str(),rStr.length()); //Send
+				}catch(Poco::Net::ConnectionAbortedException) {
+					waitTillDisconnected();
+					continue;
+				}catch(Poco::Net::InvalidSocketException) {
+					waitTillDisconnected();
+					continue;
+				}catch(Poco::TimeoutException) {
+					waitTillDisconnected();
+					continue;
+				}catch(Poco::Net::ConnectionResetException) {
+					waitTillDisconnected();
+					continue;
+				}catch(Poco::IOException) {
+					waitTillDisconnected();
+					continue;
+				}catch(Poco::RuntimeException& err) {
+					std::cout<<err.message()<<"\n";
+					waitTillDisconnected();
+					continue;
+				}
+
+				_rhighQ.pop();
+			}
+
+
+			if (_rlowQ.empty()) {
+				Thread::sleep(5);
+				continue;
+			}
+
+			string & rStr = _rlowQ.front();
 
 			try {
 				_rStrm.sendBytes(rStr.c_str(),rStr.length()); //Send
 			}catch(Poco::Net::ConnectionAbortedException) {
+				waitTillDisconnected();
 				continue;
 			}catch(Poco::Net::InvalidSocketException) {
+				waitTillDisconnected();
 				continue;
 			}catch(Poco::TimeoutException) {
+				waitTillDisconnected();
 				continue;
 			}catch(Poco::Net::ConnectionResetException) {
+				waitTillDisconnected();
 				continue;
 			}catch(Poco::IOException) {
-				continue;
-			}catch(Poco::RuntimeException& err) {
-				std::cout<<err.message()<<"\n";
+				waitTillDisconnected();
 				continue;
 			}
 
-			_rhighQ.pop();
-		}
 
-
-		if (_rlowQ.empty()) {
-			Thread::sleep(5);
-			continue;
-		}
-
-		string & rStr = _rlowQ.front();
-
-		try {
-			_rStrm.sendBytes(rStr.c_str(),rStr.length()); //Send
-		}catch(Poco::Net::ConnectionAbortedException) {
-			continue;
-		}catch(Poco::Net::InvalidSocketException) {
-			continue;
-		}catch(Poco::TimeoutException) {
-			continue;
-		}catch(Poco::Net::ConnectionResetException) {
-			continue;
-		}catch(Poco::IOException) {
-			continue;
-		}
-
-
-		_rlowQ.pop();
+			_rlowQ.pop();
 
 		}catch(Poco::RuntimeException) {
 			continue; //Queue exception
 		}
+	}
+}
+
+void NetworkWriter::waitTillDisconnected() {
+	while(_pPlayer->isSpawned()) {
+		Thread::sleep(50);
 	}
 }
