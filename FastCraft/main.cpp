@@ -23,6 +23,7 @@ GNU General Public License for more details.
 #include "PlayerPool.h"
 #include "PackingThread.h"
 #include "ServerTime.h"
+#include "ItemInfoStorage.h"
 
 using std::cout;
 using std::stringstream;
@@ -46,6 +47,8 @@ int main() {
 	Thread threadPackingThread("Chunk Packer");
 	Thread threadPlayerPool("PlayerPool");
 	Thread threadAcceptThread("Network Acceptor");
+
+	ItemInfoStorage::addBasicIDSet();
 
 
 	//Create ChunkPacker Thread
