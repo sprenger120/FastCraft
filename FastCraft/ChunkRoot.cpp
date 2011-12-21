@@ -140,7 +140,7 @@ void ChunkRoot::generateMap(int X,int Z) {
 	try {
 		ChunkTerraEditor::setPlate(_vpChunks[index],0,Block); //Bedrock 
 
-		Block.BlockID = 2;
+		Block.BlockID = 12;
 
 		for (short y=1;y<=30;y++) { //Grass
 			ChunkTerraEditor::setPlate(_vpChunks[index],y,Block);
