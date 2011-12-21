@@ -71,10 +71,8 @@ struct PlayerPoolEvent {
 	PlayerThread* pThread; //Pointer to affected class
 };
 
-struct Item {
-	short ItemID;
-	char Count;
-	short Usage;
-	short Enchantment;
+struct Enchantment {
+	short EnchID;
+	short Level;
 };
 #endif
