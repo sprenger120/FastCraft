@@ -15,6 +15,7 @@ GNU General Public License for more details.
 
 #include "ItemInfoStorage.h"
 #include <Poco/Exception.h>
+#include <Poco/String.h>
 using Poco::RuntimeException;
 
 ItemInfoStorage::ItemInfoStorage() {
@@ -75,7 +76,6 @@ void ItemInfoStorage::addBasicIDSet() {
 	addItem(348,"Glowstone_Dust",false,false,64,0);
 	addItem(349,"Fish",false,false,64,0);
 	addItem(350,"Cooked_Fish",false,false,64,0);
-	addItem(20,"Glass",false,false,64,0);
 	addItem(41,"Gold_Block",false,false,64,0);
 	addItem(42,"Iron_Block",false,false,64,0);
 	addItem(43,"Double_Slabs",false,false,64,0);
@@ -114,7 +114,7 @@ void ItemInfoStorage::addBasicIDSet() {
 	addItem(298,"Leather_Cap",true,true,1,0);
 	addItem(299,"Leather_Tunic",true,true,1,0);
 	addItem(300,"Leather_Pants",true,true,1,0);
-	addItem(301,"Leather Boots",true,true,1,0);
+	addItem(301,"Leather_Boots",true,true,1,0);
 	addItem(302,"Chain_Helmet",true,true,1,0);
 	addItem(303,"Chain_Chestplate",true,true,1,0);
 	addItem(304,"Chain_Leggings",true,true,1,0);
@@ -248,18 +248,106 @@ void ItemInfoStorage::addBasicIDSet() {
 	addItem(383,"Spawner_Egg",false,false,64,0);
 }
 
-void ItemInfoStorage::addItem(short iId,string sName,bool fDamageable,bool fEnchantable,char iMaxStackSize,short iMaxUsages) {
+
+bool ItemInfoStorage::isDamageable(short iId) {
+	if (_vItems.size() > 0) {
+		for(int x=0;x<=_vItems.size()-1;x++) {
+			if (_vItems[x].ID == iId) {
+				return _vItems[x].Damageable;
+			}
+		}	
+	}
+	throw RuntimeException("Unknown ItemID! Given:" + iId);
+}
+
+bool ItemInfoStorage::isEnchantable(short iId) {
+	if (_vItems.size() > 0) {
+		for(int x=0;x<=_vItems.size()-1;x++) {
+			if (_vItems[x].ID == iId) {
+				return _vItems[x].Enchantable;
+			}
+		}	
+	}
+	throw RuntimeException("Unknown ItemID! Given:" + iId);
+}
+
+char ItemInfoStorage::getMaxStackSize(short iId) {
+	if (_vItems.size() > 0) {
+		for(int x=0;x<=_vItems.size()-1;x++) {
+			if (_vItems[x].ID == iId) {
+				return _vItems[x].MaxStackSize;
+			}
+		}	
+	}
+	throw RuntimeException("Unknown ItemID! Given:" + iId);
+}
+
+short ItemInfoStorage::getMaxUsage(short iId) {
+	if (_vItems.size() > 0) {
+		for(int x=0;x<=_vItems.size()-1;x++) {
+			if (_vItems[x].ID == iId) {
+				return _vItems[x].MaxUsage;
+			}
+		}	
+	}
+	throw RuntimeException("Unknown ItemID! Given:" + iId);
+}
+
+
+string ItemInfoStorage::getName(short iId) {
+	if (_vItems.size() > 0) {
+		for(int x=0;x<=_vItems.size()-1;x++) {
+			if (_vItems[x].ID == iId) {
+				return _vItems[x].Name;
+			}
+		}	
+	}
+	throw RuntimeException("Unknown ItemID! Given:" + iId);
+}
+
+bool ItemInfoStorage::isRegistered(short iId) {
+	if (_vItems.size() > 0) {
+		for(int x=0;x<=_vItems.size()-1;x++) {
+			if (_vItems[x].ID == iId) {
+				return true;
+			}
+		}	
+	}
+	return false;
+}
+
+short ItemInfoStorage::getIDbyName(string sName) {
+	if (_vItems.size() > 0) {
+		for(int x=0;x<=_vItems.size()-1;x++) {
+			
+			if (Poco::icompare(_vItems[x].Name,sName) == 0) {
+				return _vItems[x].ID;
+			}
+		}	
+	}
+	return 0;
+}
+
+void ItemInfoStorage::addItem(short iId,string sName,bool fDamageable,bool fEnchantable,char iMaxStackSize,short iMaxUsage) {
 	if (iId < 0) {
 		throw RuntimeException("Item ID invalid (n < 0)");
 	}
-	if (iMaxUsages < 0) {
-		throw RuntimeException("MaxUsages invalid (n < 0) Affected ID:" + iId);
+	if (iMaxUsage < 0) {
+		throw RuntimeException("MaxUsage invalid (n < 0) Affected ID:" + iId);
 	}
 	if (iMaxStackSize <= 0) {
 		throw RuntimeException("MaxStackSize invalid (n <= 0) Affected ID:" + iId);
 	}
-	if (iId <= 255 && (iMaxUsages > 0 || fDamageable || fEnchantable)) {
+	if (iId <= 255 && (iMaxUsage > 0 || fDamageable || fEnchantable)) {
 		throw RuntimeException("Blocks haven't a damage bar! Affected ID:" + iId);
+	}
+	//Check availability of item id
+	if (_vItems.size() > 0) {
+		for(int x=0;x<=_vItems.size()-1;x++) {
+			if (_vItems[x].ID == iId) {
+				throw RuntimeException("Item/Block ID already in use! Affected Block:" + sName);
+			}
+		}
 	}
 
 	ItemInformation info;
@@ -268,7 +356,7 @@ void ItemInfoStorage::addItem(short iId,string sName,bool fDamageable,bool fEnch
 	info.Damageable = fDamageable;
 	info.Enchantable = fEnchantable;
 	info.MaxStackSize = iMaxStackSize;
-	info.MaxUsages = iMaxUsages;
+	info.MaxUsage = iMaxUsage;
 
 	_vItems.push_back(info);
 }

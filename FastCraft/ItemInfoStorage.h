@@ -29,7 +29,7 @@ struct ItemInformation{
 	bool Damageable;
 	bool Enchantable;
 	char MaxStackSize;
-	short MaxUsages;
+	short MaxUsage;
 };
 
 class ItemInfoStorage {
@@ -46,6 +46,7 @@ public:
 
 	/*
 	* Returns true if item has a damage/usage bar
+	* Will throw Poco::RuntimeException, if item wasn't found
 
 	Parameter:
 	@1 : Item/Block ID
@@ -55,6 +56,7 @@ public:
 
 	/*
 	* Returns true if item is enchantable
+	* Will throw Poco::RuntimeException, if item wasn't found
 
 	Parameter:
 	@1 : Item/Block ID
@@ -64,22 +66,54 @@ public:
 
 	/*
 	* Returns the vanilla maximal stack size of item
+	* Will throw Poco::RuntimeException, if item wasn't found
 
 	ParameteR:
 	@1 : Item/Block ID
 	*/
-	static char getMaxStackSize();
+	static char getMaxStackSize(short);
+
 
 	/*
 	* Returns the vanilla maximal item usage
 	* It will return 0 if item hasn't a damage/usage bar
+	* Will throw Poco::RuntimeException, if item wasn't found
 
 	Parameter:
 	@1 : Item ID
 	*/
-	static short getMaximalUsages();
+	static short getMaxUsage(short);
 
-	
+
+	/*
+	* Returns item name from given id
+	* Will throw Poco::RuntimeException, if item wasn't found
+
+	Parameter:
+	@1 : Item/Block ID
+	*/
+	static string getName(short);
+
+
+	/*
+	* Returns true if item id is alreay in use, otherwise false
+
+	Parameter:
+	@1 : Item/Block ID
+	*/
+	static bool isRegistered(short);
+
+	/*
+	* Returns item id from given name
+	* When item wasn't found, it will return 0
+	* Search is case insensitive
+
+	Parameter:
+	@1 : Item/Block name
+	*/
+	static short getIDbyName(string);
+
+
 	/*
 	* Adds a item to list
 	* Will throw a Poco::RuntimeException if id is already used or informations are invalid
@@ -90,7 +124,7 @@ public:
 	@3 : Damageable
 	@4 : Enchantable
 	@5 : Maxiamal stack size
-	@6 : Maximal usages    *Note: set to 0 if item hasn't a damage/usage bar
+	@6 : Maximal usage    *Note: set to 0 if item hasn't a damage/usage bar
 	*/
 	static void addItem(short,string,bool,bool,char,short);
 };
