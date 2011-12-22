@@ -134,8 +134,8 @@ short NetworkIO::readShort() {
 		throw RuntimeException("Connection aborted");
 	}
 
-	return short(_charBuffer[0])<<8 | 
-		short(_charBuffer[1]);
+	return (short(_charBuffer[0])<<8 & 0xFF00) | 
+			(short(_charBuffer[1]) & 0x00FF);
 }
 
 int NetworkIO::readInt() {
@@ -143,10 +143,10 @@ int NetworkIO::readInt() {
 		throw RuntimeException("Connection aborted");
 	}
 
-	return int(_charBuffer[0])<<24 | 
-		int(_charBuffer[1])<<16 |
-		int(_charBuffer[2])<<8 |
-		int(_charBuffer[3]);
+	return (int(_charBuffer[0])<<24 & 0xFF000000 )| 
+		(int(_charBuffer[1])<<16 & 0x00FF0000 )|
+		(int(_charBuffer[2])<<8 & 0x0000FF00 )|
+		(int(_charBuffer[3]) & 0x000000FF );
 }
 
 
