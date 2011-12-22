@@ -32,6 +32,7 @@ GNU General Public License for more details.
 #define FC_INTERVAL_TIMESEND			5000
 #define FC_INTERVAL_KEEPACTIVE			15000
 #define FC_INTERVAL_HANDLEMOVEMENT		500
+#define FC_INTERVAL_MOVEMENT			200
 
 //Chunk Constants
 #define FC_CHUNK_BLOCKCOUNT				32768

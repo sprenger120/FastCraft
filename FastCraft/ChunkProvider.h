@@ -17,6 +17,7 @@ GNU General Public License for more details.
 #define _FASTCRAFTHEADER_CHUNKPROVIDER
 
 #include "Structs.h"
+#include "EntityCoordinates.h"
 #include <vector>
 
 class NetworkIO;

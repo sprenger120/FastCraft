@@ -25,6 +25,7 @@ GNU General Public License for more details.
 #include <Poco/Runnable.h>
 #include "ChunkRoot.h"
 #include "Structs.h"
+#include "EntityCoordinates.h"
 #include "PlayerPoolEvent.h"
 #include "ThreadSafeQueue.h"
 

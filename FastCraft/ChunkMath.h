@@ -16,6 +16,7 @@ GNU General Public License for more details.
 #ifndef _FASTCRAFTHEADER_CHUNKMATH
 #define _FASTCRAFTHEADER_CHUNKMATH
 #include "Structs.h"
+#include "EntityCoordinates.h"
 
 class ChunkMath {
 private:

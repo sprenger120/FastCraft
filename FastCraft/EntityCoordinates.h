@@ -13,38 +13,20 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 */
 
-#ifndef _FASTCRAFTHEADER_STRUCTS
-#define _FASTCRAFTHEADER_STRUCTS
-#include "Constants.h"
+#ifndef _FASTCRAFTHEADER_ENTITYCOORDINATES
+#define _FASTCRAFTHEADER_ENTITYCOORDINATES
 
-struct BlockCoordinates {
-	int X;
-	int Y;
-	int Z;
-};
 
-struct ChunkCoordinates {
-	int X;
-	int Z;
-};
+class EntityCoordinates {
+public:
+	double X;
+	double Y;
+	double Z;
+	double Stance;
+	float Yaw;
+	float Pitch;
+	bool OnGround;
 
-struct MapChunk {
-	int X;
-	int Z;
-	char Blocks[FC_CHUNK_BLOCKCOUNT];
-	char Metadata[FC_CHUNK_NIBBLECOUNT];
-	char BlockLight[FC_CHUNK_NIBBLECOUNT];
-	char SkyLight[FC_CHUNK_NIBBLECOUNT];
-	bool Empty;
-};
-
-struct Block {
-	char BlockID;
-	char Metadata;
-};
-
-struct Enchantment {
-	short EnchID;
-	short Level;
+	bool operator == (const EntityCoordinates&);
 };
 #endif

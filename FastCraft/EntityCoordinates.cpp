@@ -12,39 +12,16 @@ but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 */
+#include "EntityCoordinates.h"
+#include <cmath>
 
-#ifndef _FASTCRAFTHEADER_STRUCTS
-#define _FASTCRAFTHEADER_STRUCTS
-#include "Constants.h"
-
-struct BlockCoordinates {
-	int X;
-	int Y;
-	int Z;
-};
-
-struct ChunkCoordinates {
-	int X;
-	int Z;
-};
-
-struct MapChunk {
-	int X;
-	int Z;
-	char Blocks[FC_CHUNK_BLOCKCOUNT];
-	char Metadata[FC_CHUNK_NIBBLECOUNT];
-	char BlockLight[FC_CHUNK_NIBBLECOUNT];
-	char SkyLight[FC_CHUNK_NIBBLECOUNT];
-	bool Empty;
-};
-
-struct Block {
-	char BlockID;
-	char Metadata;
-};
-
-struct Enchantment {
-	short EnchID;
-	short Level;
-};
-#endif
+bool EntityCoordinates::operator == (const EntityCoordinates& other) {
+	return !(
+		fabs(X - other.X) > 0.1 || 
+		fabs(Y - other.Y) > 0.1 || 
+		fabs(Stance - other.Stance) > 0.1 ||  
+		fabs(Z - other.Z) > 0.1 || 
+		fabs(Yaw - other.Yaw) > 0.1 || 
+		fabs(Pitch - other.Pitch) > 0.1 ||   
+		OnGround !=  other.OnGround);
+}

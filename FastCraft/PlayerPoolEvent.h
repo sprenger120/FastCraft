@@ -16,7 +16,7 @@ GNU General Public License for more details.
 #ifndef _FASTCRAFTHEADER_PLAYERPOOLEVENT
 #define _FASTCRAFTHEADER_PLAYERPOOLEVENT
 #include <string>
-#include "Structs.h"
+#include "EntityCoordinates.h"
 
 using std::string;
 class PlayerThread;
