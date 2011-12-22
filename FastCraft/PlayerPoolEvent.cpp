@@ -18,7 +18,8 @@ GNU General Public License for more details.
 
 //chat event
 PlayerPoolEvent::PlayerPoolEvent(EntityCoordinates coord,string message,PlayerThread* pPlayer) :
-_Message(message)
+_Message(message),
+_Name("")
 {
 	_Coordinates = coord;
 	_pThread = pPlayer;
@@ -26,10 +27,15 @@ _Message(message)
 }
 
 //join/disconnect event
-PlayerPoolEvent::PlayerPoolEvent(bool fMode,PlayerThread* pPlayer) :
-_Message("")
+PlayerPoolEvent::PlayerPoolEvent(bool fMode,bool fKicked,string Name,PlayerThread* pPlayer) :
+_Message(""),
+_Name(Name)
 {
 	_fMode = fMode;
+	_fKicked = fKicked;
+	if (fKicked && fMode) {
+		throw Poco::RuntimeException("Connection and kick flags can't be true at same time");
+	}
 	_pThread = pPlayer;
 	if (fMode) {
 		_JobID = FC_PPEVENT_JOIN;
@@ -40,7 +46,8 @@ _Message("")
 
 //movement event
 PlayerPoolEvent::PlayerPoolEvent(EntityCoordinates coord,PlayerThread* pPlayer) :
-_Message("")
+_Message(""),
+_Name("")
 {
 	_JobID = FC_PPEVENT_MOVE;
 	_Coordinates = coord;
@@ -49,7 +56,8 @@ _Message("")
 
 //animation event
 PlayerPoolEvent::PlayerPoolEvent(char anim,PlayerThread* p) :
-_Message("")
+_Message(""),
+_Name("")
 {
 	_JobID = FC_PPEVENT_ANIMATION;
 	_iAnimID = anim;
@@ -58,6 +66,7 @@ _Message("")
 
 PlayerPoolEvent::~PlayerPoolEvent() {
 	_Message.clear();
+	_Name.clear();
 }
 
 EntityCoordinates PlayerPoolEvent::getCoordinates() {
@@ -94,4 +103,18 @@ char PlayerPoolEvent::getAnimationID() {
 
 PlayerThread* PlayerPoolEvent::getPtr() {
 	return _pThread;
+}
+
+bool PlayerPoolEvent::isKicked() {
+	if (_JobID != FC_PPEVENT_DISCONNECT) {
+		throw Poco::RuntimeException("Data unavailable");
+	}
+	return _fKicked;
+}
+
+string PlayerPoolEvent::getName() {
+	if (_JobID != FC_PPEVENT_JOIN && _JobID != FC_PPEVENT_DISCONNECT) {
+		throw Poco::RuntimeException("Data unavailable");
+	}
+	return _Name;
 }

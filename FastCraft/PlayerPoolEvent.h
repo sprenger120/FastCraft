@@ -24,9 +24,11 @@ class PlayerThread;
 class PlayerPoolEvent{
 private:
 	EntityCoordinates _Coordinates; //Used for Move and chat
-	std::string _Message; //Used for chat 	
+	string _Message; //Used for chat 	
+	string _Name;
 	char _JobID;
 	bool _fMode;
+	bool _fKicked;
 	char _iAnimID;
 	PlayerThread* _pThread; //Pointer to affected class
 public:
@@ -35,7 +37,7 @@ public:
 
 	Parameter:
 	@1 : Coordinates of event source (player who sends message)
-	@2 : unedited Message (without <Name>)
+	@2 : Message 
 	@3 : this pointer of class that pushes event to queue
 	*/
 	PlayerPoolEvent(EntityCoordinates,string,PlayerThread*);
@@ -46,9 +48,11 @@ public:
 
 	Parameter:
 	@1 : Mode  (true for connect, false for disconnect)
-	@2 : this pointer of class that pushes event to queue
+	@2 : Kicked?
+	@3 : Username 
+	@4 : this pointer of class that pushes event to queue
 	*/
-	PlayerPoolEvent(bool,PlayerThread*);
+	PlayerPoolEvent(bool,bool,string,PlayerThread*);
 
 
 	/*
@@ -77,10 +81,12 @@ public:
 	*/
 	EntityCoordinates getCoordinates();
 	string getMessage();
+	string getName();
 	char getJobID();
 	bool getMode();
 	char getAnimationID();
 	PlayerThread* getPtr();
+	bool isKicked();
 
 	/*
 	* Destructor
