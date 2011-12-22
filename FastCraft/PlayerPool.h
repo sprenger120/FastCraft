@@ -20,27 +20,25 @@ GNU General Public License for more details.
 #define _FASTCRAFTHEADER_PLAYERPOOL
 #include <iostream>
 #include <vector>
-#include <queue>
 #include <Poco/Net/StreamSocket.h>
 #include <Poco/ThreadPool.h>
 #include <Poco/Runnable.h>
 #include "ChunkRoot.h"
 #include "Structs.h"
-
+#include "PlayerPoolEvent.h"
+#include "ThreadSafeQueue.h"
 
 class PlayerThread;
 class PackingThread;
-struct QueueJob;
 
 using std::vector;
 using std::string;
-using std::queue;
 
 class PlayerPool : public Poco::Runnable {
 private:
 	Poco::ThreadPool _ThreadPool;
 	vector<PlayerThread*> _vPlayerThreads;
-	queue<PlayerPoolEvent> _qEventQueue;
+	ThreadSafeQueue<PlayerPoolEvent> _qEventQueue;
 	
 	PackingThread& _PackingThread;
 	ChunkRoot _ChunkRoot;

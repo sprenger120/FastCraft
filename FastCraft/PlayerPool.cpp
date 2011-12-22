@@ -61,7 +61,6 @@ PlayerPool::~PlayerPool() {
 
 void PlayerPool::run() {
 	std::string sData;
-	PlayerPoolEvent Event;
 
 	while (1) {
 		if (_qEventQueue.empty()) {
@@ -69,30 +68,30 @@ void PlayerPool::run() {
 			continue;
 		}
 
-		Event = _qEventQueue.front();
-		_qEventQueue.pop();
-
-
-		switch (Event.Job) {
+		PlayerPoolEvent& Event = _qEventQueue.front();
+		
+		switch (Event.getJobID()) {
 		case FC_PPEVENT_CHAT:
-			cout<<"Chat: "<<Event.Message<<endl; //Server console
-			sendMessageToAll(Event.Message);
+			cout<<"Chat: "<<Event.getMessage()<<endl; //Server console
+			sendMessageToAll(Event.getMessage());
 			break;
 		case FC_PPEVENT_MOVE:
 			cout<<"PP: move event"<<"\n";
 			break;
 		case FC_PPEVENT_JOIN:
+			sendMessageToAll(Event.getName() + " joined game");
 			//Update PlayerLists
 			for (int x=0;x<=_vPlayerThreads.size()-1;x++) {
 				if( _vPlayerThreads[x]->isAssigned() && _vPlayerThreads[x]->isSpawned()) {
-					_vPlayerThreads[x]->PlayerInfoList(true,Event.pThread->getUsername());
+					_vPlayerThreads[x]->PlayerInfoList(true,Event.getName());
 				}
 			}
 			break;
 		case FC_PPEVENT_DISCONNECT:
+			sendMessageToAll(Event.getName() + " left game");
 			for (int x=0;x<=_vPlayerThreads.size()-1;x++) {
 				if( _vPlayerThreads[x]->isAssigned() && _vPlayerThreads[x]->isSpawned()) {
-					_vPlayerThreads[x]->PlayerInfoList(false,Event.pThread->getUsername());
+					_vPlayerThreads[x]->PlayerInfoList(false,Event.getName());
 				}
 			}
 			break;
@@ -100,6 +99,8 @@ void PlayerPool::run() {
 			cout<<"PP: animation event"<<"\n";
 			break;
 		}
+
+		_qEventQueue.pop();
 	}
 }
 
