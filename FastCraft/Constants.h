@@ -49,4 +49,13 @@ GNU General Public License for more details.
 #define FC_PPEVENT_JOIN					3
 #define FC_PPEVENT_DISCONNECT			4
 #define FC_PPEVENT_ANIMATION			5
+
+//Animation ID's 
+#define FC_ANIM_NOANIM					0	//Send to remove all animations 
+#define FC_ANIM_SWINGARM				1   
+#define FC_ANIM_DAMAGE					2   //entity gets a red color
+#define FC_ANIM_LEAVEBED				3   
+#define FC_ANIM_EATFOOD					5   
+#define FC_ANIM_CROUCH					104
+#define FC_ANIM_UNCROUCH				105
 #endif
