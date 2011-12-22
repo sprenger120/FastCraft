@@ -152,12 +152,12 @@ void PlayerInventory::HandleWindowClick(PlayerThread* pPlayer) {
 						short iItemSum = _vItemStack[iSlot].getStackSize() +  _ItemInHand.getStackSize();
 
 						if (iItemSum <= iItemMaxStackSize) {//Merge stacks into one slot
-							_vItemStack[iSlot].setStackSize(iItemSum);
+							_vItemStack[iSlot].setStackSize((char)iItemSum);
 							_ItemInHand.clear(); //Hand is empty now
 						}else{//Slot size is excessed
 							iItemSum -= iItemMaxStackSize;
-							_vItemStack[iSlot].setStackSize(iItemMaxStackSize); //Stack in inventory is full
-							_ItemInHand.setStackSize(iItemSum); //Subtract items from in hand stack
+							_vItemStack[iSlot].setStackSize((char)iItemMaxStackSize); //Stack in inventory is full
+							_ItemInHand.setStackSize((char)iItemSum); //Subtract items from in hand stack
 						}
 					}else{ //Switch stacks
 						ItemSlot Temp = _ItemInHand;

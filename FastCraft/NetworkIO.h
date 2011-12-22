@@ -54,7 +54,7 @@ public:
 
 
 	//Write part
-	void addByte(char);
+	void addByte(unsigned char);
 	void addBool(bool);
 	void addShort(short);
 	void addInt(int);

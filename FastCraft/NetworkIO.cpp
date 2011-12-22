@@ -41,7 +41,7 @@ unsigned long long NetworkIO::_iReadTraffic  = 0;
 unsigned long long NetworkIO::_iWriteTraffic = 0;
 
 
-void NetworkIO::addByte(char Byte) {
+void NetworkIO::addByte(unsigned char Byte) {
 	_sBuffer.append<char>(1,Byte);
 }
 

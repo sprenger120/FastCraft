@@ -199,9 +199,7 @@ void PlayerThread::run() {
 
 
 void PlayerThread::Disconnect(char iLeaveMode) {
-	if (!_fAssigned) {
-		cout<<"double disconnect!"<<"\n";
-	}
+	if (!_fAssigned) { return; }
 	if (isSpawned()) {
 		_ChunkProvider.HandleDisconnect();
 		_Inventory.HandleDisconnect();
@@ -263,7 +261,7 @@ void PlayerThread::Connect(Poco::Net::StreamSocket& Sock) {
 
 void PlayerThread::Kick(string sReason) {
 	_sTemp.clear();
-	_sTemp.append<char>(1,0xFF);
+	_sTemp.append<unsigned char>(1,0xFF);
 	NetworkIO::packString(_sTemp,sReason);
 
 	try {
@@ -297,7 +295,7 @@ void PlayerThread::Kick(string sReason) {
 
 void PlayerThread::Kick() {
 	_sTemp.clear();
-	_sTemp.append<char>(1,0xFF);
+	_sTemp.append<unsigned char>(1,0xFF);
 	_sTemp.append<char>(2,0x0);
 
 	try {
@@ -349,6 +347,31 @@ void PlayerThread::Interval_HandleMovement() {
 	if (_TimeJobs.LastHandleMovement + FC_INTERVAL_HANDLEMOVEMENT <= getTicks()) {
 		_TimeJobs.LastHandleMovement = getTicks();
 		_ChunkProvider.HandleMovement(_Coordinates);
+
+		/* - Looks like a cristmas tree, uncomment to have a look at it
+		_highNetwork.Lock();
+		for (int z=0;z<=3;z++) {
+			for (int x=0;x<=3;x++) {
+				for (char y=33;y<=50;y++) {
+					
+					_highNetwork.addByte(0x3D);
+
+					_highNetwork.addInt(2000);
+					_highNetwork.addInt(x);
+					_highNetwork.addByte(y);
+					_highNetwork.addInt(z);
+
+					_highNetwork.addInt(0);
+
+					_highNetwork.Flush();
+				}
+
+				
+			}
+
+		}
+		_highNetwork.UnLock();
+		*/
 	}
 }
 
@@ -540,9 +563,9 @@ void PlayerThread::Packet1_Login() {
 
 		//Set start coordinates
 		_Coordinates.X = 5.0;
-		_Coordinates.Y = 35.0;
+		_Coordinates.Y = 250.0;
 		_Coordinates.Z = 5.0;
-		_Coordinates.Stance = 35.0;
+		_Coordinates.Stance = 250.0;
 		_Coordinates.OnGround = false;
 		_Coordinates.Pitch = 0.0F;
 		_Coordinates.Yaw = 0.0F;
@@ -576,6 +599,9 @@ void PlayerThread::Packet1_Login() {
 		_highNetwork.addByte((unsigned char)SettingsHandler::getPlayerSlotCount());
 		_highNetwork.Flush();
 
+		//Send login packages
+		ProcessQueue();
+
 		//compass
 		_highNetwork.addByte(0x6);
 		_highNetwork.addInt(0); //X
@@ -584,17 +610,16 @@ void PlayerThread::Packet1_Login() {
 		_highNetwork.Flush();
 		_highNetwork.UnLock();
 
-		//Client position
-		sendClientPosition(); //Make client leave downloading map screen | chunk provider will send clients position again, after spawning chunk who standing on
-
 		//Time
 		sendTime(); 
 
 		//Health
 		UpdateHealth(20,20,5.0F); //Health
 
-		//Inventory
+		//Client position
+		sendClientPosition(); //Make client leave downloading map screen | chunk provider will send clients position again, after spawning chunk who standing on
 
+		//Inventory
 		ItemSlot Item1(1,34);
 		ItemSlot Item2(1,50);
 		ItemSlot Item3(3,3);
@@ -614,6 +639,7 @@ void PlayerThread::Packet1_Login() {
 				PlayerInfoList(true,vNames[x]);
 			}
 		}
+
 
 		//Send login packages
 		ProcessQueue();
@@ -835,5 +861,5 @@ void PlayerThread::Packet102_WindowClick() {
 	/*ItemSlot Item(_Inventory.getSlot(1).getItemID() + 10,1);
 	_Inventory.setSlot(1,Item);
 	*/
-	_Inventory.synchronizeInventory();
+	//_Inventory.synchronizeInventory();
 }
