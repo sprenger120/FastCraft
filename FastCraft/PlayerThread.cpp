@@ -19,9 +19,9 @@ GNU General Public License for more details.
 #include "ServerTime.h"
 #include "PlayerPool.h"
 #include "Constants.h"
-#include "Random.h"
 #include "ChunkRoot.h"
 #include "ItemInfoStorage.h"
+#include "PlayerPoolEvent.h"
 #include <sstream>
 #include <istream>
 #include <Poco/Timespan.h>
@@ -53,6 +53,7 @@ _sName(""),
 	_Web_Session("session.minecraft.net"),
 	_Web_Response(),
 	_Flags(),
+	_Rand(),
 	_ChunkProvider(rChunkRoot,_lowNetwork,rPackingThread,this),
 	_threadNetworkWriter("NetworkWriter"),
 	_Inventory(_highNetwork)
@@ -182,7 +183,6 @@ void PlayerThread::run() {
 				Packet254_ServerListPing();
 				break;
 			case 0xFF: //Disconnect
-				cout<<"0xFF - disconnected by client"<<"\n";
 				Packet255_Disconnect();
 				break;
 			default: 
@@ -205,24 +205,19 @@ void PlayerThread::Disconnect(char iLeaveMode) {
 		_Inventory.HandleDisconnect();
 		_PlayerCount--;
 
-		//Push disconnect event
-		_ppEvent.Coordinates = _Coordinates;
-		_ppEvent.Job = FC_PPEVENT_DISCONNECT;
-		_ppEvent.pThread = this;
-		_pPoolMaster->Event(_ppEvent);
 
+		PlayerPoolEvent Event(false, (iLeaveMode==FC_LEAVE_KICK? true:false),_sName,this);
 		switch (iLeaveMode) {
 		case FC_LEAVE_KICK:
+			_pPoolMaster->Event(Event);
 			break;
-		case FC_LEAVE_QUIT:
-			_sTemp.assign( _sName + " quit game" );
-			pushChatEvent(_sTemp);
-			cout<<_sName<<" left server. ("<<_sLeaveMessage<<")"<<"\n"; 
+		case FC_LEAVE_QUIT:		
+			cout<<_sName<<" quit ("<<_sLeaveMessage<<")"<<"\n";
+			_pPoolMaster->Event(Event);
 			break;
 		case FC_LEAVE_OTHER:
-			_sTemp.assign( _sName + " closed connection (unknown reason)" );
-			pushChatEvent(_sTemp);
-			cout<<_sName<<"  closed connection (unknown reason)"<<"\n"; 
+			cout<<_sName<<" quit (unknown reason)"<<"\n";
+			_pPoolMaster->Event(Event);
 			break;
 		default:
 			cout<<"***INTERNAL SERVER WARNING: Unknown disconnect mode"<<"\n";
@@ -330,7 +325,12 @@ void PlayerThread::Kick() {
 
 string PlayerThread::generateConnectionHash() {
 	std::stringstream StringStream;
-	StringStream<<std::hex<< Random::uInt64();
+
+	StringStream<<std::hex<<_Rand.next();
+	if(StringStream.str().length() % 2) {
+		StringStream<<"0";
+	}
+	StringStream<<std::hex<<_Rand.next();
 	_sConnectionHash.assign(StringStream.str());
 	return _sConnectionHash;
 }
@@ -413,7 +413,7 @@ void PlayerThread::Interval_KeepAlive() {
 
 		_highNetwork.Lock();
 		_highNetwork.addByte(0x0);
-		_highNetwork.addInt(Random::Int());
+		_highNetwork.addInt(_Rand.next());
 		_highNetwork.Flush();
 		_highNetwork.UnLock();
 	}
@@ -572,15 +572,10 @@ void PlayerThread::Packet1_Login() {
 
 
 		//Push PlayerPool Join event
-		_ppEvent.Coordinates = _Coordinates;
-		_ppEvent.Job = FC_PPEVENT_JOIN;
-		_ppEvent.pThread = this;
-		_pPoolMaster->Event(_ppEvent);
-
+		PlayerPoolEvent Event(true,false,_sName,this);
+		_pPoolMaster->Event(Event);
 
 		cout<<_sName<<" joined ("<<_sIP<<") EID:"<<_iEntityID<<endl;  //Console log
-		_sTemp.assign(  _sName + " joined game" );
-		pushChatEvent(_sTemp);
 
 		/*
 		* Response
@@ -790,11 +785,8 @@ void PlayerThread::Packet255_Disconnect() {
 }
 
 void PlayerThread::pushChatEvent(string& rString) {
-	_ppEvent.Coordinates = _Coordinates;
-	_ppEvent.Job = FC_PPEVENT_CHAT;
-	_ppEvent.Message.assign(rString);
-	_ppEvent.pThread = this;
-	_pPoolMaster->Event(_ppEvent);
+	PlayerPoolEvent Event(_Coordinates,rString,this);
+	_pPoolMaster->Event(Event);
 }
 
 void PlayerThread::PlayerInfoList(bool fSpawn,string& rName) {
@@ -857,9 +849,4 @@ void PlayerThread::Packet101_CloseWindow() {
 
 void PlayerThread::Packet102_WindowClick() {
 	_Inventory.HandleWindowClick(this);	
-
-	/*ItemSlot Item(_Inventory.getSlot(1).getItemID() + 10,1);
-	_Inventory.setSlot(1,Item);
-	*/
-	//_Inventory.synchronizeInventory();
 }

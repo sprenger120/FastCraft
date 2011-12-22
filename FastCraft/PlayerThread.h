@@ -23,6 +23,7 @@ GNU General Public License for more details.
 #include <Poco/Runnable.h>
 #include <Poco/NumberFormatter.h>
 #include <Poco/Thread.h>
+#include <Poco/Random.h>
 #include "ThreadSafeQueue.h"
 #include "Structs.h"
 #include "NetworkIO.h"
@@ -78,7 +79,6 @@ private:
 
 	//Needed Classes
 	PlayerPool* _pPoolMaster;
-	PlayerPoolEvent _ppEvent;
 	ChunkProvider _ChunkProvider;
 
 	//Thread specific
@@ -90,6 +90,7 @@ private:
 	Poco::Net::HTTPClientSession _Web_Session;
 	Poco::Net::HTTPResponse _Web_Response;
 	string _sConnectionHash;
+	Poco::Random _Rand;
 
 	//Time jobs
 	TimeJobs _TimeJobs;
