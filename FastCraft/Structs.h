@@ -63,14 +63,6 @@ struct Block {
 	char Metadata;
 };
 
-struct PlayerPoolEvent {
-	std::string Message; //Used for chat 
-	EntityCoordinates Coordinates; //Used for Move and chat
-	char Job;
-	int ID; //Used for Animation
-	PlayerThread* pThread; //Pointer to affected class
-};
-
 struct Enchantment {
 	short EnchID;
 	short Level;
