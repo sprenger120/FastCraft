@@ -17,10 +17,12 @@ GNU General Public License for more details.
 #include "PlayerThread.h"
 #include "SettingsHandler.h"
 #include "PackingThread.h"
+#include "EntityPlayer.h"
 
 #include <Poco/Thread.h>
 #include <Poco/Exception.h>
 #include <iostream>
+#include <cmath>
 
 using Poco::Thread;
 using std::cout;
@@ -61,46 +63,127 @@ PlayerPool::~PlayerPool() {
 
 void PlayerPool::run() {
 	std::string sData;
+	
 
 	while (1) {
 		if (_qEventQueue.empty()) {
 			Thread::sleep(50);
 			continue;
 		}
+		try {
 
 		PlayerPoolEvent& Event = _qEventQueue.front();
 		
+
 		switch (Event.getJobID()) {
 		case FC_PPEVENT_CHAT:
 			cout<<"Chat: "<<Event.getMessage()<<endl; //Server console
 			sendMessageToAll(Event.getMessage());
 			break;
 		case FC_PPEVENT_MOVE:
-			cout<<"PP: move event"<<"\n";
+			{
+				//Build playerEntity
+				EntityPlayer SourcePlayer;
+				SourcePlayer._Coordinates = Event.getPtr()->getCoordinates();
+				SourcePlayer._sName = Event.getPtr()->getUsername();
+				int SourcePlayerID = Event.getPtr()->getEntityID();
+
+				for (int x=0;x<=_vPlayerThreads.size()-1;x++) {
+					if( _vPlayerThreads[x]->isAssigned() && _vPlayerThreads[x]->isSpawned()) {
+						if (_vPlayerThreads[x] == Event.getPtr() ) {continue;}
+
+						//Check distance 
+						if ( distance2D(_vPlayerThreads[x]->getCoordinates(),Event.getCoordinates()) > FC_PLAYERSPAWNRADIUS) {
+							if (_vPlayerThreads[x]->isEntitySpawned(SourcePlayerID)) { //Despawn player, too distant
+								_vPlayerThreads[x]->despawnEntity(SourcePlayerID);
+							}
+							continue;
+						}
+
+						if (!_vPlayerThreads[x]->isEntitySpawned(SourcePlayerID)) { //Spawn into players view circle
+							_vPlayerThreads[x]->spawnPlayer(SourcePlayerID,SourcePlayer);
+						}else{ //Already spawned -> update position
+							_vPlayerThreads[x]->updateEntityPosition(SourcePlayerID,Event.getCoordinates());
+						}
+					}
+				}
+
+			}
 			break;
 		case FC_PPEVENT_JOIN:
-			sendMessageToAll(Event.getName() + " joined game");
-			//Update PlayerLists
-			for (int x=0;x<=_vPlayerThreads.size()-1;x++) {
-				if( _vPlayerThreads[x]->isAssigned() && _vPlayerThreads[x]->isSpawned()) {
-					_vPlayerThreads[x]->PlayerInfoList(true,Event.getName());
+			{
+				sendMessageToAll(Event.getName() + " joined game");
+
+				EntityPlayer SourcePlayer;
+				SourcePlayer._Coordinates = Event.getPtr()->getCoordinates();
+				SourcePlayer._sName = Event.getName();
+				int SourcePlayerID = Event.getPtr()->getEntityID();
+
+
+				for (int x=0;x<=_vPlayerThreads.size()-1;x++) {
+					if( _vPlayerThreads[x]->isAssigned() && _vPlayerThreads[x]->isSpawned()) {
+						_vPlayerThreads[x]->PlayerInfoList(true,Event.getName()); //Update player list
+
+						if (_vPlayerThreads[x] == Event.getPtr() ) {continue;} //dont spawn event source
+						if ( distance2D(_vPlayerThreads[x]->getCoordinates(),SourcePlayer._Coordinates) > 100.0) {continue;} //Too distant -> don't spawn
+
+						_vPlayerThreads[x]->spawnPlayer(SourcePlayerID,SourcePlayer); //Spawn new player	
+
+						//Spawn this player to event source
+						EntityPlayer TargetPlayer; 
+
+						TargetPlayer._Coordinates = _vPlayerThreads[x]->getCoordinates();
+						TargetPlayer._sName = _vPlayerThreads[x]->getUsername();
+						int TargetPlayerID = _vPlayerThreads[x]->getEntityID();
+
+						Event.getPtr()->spawnPlayer(TargetPlayerID,TargetPlayer);
+					}
 				}
 			}
 			break;
 		case FC_PPEVENT_DISCONNECT:
-			sendMessageToAll(Event.getName() + " left game");
-			for (int x=0;x<=_vPlayerThreads.size()-1;x++) {
-				if( _vPlayerThreads[x]->isAssigned() && _vPlayerThreads[x]->isSpawned()) {
-					_vPlayerThreads[x]->PlayerInfoList(false,Event.getName());
+			{
+				sendMessageToAll(Event.getName() + " left game");
+				int SourcePlayerID = Event.getPtr()->getEntityID(); //Disconnect don't clear the entity so we can use it 
+
+				for (int x=0;x<=_vPlayerThreads.size()-1;x++) {
+					if( _vPlayerThreads[x]->isAssigned() && _vPlayerThreads[x]->isSpawned()) {
+						_vPlayerThreads[x]->PlayerInfoList(false,Event.getName());
+						if (_vPlayerThreads[x] == Event.getPtr() ) {continue;}
+
+						if (_vPlayerThreads[x]->isEntitySpawned(SourcePlayerID)) {
+							_vPlayerThreads[x]->despawnEntity(SourcePlayerID);
+						}
+					}
 				}
 			}
 			break;
 		case FC_PPEVENT_ANIMATION:
-			cout<<"PP: animation event"<<"\n";
+			{
+				int SourcePlayerID = Event.getPtr()->getEntityID(); 
+
+				for (int x=0;x<=_vPlayerThreads.size()-1;x++) {
+					if( _vPlayerThreads[x]->isAssigned() && _vPlayerThreads[x]->isSpawned()) {
+						if (_vPlayerThreads[x] == Event.getPtr() ) {continue;}
+
+						if (_vPlayerThreads[x]->isEntitySpawned(SourcePlayerID)) {
+							_vPlayerThreads[x]->playAnimationOnEntity(SourcePlayerID,Event.getAnimationID());
+						}
+					}
+				}
+			}
+			break;
+		case FC_PPEVENT_ACTION: 
+			cout<<"PP: action event"<<"\n";
+
 			break;
 		}
 
 		_qEventQueue.pop();
+		} catch(Poco::RuntimeException& ex) {
+			cout<<"exception:"<<ex.message()<<"\n";
+			_qEventQueue.pop();
+		}
 	}
 }
 
@@ -163,4 +246,10 @@ vector<string> PlayerPool::ListPlayers(int iMax) {
 	}
 
 	return vNames;
+}
+
+
+double PlayerPool::distance2D(EntityCoordinates& c1,EntityCoordinates& c2) {
+	return  sqrt (   (c1.X-c2.X) * (c1.X-c2.X) + 
+		(c1.Z-c2.Z) * (c1.Z-c2.Z));
 }

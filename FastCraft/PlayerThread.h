@@ -24,6 +24,7 @@ GNU General Public License for more details.
 #include <Poco/NumberFormatter.h>
 #include <Poco/Thread.h>
 #include <Poco/Random.h>
+#include <vector>
 #include "ThreadSafeQueue.h"
 #include "Structs.h"
 #include "NetworkIO.h"
@@ -32,6 +33,8 @@ GNU General Public License for more details.
 #include "NetworkWriter.h"
 #include "PlayerInventory.h"
 #include "ItemSlot.h"
+#include "EntityCoordinates.h"
+#include "EntityPlayer.h"
 
 class EntityProvider;
 class PlayerPool;
@@ -40,11 +43,19 @@ class PackingThread;
 
 using std::string;
 using std::stringstream;
+using std::vector;
 
 struct TimeJobs {
 	long long LastTimeSend;
 	long long LastKeepAliveSend;
 	long long LastHandleMovement;
+	long long LastMovementSend;
+};
+
+struct EntityListEntry {
+	int EntityID;
+	char Type;
+	EntityCoordinates oldPosition;
 };
 
 class PlayerThread : public Poco::Runnable {
@@ -94,6 +105,9 @@ private:
 
 	//Time jobs
 	TimeJobs _TimeJobs;
+
+	//Entities
+	vector<EntityListEntry> _vSpawnedEntities;
 public:
 	/*
 	* De- / constructor
@@ -213,6 +227,76 @@ public:
 	*/
 	void Disconnect(char);
 
+
+	/*
+	* Spawns a player
+	* Will throw Poco::RuntimeException if ID is already spawned
+
+	Parameter:
+	@1 : EntityID
+	@2 : Reference to EntityPlayer object
+	*/
+	void spawnPlayer(int,EntityPlayer&);
+
+
+	/*
+	* Returns true if given entity id is spawned
+
+	Parameter:
+	@1 : EntityID
+	*/
+	bool isEntitySpawned(int);
+
+	
+	/*
+	* Updates entitys position
+	* Will throw Poco::RuntimeException if entity wasn't spawned so far
+
+	Parameter:
+	@1 : EntityID
+	@2 : new Coordinates
+	*/
+	void updateEntityPosition(int,EntityCoordinates&);
+
+
+	/*
+	* Despawns entity
+	* Will throw Poco::RuntimeException if entity wasn't spawned so far
+
+	Parameter:
+	@1 : EntityID
+	*/
+	void despawnEntity(int);
+
+
+	/*
+	* Returns EntityID of player
+	* Will throw Poco::RuntimeExcpetion if player isn't spawned so far
+	*/
+	int getEntityID();
+
+
+	/*
+	* Make the given entity do a animation 
+	* Will throw Poco::RuntimeException if Entity isn't spawned 
+	* Will not check animation id existance - please use FC_ANIM constants
+	* Use only for swing arm!
+
+	Parameter:
+	@1 : EntityID
+	@2 : Animation ID
+	*/
+	void playAnimationOnEntity(int,char);
+
+
+	/*
+	* Make the given entity do a action
+	* Will throw Poco::RuntimeException if Entity isn't spawned 
+	* Will not check action id existance - please use FC_ACTION constants
+	* Use only for crouching, leaving a bed, or sprinting!
+	*/
+	//void playActionOnEntity(int,char);
+
 	/*
 	* These are internal functions 
 	* DONT USE THEM
@@ -228,6 +312,7 @@ private:
 	void Interval_KeepAlive();
 	void Interval_Time();
 	void Interval_HandleMovement();
+	void Inverval_Movement();
 
 	void sendTime();
 	void pushChatEvent(string&);
@@ -250,6 +335,8 @@ private:
 	void Packet12_Look();
 	void Packet13_PosAndLook();
 	void Packet16_HoldingChange();
+	void Packet18_Animation();
+	void Packet19_EntityAction();
 	void Packet101_CloseWindow();
 	void Packet102_WindowClick();
 	void Packet254_ServerListPing();

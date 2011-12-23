@@ -56,7 +56,8 @@ _sName(""),
 	_Rand(),
 	_ChunkProvider(rChunkRoot,_lowNetwork,rPackingThread,this),
 	_threadNetworkWriter("NetworkWriter"),
-	_Inventory(_highNetwork)
+	_Inventory(_highNetwork),
+	_vSpawnedEntities(0)
 {
 	_Coordinates.OnGround = false;
 	_Coordinates.Pitch = 0.0F;
@@ -69,6 +70,7 @@ _sName(""),
 	_TimeJobs.LastTimeSend = 0L;
 	_TimeJobs.LastKeepAliveSend = 0L;
 	_TimeJobs.LastHandleMovement = 0L;
+	_TimeJobs.LastMovementSend = 0L;
 
 	_iEntityID=0;
 	_Spawned_PlayerInfoList = 0;
@@ -133,6 +135,7 @@ void PlayerThread::run() {
 			Interval_KeepAlive(); 
 			Interval_Time();
 			Interval_HandleMovement();
+			Inverval_Movement();
 
 			iPacket = _lowNetwork.readByte();
 
@@ -172,6 +175,12 @@ void PlayerThread::run() {
 				break;
 			case 0x10: 
 				Packet16_HoldingChange();
+				break;
+			case 0x12: 
+				Packet18_Animation();
+				break;
+			case 0x13: 
+				Packet19_EntityAction();
 				break;
 			case 0x65: 
 				Packet101_CloseWindow();
@@ -232,12 +241,14 @@ void PlayerThread::Disconnect(char iLeaveMode) {
 	_sIP.clear();
 
 
-	_TimeJobs.LastKeepAliveSend = 0;
-	_TimeJobs.LastTimeSend = 0;
-	_TimeJobs.LastHandleMovement = 0;
+	_TimeJobs.LastKeepAliveSend = 0L;
+	_TimeJobs.LastTimeSend = 0L;
+	_TimeJobs.LastHandleMovement = 0L;
+	_TimeJobs.LastMovementSend = 0L;
 
 	ClearQueue();
 	_Connection.close();
+	_vSpawnedEntities.clear();
 }
 
 
@@ -351,23 +362,23 @@ void PlayerThread::Interval_HandleMovement() {
 		/* - Looks like a cristmas tree, uncomment to have a look at it
 		_highNetwork.Lock();
 		for (int z=0;z<=3;z++) {
-			for (int x=0;x<=3;x++) {
-				for (char y=33;y<=50;y++) {
-					
-					_highNetwork.addByte(0x3D);
+		for (int x=0;x<=3;x++) {
+		for (char y=33;y<=50;y++) {
 
-					_highNetwork.addInt(2000);
-					_highNetwork.addInt(x);
-					_highNetwork.addByte(y);
-					_highNetwork.addInt(z);
+		_highNetwork.addByte(0x3D);
 
-					_highNetwork.addInt(0);
+		_highNetwork.addInt(2000);
+		_highNetwork.addInt(x);
+		_highNetwork.addByte(y);
+		_highNetwork.addInt(z);
 
-					_highNetwork.Flush();
-				}
+		_highNetwork.addInt(0);
 
-				
-			}
+		_highNetwork.Flush();
+		}
+
+
+		}
 
 		}
 		_highNetwork.UnLock();
@@ -563,12 +574,13 @@ void PlayerThread::Packet1_Login() {
 
 		//Set start coordinates
 		_Coordinates.X = 5.0;
-		_Coordinates.Y = 250.0;
+		_Coordinates.Y = 100.0;
 		_Coordinates.Z = 5.0;
 		_Coordinates.Stance = 250.0;
 		_Coordinates.OnGround = false;
 		_Coordinates.Pitch = 0.0F;
 		_Coordinates.Yaw = 0.0F;
+		_lastCoordinates = _Coordinates;
 
 
 		//Push PlayerPool Join event
@@ -594,9 +606,6 @@ void PlayerThread::Packet1_Login() {
 		_highNetwork.addByte((unsigned char)SettingsHandler::getPlayerSlotCount());
 		_highNetwork.Flush();
 
-		//Send login packages
-		ProcessQueue();
-
 		//compass
 		_highNetwork.addByte(0x6);
 		_highNetwork.addInt(0); //X
@@ -611,8 +620,6 @@ void PlayerThread::Packet1_Login() {
 		//Health
 		UpdateHealth(20,20,5.0F); //Health
 
-		//Client position
-		sendClientPosition(); //Make client leave downloading map screen | chunk provider will send clients position again, after spawning chunk who standing on
 
 		//Inventory
 		ItemSlot Item1(1,34);
@@ -636,10 +643,37 @@ void PlayerThread::Packet1_Login() {
 		}
 
 
+		//Client position
+		sendClientPosition(); //Make client leave downloading map screen | chunk provider will send clients position again, after spawning chunk who standing on
+
 		//Send login packages
 		ProcessQueue();
 		_fSpawned = true;
 
+		/*
+		EntityPlayer James;
+		//James._aHeldItems[0].
+
+		for (int z = 0; z<=20;z+=2) {
+		for (int y = 31;y<=31;y+=2) {
+		for (int x = 0;x<=20;x+=2) {
+		int id = EntityID::New();
+		James._Flags.clear();
+		James._sName.assign("Notch");
+		James._Coordinates.X = (double)x;
+		James._Coordinates.Y = (double)y;
+		James._Coordinates.Z = (double)z;
+
+		James._Coordinates.Pitch = 0.0F;
+		James._Coordinates.Yaw = 0.0F;
+
+		spawnPlayer(id,James);
+		}
+		}
+		}
+		*/
+
+		insertChat(string("§dWelcome to FastCraft 0.0.2 Alpha server."));
 
 		//Chunks
 		_ChunkProvider.HandleMovement(_Coordinates);
@@ -850,3 +884,175 @@ void PlayerThread::Packet101_CloseWindow() {
 void PlayerThread::Packet102_WindowClick() {
 	_Inventory.HandleWindowClick(this);	
 }
+
+void PlayerThread::Inverval_Movement() {
+	if (!isSpawned()) {return;}
+	if (_TimeJobs.LastMovementSend + FC_INTERVAL_MOVEMENT <= getTicks()) { //Send new keep alive
+		if (!(_Coordinates == _lastCoordinates)) {
+			PlayerPoolEvent Event(_Coordinates,this);
+			_pPoolMaster->Event(Event);
+			_lastCoordinates = _Coordinates;
+			_TimeJobs.LastMovementSend = getTicks();
+		}else{
+			if (_TimeJobs.LastMovementSend + 1000 <= getTicks()) {  //Workaound for the invisable player bug
+				//Send a "still alive" event
+				PlayerPoolEvent Event(_Coordinates,this); 
+				_pPoolMaster->Event(Event);
+				_TimeJobs.LastMovementSend = getTicks();
+			}
+		}
+	}
+}
+
+void PlayerThread::spawnPlayer(int ID,EntityPlayer& rPlayer) {
+	if (isEntitySpawned(ID)) {
+		throw Poco::RuntimeException("Already spawned!");
+	}
+	EntityListEntry Entry;
+
+	Entry.EntityID = ID;
+	Entry.Type = FC_ENTITY_PLAYER;
+	Entry.oldPosition = rPlayer._Coordinates;
+
+	_vSpawnedEntities.push_back(Entry);
+
+	_highNetwork.Lock();
+	_highNetwork.addByte(0x14);
+	_highNetwork.addInt(ID);
+	_highNetwork.addString(rPlayer._sName);
+
+	_highNetwork.addInt( (int) (rPlayer._Coordinates.X * 32.0));
+	_highNetwork.addInt( (int) (rPlayer._Coordinates.Y * 32.0));
+	_highNetwork.addInt( (int) (rPlayer._Coordinates.Z * 32.0));
+
+	_highNetwork.addByte( (char) rPlayer._Coordinates.Yaw);
+	_highNetwork.addByte( (char) rPlayer._Coordinates.Pitch);
+
+	_highNetwork.addShort(267); //rPlayer._aHeldItems[0]);
+
+	_highNetwork.Flush();
+	_highNetwork.UnLock();
+}
+
+bool PlayerThread::isEntitySpawned(int ID) {
+	if (_vSpawnedEntities.size() > 0) {
+		for ( int x= 0;x<=_vSpawnedEntities.size()-1;x++) {
+			if (_vSpawnedEntities[x].EntityID == ID){
+				return true;
+			}
+		}
+	}
+	return false;
+}
+
+void PlayerThread::updateEntityPosition(int ID,EntityCoordinates& rCoordinates) {
+	if (!isEntitySpawned(ID)) {
+		throw Poco::RuntimeException("Not spawned!");
+	}
+
+	_highNetwork.Lock();
+	_highNetwork.addByte(0x22);
+
+	_highNetwork.addInt(ID);
+
+	_highNetwork.addInt( (int) (rCoordinates.X * 32.0));
+	_highNetwork.addInt( (int) (rCoordinates.Y * 32.0));
+	_highNetwork.addInt( (int) (rCoordinates.Z * 32.0));
+
+	_highNetwork.addByte( (char) ((rCoordinates.Yaw * 256.0F) / 360.0F) );
+	_highNetwork.addByte( (char) ((rCoordinates.Pitch * 256.0F) / 360.0F) );
+
+	_highNetwork.Flush();
+	_highNetwork.UnLock();
+}
+
+void PlayerThread::despawnEntity(int ID) {
+	int id = -1;
+
+	//search element
+	if (_vSpawnedEntities.size()>0) {
+		for (int x=0;x<=_vSpawnedEntities.size()-1;x++){
+			if (_vSpawnedEntities[x].EntityID == ID){
+				id = x;
+			}
+		}
+	}else{
+		throw Poco::RuntimeException("Not spawned");
+	}
+	if(id==-1) {
+		throw Poco::RuntimeException("Not spawned");
+	}
+
+	_vSpawnedEntities.erase(_vSpawnedEntities.begin()+id);
+
+	_highNetwork.Lock();
+	_highNetwork.addByte(0x1D);
+	_highNetwork.addInt(ID);
+	_highNetwork.Flush();
+	_highNetwork.UnLock();
+}
+
+int PlayerThread::getEntityID() {
+	return _iEntityID;
+}
+
+void PlayerThread::Packet18_Animation() {
+	try {
+		int iEID = _lowNetwork.readInt();
+		char iAnimID = _lowNetwork.readByte();
+
+		if (iEID != _iEntityID){
+			Kick("You can't use other EntityID's as yours"); 
+		}
+
+		PlayerPoolEvent Event(iAnimID,true,this);
+		_pPoolMaster->Event(Event);
+	}catch(Poco::RuntimeException& ex) {
+		Disconnect(FC_LEAVE_OTHER);
+	}
+}
+
+void PlayerThread::Packet19_EntityAction() {
+	try {
+		int iEID = _lowNetwork.readInt();
+		char iActionID = _lowNetwork.readByte();
+
+		if (iEID != _iEntityID){
+			Kick("You can't use other EntityID's as yours"); 
+		}
+
+		PlayerPoolEvent Event(iActionID,false,this);
+		_pPoolMaster->Event(Event);
+	}catch(Poco::RuntimeException& ex) {
+		Disconnect(FC_LEAVE_OTHER);
+	}
+}
+
+void PlayerThread::playAnimationOnEntity(int ID,char AnimID) {
+	if (!isEntitySpawned(ID)) {
+		throw Poco::RuntimeException("Not spawned!");
+	}
+
+	_highNetwork.Lock();
+	_highNetwork.addByte(0x12);
+	_highNetwork.addInt(ID);
+	_highNetwork.addByte(AnimID);
+
+	_highNetwork.Flush();
+	_highNetwork.UnLock();
+}
+
+/*
+void PlayerThread::playActionOnEntity(int ID,char AnimID) {
+	if (!isEntitySpawned(ID)) {
+		throw Poco::RuntimeException("Not spawned!");
+	}
+
+	_highNetwork.Lock();
+	_highNetwork.addByte(0x12);
+	_highNetwork.addInt(ID);
+	_highNetwork.addByte(AnimID);
+
+	_highNetwork.Flush();
+	_highNetwork.UnLock();
+}*/
