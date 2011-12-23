@@ -168,7 +168,7 @@ public:
 	Parameter:
 	@1 : Text to insert 
 	*/
-	void insertChat(string&);
+	void insertChat(string);
 
 
 	/*

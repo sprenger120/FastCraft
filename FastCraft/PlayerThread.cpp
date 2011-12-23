@@ -473,7 +473,7 @@ void PlayerThread::appendQueue(string& rString) {
 	_lowLevelSendQueue.push(rString);
 }
 
-void PlayerThread::insertChat(string& rString) {
+void PlayerThread::insertChat(string rString) {
 	_highNetwork.Lock();
 	_highNetwork.addByte(0x3);
 	_highNetwork.addString(rString);
@@ -674,7 +674,7 @@ void PlayerThread::Packet1_Login() {
 		}
 		*/
 
-		insertChat(string("§dWelcome to FastCraft 0.0.2 Alpha server."));
+		insertChat("§dWelcome to FastCraft 0.0.2 Alpha server.");
 
 		//Chunks
 		_ChunkProvider.HandleMovement(_Coordinates);
@@ -1078,7 +1078,7 @@ void PlayerThread::Packet18_Animation() {
 
 		PlayerPoolEvent Event(iAnimID,true,this);
 		_pPoolMaster->Event(Event);
-	}catch(Poco::RuntimeException& ex) {
+	}catch(Poco::RuntimeException) {
 		Disconnect(FC_LEAVE_OTHER);
 	}
 }
@@ -1094,7 +1094,7 @@ void PlayerThread::Packet19_EntityAction() {
 
 		PlayerPoolEvent Event(iActionID,false,this);
 		_pPoolMaster->Event(Event);
-	}catch(Poco::RuntimeException& ex) {
+	}catch(Poco::RuntimeException) {
 		Disconnect(FC_LEAVE_OTHER);
 	}
 }
