@@ -27,6 +27,7 @@ GNU General Public License for more details.
 #include <Poco/Timespan.h>
 #include <Poco/Net/NetException.h>
 #include <Poco/Stopwatch.h>
+#include <math.h>
 
 using Poco::Thread;
 using std::cout;
@@ -574,7 +575,7 @@ void PlayerThread::Packet1_Login() {
 
 		//Set start coordinates
 		_Coordinates.X = 5.0;
-		_Coordinates.Y = 100.0;
+		_Coordinates.Y = 500.0;
 		_Coordinates.Z = 5.0;
 		_Coordinates.Stance = 250.0;
 		_Coordinates.OnGround = false;
@@ -655,21 +656,21 @@ void PlayerThread::Packet1_Login() {
 		//James._aHeldItems[0].
 
 		for (int z = 0; z<=20;z+=2) {
-		for (int y = 31;y<=31;y+=2) {
-		for (int x = 0;x<=20;x+=2) {
-		int id = EntityID::New();
-		James._Flags.clear();
-		James._sName.assign("Notch");
-		James._Coordinates.X = (double)x;
-		James._Coordinates.Y = (double)y;
-		James._Coordinates.Z = (double)z;
+			for (int y = 31;y<=31;y+=2) {
+				for (int x = 0;x<=20;x+=2) {
+					int id = EntityID::New();
+					James._Flags.clear();
+					James._sName.assign("Solidier");
+					James._Coordinates.X = (double)x;
+					James._Coordinates.Y = (double)y;
+					James._Coordinates.Z = (double)z;
 
-		James._Coordinates.Pitch = 0.0F;
-		James._Coordinates.Yaw = 0.0F;
+					James._Coordinates.Pitch = 0.0F;
+					James._Coordinates.Yaw = 0.0F;
 
-		spawnPlayer(id,James);
-		}
-		}
+					spawnPlayer(id,James);
+				}
+			}
 		}
 		*/
 
@@ -946,11 +947,79 @@ bool PlayerThread::isEntitySpawned(int ID) {
 }
 
 void PlayerThread::updateEntityPosition(int ID,EntityCoordinates& rCoordinates) {
-	if (!isEntitySpawned(ID)) {
-		throw Poco::RuntimeException("Not spawned!");
+	int id = -1;
+
+	//search element
+	if (_vSpawnedEntities.size()>0) {
+		for (int x=0;x<=_vSpawnedEntities.size()-1;x++){
+			if (_vSpawnedEntities[x].EntityID == ID){
+				id = x;
+			}
+		}
+	}else{
+		throw Poco::RuntimeException("Not spawned");
+	}
+	if(id==-1) {
+		throw Poco::RuntimeException("Not spawned");
+	}
+
+
+	if (_vSpawnedEntities[id].oldPosition == rCoordinates) {
+		return; //Coordinates are equal -> no update
 	}
 
 	_highNetwork.Lock();
+
+	double dX =  rCoordinates.X - _vSpawnedEntities[id].oldPosition.X;
+	double dY =  rCoordinates.Y - _vSpawnedEntities[id].oldPosition.Y;
+	double dZ =  rCoordinates.Z - _vSpawnedEntities[id].oldPosition.Z;
+
+	//cout<<"dX:"<<dX<<" dY:"<<dY<<" dZ:"<<dZ<<"\n";
+
+	if(_vSpawnedEntities[id].oldPosition.LookEqual(rCoordinates)) {	//Player just moved around and doesn't change camera 
+		if (fabs(dX) <= 4.0 && fabs(dY) <= 4.0 && fabs(dZ) <= 4.0 ) {//Movement under 4 blocks
+			//relative move
+			_highNetwork.addByte(0x1F);
+			_highNetwork.addInt(ID);
+			_highNetwork.addByte(   (char) (dX*32.0) );
+			_highNetwork.addByte(   (char) (dY*32.0) );
+			_highNetwork.addByte(   (char) (dZ*32.0) );
+			_highNetwork.Flush();
+			_highNetwork.UnLock();
+			_vSpawnedEntities[id].oldPosition = rCoordinates;
+			return;
+		}else {
+			//Full update
+		}
+	}else{ //player moved camera
+		if (_vSpawnedEntities[id].oldPosition.CoordinatesEqual(rCoordinates)) { //Just moved camera
+			_highNetwork.addByte(0x20);
+			_highNetwork.addInt(ID);
+			_highNetwork.addByte( (char) ((rCoordinates.Yaw * 256.0F) / 360.0F) );
+			_highNetwork.addByte( (char) ((rCoordinates.Pitch * 256.0F) / 360.0F) );
+			_highNetwork.Flush();
+			_highNetwork.UnLock();
+			_vSpawnedEntities[id].oldPosition = rCoordinates;
+			return;
+		}
+		if (fabs(dX) <= 4.0 && fabs(dY) <= 4.0 && fabs(dZ) <= 4.0 ) {//Movement under 4 blocks
+			//relative move + camera
+			_highNetwork.addByte(0x21);
+			_highNetwork.addInt(ID);
+			_highNetwork.addByte(   (char) (dX*32.0) );
+			_highNetwork.addByte(   (char) (dY*32.0) );
+			_highNetwork.addByte(   (char) (dZ*32.0) );
+			_highNetwork.addByte( (char) ((rCoordinates.Yaw * 256.0F) / 360.0F) );
+			_highNetwork.addByte( (char) ((rCoordinates.Pitch * 256.0F) / 360.0F) );
+			_highNetwork.Flush();
+			_highNetwork.UnLock();
+			_vSpawnedEntities[id].oldPosition = rCoordinates;
+			return;
+		}else {
+			//Full update
+		}
+	}
+		
 	_highNetwork.addByte(0x22);
 
 	_highNetwork.addInt(ID);
@@ -964,6 +1033,8 @@ void PlayerThread::updateEntityPosition(int ID,EntityCoordinates& rCoordinates) 
 
 	_highNetwork.Flush();
 	_highNetwork.UnLock();
+
+	_vSpawnedEntities[id].oldPosition = rCoordinates;
 }
 
 void PlayerThread::despawnEntity(int ID) {
@@ -1044,15 +1115,15 @@ void PlayerThread::playAnimationOnEntity(int ID,char AnimID) {
 
 /*
 void PlayerThread::playActionOnEntity(int ID,char AnimID) {
-	if (!isEntitySpawned(ID)) {
-		throw Poco::RuntimeException("Not spawned!");
-	}
+if (!isEntitySpawned(ID)) {
+throw Poco::RuntimeException("Not spawned!");
+}
 
-	_highNetwork.Lock();
-	_highNetwork.addByte(0x12);
-	_highNetwork.addInt(ID);
-	_highNetwork.addByte(AnimID);
+_highNetwork.Lock();
+_highNetwork.addByte(0x12);
+_highNetwork.addInt(ID);
+_highNetwork.addByte(AnimID);
 
-	_highNetwork.Flush();
-	_highNetwork.UnLock();
+_highNetwork.Flush();
+_highNetwork.UnLock();
 }*/
