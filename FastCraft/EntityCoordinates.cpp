@@ -21,7 +21,7 @@ bool EntityCoordinates::operator == (const EntityCoordinates& other) {
 		fabs(Y - other.Y) > 0.1 || 
 		fabs(Stance - other.Stance) > 0.1 ||  
 		fabs(Z - other.Z) > 0.1 || 
-		fabs(Yaw - other.Yaw) > 0.1 || 
-		fabs(Pitch - other.Pitch) > 0.1 ||   
+		fabs(Yaw - other.Yaw) > 0.1F || 
+		fabs(Pitch - other.Pitch) > 0.1F ||   
 		OnGround !=  other.OnGround);
 }
