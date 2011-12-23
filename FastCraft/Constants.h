@@ -16,8 +16,7 @@ GNU General Public License for more details.
 #ifndef _FASTCRAFTHEADER_CONSTANTS
 #define _FASTCRAFTHEADER_CONSTANTS
 
-#define FC_JOB_NONE						0
-#define FC_JOB_CLOSECONN				1
+#define FC_PLAYERSPAWNRADIUS			100.0
 
 //Properties
 #define FC_SERVMODE_SURVIVAL			0
@@ -32,7 +31,7 @@ GNU General Public License for more details.
 #define FC_INTERVAL_TIMESEND			5000
 #define FC_INTERVAL_KEEPACTIVE			15000
 #define FC_INTERVAL_HANDLEMOVEMENT		500
-#define FC_INTERVAL_MOVEMENT			200
+#define FC_INTERVAL_MOVEMENT			100
 
 //Chunk Constants
 #define FC_CHUNK_BLOCKCOUNT				32768
@@ -50,6 +49,7 @@ GNU General Public License for more details.
 #define FC_PPEVENT_JOIN					3
 #define FC_PPEVENT_DISCONNECT			4
 #define FC_PPEVENT_ANIMATION			5
+#define FC_PPEVENT_ACTION				6
 
 //Animation ID's 
 #define FC_ANIM_NOANIM					0	//Send to remove all animations 
@@ -59,4 +59,17 @@ GNU General Public License for more details.
 #define FC_ANIM_EATFOOD					5   
 #define FC_ANIM_CROUCH					104
 #define FC_ANIM_UNCROUCH				105
+
+//Actions
+#define FC_ACTION_CROUCH				1
+#define FC_ACTION_UNCROUCH				2
+#define FC_ACTION_LEAVEBED				3
+#define FC_ACTION_STARTSPRINTING		4
+#define FC_ACTION_STOPSPRINTING			5
+
+//Entity Type ID's
+#define FC_ENTITY_PLAYER				1
+#define FC_ENTITY_PICKUP				2
+#define FC_ENTITY_MOB					3
+#define FC_ENITIY_DRIVEABLE				4 //minecarts, boats..
 #endif
