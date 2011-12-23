@@ -93,7 +93,7 @@ public:
 	vector<string> ListPlayers(int);
 private:
 	int getFreeSlot(); //Returns -1 if there is no free slot
-	void sendMessageToAll(string&);
-	double distance2D(EntityCoordinates&,EntityCoordinates&);
+	void sendMessageToAll(string);
+	double distance2D(EntityCoordinates,EntityCoordinates);
 };
 #endif

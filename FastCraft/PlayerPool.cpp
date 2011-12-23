@@ -219,7 +219,7 @@ void PlayerPool::Event(PlayerPoolEvent& rEvent) {
 	_qEventQueue.push(rEvent);
 }
 
-void PlayerPool::sendMessageToAll(string& rString) {
+void PlayerPool::sendMessageToAll(string rString) {
 	for (int x=0;x<=_vPlayerThreads.size()-1;x++) {
 		if( _vPlayerThreads[x]->isAssigned() && _vPlayerThreads[x]->isSpawned()) {
 			_vPlayerThreads[x]->insertChat(rString);
@@ -249,7 +249,7 @@ vector<string> PlayerPool::ListPlayers(int iMax) {
 }
 
 
-double PlayerPool::distance2D(EntityCoordinates& c1,EntityCoordinates& c2) {
+double PlayerPool::distance2D(EntityCoordinates c1,EntityCoordinates c2) {
 	return  sqrt (   (c1.X-c2.X) * (c1.X-c2.X) + 
 		(c1.Z-c2.Z) * (c1.Z-c2.Z));
 }
