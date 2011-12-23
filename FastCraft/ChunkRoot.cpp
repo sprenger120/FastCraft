@@ -16,9 +16,11 @@ GNU General Public License for more details.
 #include "ChunkRoot.h"
 #include "Structs.h"
 #include "Constants.h"
+#include "ChunkMath.h"
 #include "ChunkTerraEditor.h"
 #include <Poco/Stopwatch.h>
 #include <Poco/Exception.h>
+#include <Poco/Random.h>
 #include <cstring>
 
 using std::cout;
@@ -108,6 +110,8 @@ void ChunkRoot::generateMap(int iFromX,int iFromZ,int iToX,int iToZ) {
 void ChunkRoot::generateMap(int X,int Z) {
 	int index=0;
 	Block Block;
+	Poco::Random Rand;
+	Rand.seed();
 
 	if (getFreeChunkSlotCount() == 0) {
 		if (_vpChunks.size() == _iMaxChunkSlots) {
@@ -120,6 +124,10 @@ void ChunkRoot::generateMap(int X,int Z) {
 		_vpChunks[index] = new MapChunk;
 		_vpChunks[index]->Empty = true; //Set empty
 
+		if (_vpChunks[index] == NULL) {
+			cout<<"nullchunk";
+		}
+
 		memset(_vpChunks[index]->Blocks,0,FC_CHUNK_BLOCKCOUNT); //clear blocks
 	}
 
@@ -128,6 +136,10 @@ void ChunkRoot::generateMap(int X,int Z) {
 
 	if (index == -1) {
 		throw Poco::RuntimeException("Invalid index");
+	}
+
+	if (_vpChunks[index] == NULL) {
+		cout<<"nullchunk";
 	}
 
 	_vpChunks[index]->X = X;
@@ -142,10 +154,9 @@ void ChunkRoot::generateMap(int X,int Z) {
 
 		Block.BlockID = 12;
 
-		for (short y=1;y<=30;y++) { //Grass
+		for (short y=1;y<=30;y++) {
 			ChunkTerraEditor::setPlate(_vpChunks[index],y,Block);
 		}
-
 	} catch (Poco::RuntimeException& err) {
 		cout<<"***GENERATING ERROR:"<<err.message()<<endl;
 		throw Poco::RuntimeException("Generation failed!");
