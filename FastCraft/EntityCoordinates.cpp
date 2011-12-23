@@ -25,3 +25,18 @@ bool EntityCoordinates::operator == (const EntityCoordinates& other) {
 		fabs(Pitch - other.Pitch) > 0.1F ||   
 		OnGround !=  other.OnGround);
 }
+
+bool EntityCoordinates::CoordinatesEqual(const EntityCoordinates& other) {
+	return !(
+		fabs(X - other.X) > 0.1 || 
+		fabs(Y - other.Y) > 0.1 || 
+		fabs(Stance - other.Stance) > 0.1 ||  
+		fabs(Z - other.Z) > 0.1 || 
+		OnGround !=  other.OnGround
+		);
+}
+
+bool EntityCoordinates::LookEqual(const EntityCoordinates& other) {
+	return !(fabs(Yaw - other.Yaw) > 0.1F || 
+			fabs(Pitch - other.Pitch) > 0.1F );
+}

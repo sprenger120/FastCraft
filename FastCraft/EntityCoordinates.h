@@ -28,5 +28,8 @@ public:
 	bool OnGround;
 
 	bool operator == (const EntityCoordinates&);
+
+	bool LookEqual(const EntityCoordinates&);
+	bool CoordinatesEqual(const EntityCoordinates&);
 };
 #endif
