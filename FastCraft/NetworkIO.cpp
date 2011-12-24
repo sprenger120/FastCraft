@@ -82,7 +82,7 @@ void NetworkIO::addFloat(float dVal) {
 
 
 void NetworkIO::addDouble(double dVal) {
-	long long iBuff;
+	long long int iBuff;
 
 	memcpy(&iBuff,&dVal,8); //copy double to an int64
 	iBuff = Poco::ByteOrder::toBigEndian(iBuff); //switch endian
