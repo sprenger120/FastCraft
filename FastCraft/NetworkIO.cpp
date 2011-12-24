@@ -345,7 +345,7 @@ void NetworkIO::addInt(string& rBuff,int iInt) {
 
 void NetworkIO::addInt64(string& rBuff,long long iInt) {
 	char EndianBuffer[8];
-	iInt = Poco::ByteOrder::toBigEndian(iInt);
+	iInt = Poco::ByteOrder::toBigEndian(Poco::Int64(iInt));
 	memcpy(EndianBuffer,&iInt,8);
 	rBuff.append(EndianBuffer,8);
 }
@@ -366,7 +366,7 @@ void NetworkIO::addDouble(string& rBuff,double dVal) {
 	char EndianBuffer[8];
 
 	memcpy(&iBuff,&dVal,8); //copy double to an int64
-	iBuff = Poco::ByteOrder::toBigEndian(iBuff); //switch endian
+	iBuff = Poco::ByteOrder::toBigEndian(Poco::Int64(iBuff)); //switch endian
 	memcpy(EndianBuffer,&iBuff,8);//copy to endian buffer
 	rBuff.append(EndianBuffer,8);//append
 }
