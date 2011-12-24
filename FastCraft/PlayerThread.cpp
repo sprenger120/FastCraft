@@ -946,7 +946,7 @@ bool PlayerThread::isEntitySpawned(int ID) {
 	return false;
 }
 
-void PlayerThread::updateEntityPosition(int ID,EntityCoordinates& rCoordinates) {
+void PlayerThread::updateEntityPosition(int ID,EntityCoordinates Coordinates) {
 	int id = -1;
 
 	//search element
@@ -964,19 +964,19 @@ void PlayerThread::updateEntityPosition(int ID,EntityCoordinates& rCoordinates) 
 	}
 
 
-	if (_vSpawnedEntities[id].oldPosition == rCoordinates) {
+	if (_vSpawnedEntities[id].oldPosition == Coordinates) {
 		return; //Coordinates are equal -> no update
 	}
 
 	_highNetwork.Lock();
 
-	double dX =  rCoordinates.X - _vSpawnedEntities[id].oldPosition.X;
-	double dY =  rCoordinates.Y - _vSpawnedEntities[id].oldPosition.Y;
-	double dZ =  rCoordinates.Z - _vSpawnedEntities[id].oldPosition.Z;
+	double dX =  Coordinates.X - _vSpawnedEntities[id].oldPosition.X;
+	double dY =  Coordinates.Y - _vSpawnedEntities[id].oldPosition.Y;
+	double dZ =  Coordinates.Z - _vSpawnedEntities[id].oldPosition.Z;
 
 	//cout<<"dX:"<<dX<<" dY:"<<dY<<" dZ:"<<dZ<<"\n";
 
-	if(_vSpawnedEntities[id].oldPosition.LookEqual(rCoordinates)) {	//Player just moved around and doesn't change camera 
+	if(_vSpawnedEntities[id].oldPosition.LookEqual(Coordinates)) {	//Player just moved around and doesn't change camera 
 		if (fabs(dX) <= 4.0 && fabs(dY) <= 4.0 && fabs(dZ) <= 4.0 ) {//Movement under 4 blocks
 			//relative move
 			_highNetwork.addByte(0x1F);
@@ -986,20 +986,20 @@ void PlayerThread::updateEntityPosition(int ID,EntityCoordinates& rCoordinates) 
 			_highNetwork.addByte(   (char) (dZ*32.0) );
 			_highNetwork.Flush();
 			_highNetwork.UnLock();
-			_vSpawnedEntities[id].oldPosition = rCoordinates;
+			_vSpawnedEntities[id].oldPosition = Coordinates;
 			return;
 		}else {
 			//Full update
 		}
 	}else{ //player moved camera
-		if (_vSpawnedEntities[id].oldPosition.CoordinatesEqual(rCoordinates)) { //Just moved camera
+		if (_vSpawnedEntities[id].oldPosition.CoordinatesEqual(Coordinates)) { //Just moved camera
 			_highNetwork.addByte(0x20);
 			_highNetwork.addInt(ID);
-			_highNetwork.addByte( (char) ((rCoordinates.Yaw * 256.0F) / 360.0F) );
-			_highNetwork.addByte( (char) ((rCoordinates.Pitch * 256.0F) / 360.0F) );
+			_highNetwork.addByte( (char) ((Coordinates.Yaw * 256.0F) / 360.0F) );
+			_highNetwork.addByte( (char) ((Coordinates.Pitch * 256.0F) / 360.0F) );
 			_highNetwork.Flush();
 			_highNetwork.UnLock();
-			_vSpawnedEntities[id].oldPosition = rCoordinates;
+			_vSpawnedEntities[id].oldPosition = Coordinates;
 			return;
 		}
 		if (fabs(dX) <= 4.0 && fabs(dY) <= 4.0 && fabs(dZ) <= 4.0 ) {//Movement under 4 blocks
@@ -1009,11 +1009,11 @@ void PlayerThread::updateEntityPosition(int ID,EntityCoordinates& rCoordinates) 
 			_highNetwork.addByte(   (char) (dX*32.0) );
 			_highNetwork.addByte(   (char) (dY*32.0) );
 			_highNetwork.addByte(   (char) (dZ*32.0) );
-			_highNetwork.addByte( (char) ((rCoordinates.Yaw * 256.0F) / 360.0F) );
-			_highNetwork.addByte( (char) ((rCoordinates.Pitch * 256.0F) / 360.0F) );
+			_highNetwork.addByte( (char) ((Coordinates.Yaw * 256.0F) / 360.0F) );
+			_highNetwork.addByte( (char) ((Coordinates.Pitch * 256.0F) / 360.0F) );
 			_highNetwork.Flush();
 			_highNetwork.UnLock();
-			_vSpawnedEntities[id].oldPosition = rCoordinates;
+			_vSpawnedEntities[id].oldPosition = Coordinates;
 			return;
 		}else {
 			//Full update
@@ -1024,17 +1024,17 @@ void PlayerThread::updateEntityPosition(int ID,EntityCoordinates& rCoordinates) 
 
 	_highNetwork.addInt(ID);
 
-	_highNetwork.addInt( (int) (rCoordinates.X * 32.0));
-	_highNetwork.addInt( (int) (rCoordinates.Y * 32.0));
-	_highNetwork.addInt( (int) (rCoordinates.Z * 32.0));
+	_highNetwork.addInt( (int) (Coordinates.X * 32.0));
+	_highNetwork.addInt( (int) (Coordinates.Y * 32.0));
+	_highNetwork.addInt( (int) (Coordinates.Z * 32.0));
 
-	_highNetwork.addByte( (char) ((rCoordinates.Yaw * 256.0F) / 360.0F) );
-	_highNetwork.addByte( (char) ((rCoordinates.Pitch * 256.0F) / 360.0F) );
+	_highNetwork.addByte( (char) ((Coordinates.Yaw * 256.0F) / 360.0F) );
+	_highNetwork.addByte( (char) ((Coordinates.Pitch * 256.0F) / 360.0F) );
 
 	_highNetwork.Flush();
 	_highNetwork.UnLock();
 
-	_vSpawnedEntities[id].oldPosition = rCoordinates;
+	_vSpawnedEntities[id].oldPosition = Coordinates;
 }
 
 void PlayerThread::despawnEntity(int ID) {

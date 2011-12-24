@@ -256,7 +256,7 @@ public:
 	@1 : EntityID
 	@2 : new Coordinates
 	*/
-	void updateEntityPosition(int,EntityCoordinates&);
+	void updateEntityPosition(int,EntityCoordinates);
 
 
 	/*
