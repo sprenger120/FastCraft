@@ -65,9 +65,10 @@ void NetworkIO::addInt(int iInt) {
 	_sBuffer.append(_sEndianBuffer,4);
 }
 
-void NetworkIO::addInt64(signed long long iInt) {
-	iInt = Poco::ByteOrder::toBigEndian(iInt);
-	memcpy(_sEndianBuffer,&iInt,8);
+void NetworkIO::addInt64(long long iInt) {
+	Poco::Int64 val;
+	val = Poco::ByteOrder::toBigEndian((Poco::Int64)iInt);
+	memcpy(_sEndianBuffer,&val,8);
 	_sBuffer.append(_sEndianBuffer,8);
 }
 
