@@ -67,7 +67,7 @@ void NetworkIO::addInt(int iInt) {
 
 void NetworkIO::addInt64(long long iInt) {
 	iInt = Poco::ByteOrder::toBigEndian(Poco::Int64(iInt));
-	memcpy(_sEndianBuffer,&val,8);
+	memcpy(_sEndianBuffer,&iInt,8);
 	_sBuffer.append(_sEndianBuffer,8);
 }
 
@@ -85,7 +85,7 @@ void NetworkIO::addDouble(double dVal) {
 	long long int iBuff;
 
 	memcpy(&iBuff,&dVal,8); //copy double to an int64
-	iBuff = Poco::ByteOrder::toBigEndian(iBuff); //switch endian
+	iBuff = Poco::ByteOrder::toBigEndian(Poco::Int64(iBuff)); //switch endian
 	memcpy(_sEndianBuffer,&iBuff,8);//copy to endian buffer
 	_sBuffer.append(_sEndianBuffer,8);//append
 }
@@ -158,7 +158,7 @@ long long NetworkIO::readInt64() {
 	long long iVal;
 	memcpy(&iVal,_charBuffer,8);
 
-	return Poco::ByteOrder::fromBigEndian(iVal);
+	return Poco::ByteOrder::fromBigEndian(Poco::Int64(iVal));
 }
 
 float NetworkIO::readFloat() {
@@ -179,7 +179,7 @@ float NetworkIO::readFloat() {
 
 
 double NetworkIO::readDouble() {
-	long long iInt;
+	Poco::Int64 iInt;
 
 	try {
 		iInt = readInt64();
