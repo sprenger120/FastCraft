@@ -217,7 +217,7 @@ public:
 	@1 : true for spawn player, false for despawn player
 	@2 : player name
 	*/
-	void PlayerInfoList(bool,string&);
+	void PlayerInfoList(bool,string);
 
 	/*
 	* Closes connection and clears object

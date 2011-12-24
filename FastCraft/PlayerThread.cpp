@@ -824,7 +824,7 @@ void PlayerThread::pushChatEvent(string& rString) {
 	_pPoolMaster->Event(Event);
 }
 
-void PlayerThread::PlayerInfoList(bool fSpawn,string& rName) {
+void PlayerThread::PlayerInfoList(bool fSpawn,string Name) {
 	if (fSpawn) {
 		if (_Spawned_PlayerInfoList == 60) {return;} //Workaround for a Minecraft render bug
 		_Spawned_PlayerInfoList++;
@@ -834,7 +834,7 @@ void PlayerThread::PlayerInfoList(bool fSpawn,string& rName) {
 
 	_highNetwork.Lock();
 	_highNetwork.addByte(0xc9);
-	_highNetwork.addString(rName);
+	_highNetwork.addString(Name);
 	_highNetwork.addBool(fSpawn);
 	_highNetwork.addShort(10);
 	_highNetwork.Flush();
