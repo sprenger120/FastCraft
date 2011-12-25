@@ -299,8 +299,6 @@ public:
 	*/
 	//void playActionOnEntity(int,char);
 private:
-	//Queue
-	void ClearQueue();
 	void ProcessQueue();
 	 
 	//Interval functions

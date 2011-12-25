@@ -87,7 +87,7 @@ _sName(""),
 int PlayerThread::_PlayerCount = 0;
 
 PlayerThread::~PlayerThread() {
-	ClearQueue();
+	_NetworkWriter.clearQueues();
 }
 
 
@@ -239,14 +239,13 @@ void PlayerThread::Disconnect(char iLeaveMode) {
 	_fAssigned = false;
 	_sName.clear();
 	_sIP.clear();
-
+	_NetworkWriter.clearQueues();
 
 	_TimeJobs.LastKeepAliveSend = 0L;
 	_TimeJobs.LastTimeSend = 0L;
 	_TimeJobs.LastHandleMovement = 0L;
 	_TimeJobs.LastMovementSend = 0L;
 
-	ClearQueue();
 	_Connection.close();
 	_vSpawnedEntities.clear();
 }
@@ -347,6 +346,7 @@ string PlayerThread::generateConnectionHash() {
 }
 
 void PlayerThread::Interval_Time() {
+	if (!isSpawned()) {return;}
 	if (_TimeJobs.LastTimeSend + FC_INTERVAL_TIMESEND <= getTicks()) {
 		_TimeJobs.LastTimeSend = getTicks();
 		sendTime();
@@ -414,6 +414,7 @@ void PlayerThread::sendClientPosition() {
 }
 
 void PlayerThread::Interval_KeepAlive() {
+	if (!isSpawned()){return;}
 	if (_TimeJobs.LastKeepAliveSend + FC_INTERVAL_KEEPACTIVE <= getTicks()) { //Send new keep alive
 		_TimeJobs.LastKeepAliveSend = getTicks();
 
@@ -465,10 +466,6 @@ void PlayerThread::insertChat(string rString) {
 	Out.Finalize(FC_QUEUE_HIGH);
 }
 
-void PlayerThread::ClearQueue() {
-	_NetworkOutRoot.getHighQueue().clear();
-	_NetworkOutRoot.getLowQueue().clear();
-}
 
 void PlayerThread::ProcessQueue() {			
 	while (!_NetworkOutRoot.getHighQueue().empty()) {
@@ -569,13 +566,6 @@ void PlayerThread::Packet1_Login() {
 		_Coordinates.Yaw = 0.0F;
 		_lastCoordinates = _Coordinates;
 
-
-		//Push PlayerPool Join event
-		PlayerPoolEvent Event(true,false,_sName,this);
-		_pPoolMaster->Event(Event);
-
-		cout<<_sName<<" joined ("<<_sIP<<") EID:"<<_iEntityID<<endl;  //Console log
-
 		/*
 		* Response
 		*/
@@ -601,16 +591,13 @@ void PlayerThread::Packet1_Login() {
 		Out.addInt(0); // Z 
 		Out.Finalize(FC_QUEUE_HIGH);
 
-
-		//Client position
-		sendClientPosition(); //Make client leave downloading map screen
-
 		//Time
-		sendTime(); 
+		sendTime();
+
+		_ChunkProvider.HandleMovement(_Coordinates); //Pre Chunks
 
 		//Health
 		UpdateHealth(20,20,5.0F); //Health
-
 
 		//Inventory
 		ItemSlot Item1(1,34);
@@ -620,31 +607,34 @@ void PlayerThread::Packet1_Login() {
 		_Inventory.setSlot(36,Item1); 
 		_Inventory.setSlot(37,Item2);   
 		_Inventory.setSlot(38,Item3);  
-
 		_Inventory.synchronizeInventory();
 
-		//Spawn PlayerInfo
+		sendClientPosition();
+		insertChat("§dWelcome to FastCraft 0.0.2 Alpha server.");
+		ProcessQueue(); //Send login packages
+
+		PlayerPoolEvent Event(true,false,_sName,this);//Push PlayerPool Join event
+		_pPoolMaster->Event(Event);
+		_fSpawned = true;	
+
+
+		//Spawn own name to playerinfo
+		PlayerInfoList(true,_sName);
+
+		//Spawn other player
 		vector<string> vNames;
 		vNames = _pPoolMaster->ListPlayers(60);
 
 		if (vNames.size() > 0) {
 			for ( int x = 0;x<= vNames.size()-1;x++) {
+				if(vNames[x].compare(_sName)==0) {continue;}//No double spawning of own name
 				PlayerInfoList(true,vNames[x]);
 			}
 		}
-
-
-		insertChat("§dWelcome to FastCraft 0.0.2 Alpha server.");
-
-		//Send login packages
-		ProcessQueue();
-		_fSpawned = true;
-
-		//Chunks
-		_ChunkProvider.HandleMovement(_Coordinates);
 	} catch(Poco::RuntimeException) {
 		Disconnect(FC_LEAVE_OTHER);
 	}
+	cout<<_sName<<" joined ("<<_sIP<<") EID:"<<_iEntityID<<endl;  //Console log
 }
 
 void PlayerThread::Packet2_Handshake() {
