@@ -16,10 +16,10 @@ GNU General Public License for more details.
 #ifndef _FASTCRAFTHEADER_PACKINGTHREAD
 #define _FASTCRAFTHEADER_PACKINGTHREAD
 #include <Poco/Runnable.h>
-#include <queue>
 #include <sstream>
 #include <Poco/DeflatingStream.h>
 #include "Structs.h"
+#include "ThreadSafeQueue.h"
 
 class NetworkOutRoot;
 
@@ -34,7 +34,7 @@ using std::queue;
 
 class PackingThread : public Poco::Runnable{
 private:
-	queue <PackJob> _vPackJobs;
+	ThreadSafeQueue<PackJob> _vPackJobs;
 	std::stringstream _stringStrm;
 	Poco::DeflatingOutputStream _deflatingStrm;
 public:

@@ -61,8 +61,13 @@ void PackingThread::ProcessJob(PackJob& rJob) {
 	Out.addByte(127);
 	Out.addByte(15);
 
+	//std::cout<<"writing X:"<<rJob.X<<" Z:"<<rJob.Z<<"\n";
 
 	//deflate
+	if(rJob.pChunk==NULL) {
+		std::cout<<"PackingThread::ProcessJob Nullpointer"<<"\n";
+		return;
+	}
 	_deflatingStrm.write(rJob.pChunk->Blocks,FC_CHUNK_BLOCKCOUNT);
 	_deflatingStrm.write(rJob.pChunk->Metadata,FC_CHUNK_NIBBLECOUNT);
 	_deflatingStrm.write(rJob.pChunk->BlockLight,FC_CHUNK_NIBBLECOUNT);
