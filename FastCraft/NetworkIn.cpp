@@ -16,6 +16,7 @@ GNU General Public License for more details.
 #include <Poco/Exception.h>
 #include <Poco/Net/NetException.h>
 #include <Poco/ByteOrder.h>
+#include <cstring>
 using Poco::RuntimeException;
 
 NetworkIn::NetworkIn(StreamSocket& r) :

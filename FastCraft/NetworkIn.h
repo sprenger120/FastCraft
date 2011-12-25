@@ -24,7 +24,6 @@ using std::string;
 class NetworkIn {
 private:
 	StreamSocket & _rSocket;
-	char _sEndianBuffer[8];
 	char _sReadBuffer[8];
 	static unsigned long long _iReadTraffic;
 public:
