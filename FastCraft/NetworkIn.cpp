@@ -186,3 +186,7 @@ void NetworkIn::read(int iLenght) {
 
 	_iReadTraffic += iLenght;
 }
+
+unsigned long long NetworkIn::getReadTraffic() {
+	return _iReadTraffic;
+}
