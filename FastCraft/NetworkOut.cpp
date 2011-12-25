@@ -16,6 +16,7 @@ GNU General Public License for more details.
 #include "NetworkOutRoot.h"
 #include "Constants.h"
 #include <Poco/ByteOrder.h>
+#include <cstring>
 
 NetworkOut::NetworkOut(NetworkOutRoot* p) :
 _pMaster(p),
