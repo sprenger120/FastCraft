@@ -909,6 +909,10 @@ void PlayerThread::spawnPlayer(int ID,EntityPlayer& rPlayer) {
 	if (isEntitySpawned(ID)) {
 		throw Poco::RuntimeException("Already spawned!");
 	}
+	if (ID == _iEntityID) {
+		throw Poco::RuntimeException("Own EntityID can't be spawned!");
+	}
+
 	EntityListEntry Entry;
 
 	Entry.EntityID = ID;
