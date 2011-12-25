@@ -35,21 +35,40 @@ public:
 
 	int size();
 	bool empty();
+
+	ThreadSafeQueue(void);
+	~ThreadSafeQueue();
 private:
 	Poco::Mutex _Mutex;
 	queue<T> _q;
+
+	T* _pfront;
 };
 
+template <typename T>
+inline ThreadSafeQueue<T>::ThreadSafeQueue(void) : 
+_pfront(NULL)
+{
+}
 
-template <class T> 
+template <typename T>
+inline ThreadSafeQueue<T>::~ThreadSafeQueue() {
+	clear();
+}
+
+
+template <typename T> 
 inline void ThreadSafeQueue<T>::push(T& t) {
 	_Mutex.lock();
 	_q.push(t);
+	if (_q.size()==1) {
+		_pfront=&(_q.front());
+	}
 	_Mutex.unlock();
 }
 
 
-template <class T> 
+template <typename T> 
 inline void ThreadSafeQueue<T>::pop() {
 	_Mutex.lock();
 	if (_q.empty()) { 
@@ -57,10 +76,15 @@ inline void ThreadSafeQueue<T>::pop() {
 		throw Poco::RuntimeException("Queue is empty");
 	}
 	_q.pop();
+	if (_q.size() > 0) {
+		_pfront=&(_q.front());
+	}else{
+		_pfront=NULL;
+	}
 	_Mutex.unlock();
 }
 
-template <class T> 
+template <typename T> 
 inline void ThreadSafeQueue<T>::clear() {
 	_Mutex.lock();
 	while (!_q.empty()) {
@@ -69,29 +93,22 @@ inline void ThreadSafeQueue<T>::clear() {
 	_Mutex.unlock();
 }
 
-template <class T> 
+template <typename T> 
 inline T& ThreadSafeQueue<T>::front() {
-	_Mutex.lock();
-
 	if (_q.empty()) { 
 		std::cout<<"FRONT exception, queue is empty"<<"\n";
 		throw Poco::RuntimeException("Queue is empty");
 	}
-
-	T& rT = _q.front();
-
-	_Mutex.unlock();
-
-	return rT;
+	return (T&)(*_pfront);
 }
 
 
-template <class T> 
+template <typename T> 
 inline int ThreadSafeQueue<T>::size() {
 	return _q.size();
 }
 
-template <class T> 
+template <typename T> 
 inline bool ThreadSafeQueue<T>::empty() {
 	return _q.empty();
 }
