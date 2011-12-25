@@ -31,10 +31,24 @@ private:
 	PlayerThread* _pPlayer;
 
 	void waitTillDisconnected(); //Waits till fSpawned is false
+	bool _fClear;
 public:
+	/*
+	* Con/Destructor
+	*/
 	NetworkWriter(ThreadSafeQueue<string>&,ThreadSafeQueue<string>&,Poco::Net::StreamSocket&,PlayerThread*);
 	~NetworkWriter();
 
+	
+	/*
+	* Thread main
+	*/
 	void run();
+
+
+	/*
+	* Exception prevention method for clearing the write queues
+	*/
+	void clearQueues();
 };
 #endif

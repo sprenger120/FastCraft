@@ -29,6 +29,7 @@ _rlowQ(lowQ),
 	_rStrm(s),
 	_pPlayer(p)
 {
+	_fClear=false;
 }
 
 NetworkWriter::~NetworkWriter() {
@@ -39,6 +40,17 @@ void NetworkWriter::run() {
 		if (!_pPlayer->isSpawned()) {
 			Thread::sleep(50);
 			continue;
+		}
+
+
+		if (_fClear) {
+			_fClear=false;
+			if (!_rhighQ.empty()) {
+				_rhighQ.clear();
+			}
+			if(!_rlowQ.empty()) {
+				_rlowQ.clear();
+			}
 		}
 
 		try{
@@ -79,6 +91,7 @@ void NetworkWriter::run() {
 			}
 
 			string & rStr = _rlowQ.front();
+			Thread::sleep(10);
 
 			try {
 				_rStrm.sendBytes(rStr.c_str(),rStr.length()); //Send
@@ -107,8 +120,9 @@ void NetworkWriter::run() {
 
 			_rlowQ.pop();
 
-		}catch(Poco::RuntimeException) {
-			std::cout<<"exception"<<"\n";
+		}catch(Poco::RuntimeException& ex) {
+			std::cout<<"NetworkWriter::run exception:"<<ex.message()<<"\n";
+			waitTillDisconnected();
 			continue; //Queue exception
 		}
 	}
@@ -118,4 +132,8 @@ void NetworkWriter::waitTillDisconnected() {
 	while(_pPlayer->isSpawned()) {
 		Thread::sleep(50);
 	}
+}
+
+void NetworkWriter::clearQueues() {
+	_fClear=true;
 }
