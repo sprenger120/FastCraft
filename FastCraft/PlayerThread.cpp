@@ -45,19 +45,18 @@ _sName(""),
 	_sTemp(""),
 	_sConnectionHash(""),
 
-	_lowLevelSendQueue(),
-	_highLevelSendQueue(),
-	_lowNetwork(_lowLevelSendQueue,_Connection),
-	_highNetwork(_highLevelSendQueue,_Connection),
-	_NetworkWriter(_lowLevelSendQueue,_highLevelSendQueue,_Connection,this),
+
+	_NetworkOutRoot(),
+	_NetworkInRoot(_Connection),
+	_NetworkWriter(_NetworkOutRoot.getLowQueue(),_NetworkOutRoot.getHighQueue(),_Connection,this),
 
 	_Web_Session("session.minecraft.net"),
 	_Web_Response(),
 	_Flags(),
 	_Rand(),
-	_ChunkProvider(rChunkRoot,_lowNetwork,rPackingThread,this),
+	_ChunkProvider(rChunkRoot,_NetworkOutRoot,rPackingThread,this),
 	_threadNetworkWriter("NetworkWriter"),
-	_Inventory(_highNetwork),
+	_Inventory(_NetworkOutRoot,_NetworkInRoot),
 	_vSpawnedEntities(0)
 {
 	_Coordinates.OnGround = false;
@@ -138,7 +137,7 @@ void PlayerThread::run() {
 			Interval_HandleMovement();
 			Inverval_Movement();
 
-			iPacket = _lowNetwork.readByte();
+			iPacket = _NetworkInRoot.readByte();
 
 			//cout<<"Package recovered:"<<std::hex<<int(iPacket)<<"\n";
 			switch (iPacket) {
@@ -269,7 +268,7 @@ void PlayerThread::Connect(Poco::Net::StreamSocket& Sock) {
 void PlayerThread::Kick(string sReason) {
 	_sTemp.clear();
 	_sTemp.append<unsigned char>(1,0xFF);
-	NetworkIO::packString(_sTemp,sReason);
+	NetworkOut::addString(_sTemp,sReason);
 
 	try {
 		_Connection.sendBytes(_sTemp.c_str(),_sTemp.length());
@@ -388,46 +387,40 @@ void PlayerThread::Interval_HandleMovement() {
 }
 
 void PlayerThread::sendTime() {
-	_highNetwork.Lock();
-	_highNetwork.addByte(0x4);
-	_highNetwork.addInt64(ServerTime::getTime());
-	_highNetwork.Flush();
-	_highNetwork.UnLock();
+	NetworkOut Out = _NetworkOutRoot.New();
+	Out.addByte(0x4);
+	Out.addInt64(ServerTime::getTime());
+	Out.Finalize(FC_QUEUE_HIGH);
 }
 
 long long PlayerThread::getTicks() {
 	return _iThreadTicks;
 }
 
-NetworkIO& PlayerThread::getConnection() {
-	return _lowNetwork;
-}
 
 void PlayerThread::sendClientPosition() {
-	_highNetwork.Lock();
+	NetworkOut Out = _NetworkOutRoot.New();
 
-	_highNetwork.addByte(0x0D);
-	_highNetwork.addDouble(_Coordinates.X);
-	_highNetwork.addDouble(_Coordinates.Stance);
-	_highNetwork.addDouble(_Coordinates.Y);
-	_highNetwork.addDouble(_Coordinates.Z);
-	_highNetwork.addFloat(_Coordinates.Yaw);
-	_highNetwork.addFloat(_Coordinates.Pitch);
-	_highNetwork.addBool(_Coordinates.OnGround);
-	_highNetwork.Flush();
-
-	_highNetwork.UnLock();
+	Out.addByte(0x0D);
+	Out.addDouble(_Coordinates.X);
+	Out.addDouble(_Coordinates.Stance);
+	Out.addDouble(_Coordinates.Y);
+	Out.addDouble(_Coordinates.Z);
+	Out.addFloat(_Coordinates.Yaw);
+	Out.addFloat(_Coordinates.Pitch);
+	Out.addBool(_Coordinates.OnGround);
+	
+	Out.Finalize(FC_QUEUE_HIGH);
 }
 
 void PlayerThread::Interval_KeepAlive() {
 	if (_TimeJobs.LastKeepAliveSend + FC_INTERVAL_KEEPACTIVE <= getTicks()) { //Send new keep alive
 		_TimeJobs.LastKeepAliveSend = getTicks();
 
-		_highNetwork.Lock();
-		_highNetwork.addByte(0x0);
-		_highNetwork.addInt(_Rand.next());
-		_highNetwork.Flush();
-		_highNetwork.UnLock();
+		NetworkOut Out = _NetworkOutRoot.New();
+		Out.addByte(0x0);
+		Out.addInt(_Rand.next());
+		Out.Finalize(FC_QUEUE_HIGH);
 	}
 }
 
@@ -437,13 +430,12 @@ void PlayerThread::UpdateHealth(short iHealth,short iFood,float nSaturation) {
 	_iFood = fixRange<short>(iFood,0,20);
 	_nSaturation = fixRange<float>(iFood,0.0F,5.0F);
 
-	_highNetwork.Lock();
-	_highNetwork.addByte(0x8);
-	_highNetwork.addShort(_iHealth);
-	_highNetwork.addShort(_iFood);
-	_highNetwork.addFloat(_nSaturation);
-	_highNetwork.Flush();
-	_highNetwork.UnLock();
+	NetworkOut Out = _NetworkOutRoot.New();
+	Out.addByte(0x8);
+	Out.addShort(_iHealth);
+	Out.addShort(_iFood);
+	Out.addFloat(_nSaturation);
+	Out.Finalize(FC_QUEUE_HIGH);
 }
 
 
@@ -466,29 +458,21 @@ bool PlayerThread::isSpawned() {
 }
 
 
-/*
-* QUEUE
-*/
-void PlayerThread::appendQueue(string& rString) {
-	_lowLevelSendQueue.push(rString);
-}
-
 void PlayerThread::insertChat(string rString) {
-	_highNetwork.Lock();
-	_highNetwork.addByte(0x3);
-	_highNetwork.addString(rString);
-	_highNetwork.Flush();
-	_highNetwork.UnLock();
+	NetworkOut Out = _NetworkOutRoot.New();
+	Out.addByte(0x3);
+	Out.addString(rString);
+	Out.Finalize(FC_QUEUE_HIGH);
 }
 
 void PlayerThread::ClearQueue() {
-	_highLevelSendQueue.clear();
-	_lowLevelSendQueue.clear();
+	_NetworkOutRoot.getHighQueue().clear();
+	_NetworkOutRoot.getLowQueue().clear();
 }
 
 void PlayerThread::ProcessQueue() {			
-	while (!_highLevelSendQueue.empty()) {
-		string & rJob = _highLevelSendQueue.front();
+	while (!_NetworkOutRoot.getHighQueue().empty()) {
+		string & rJob = _NetworkOutRoot.getHighQueue().front();
 
 		try {
 			_Connection.sendBytes(rJob.c_str(),rJob.length()); //Send
@@ -510,7 +494,7 @@ void PlayerThread::ProcessQueue() {
 		}
 
 
-		_highLevelSendQueue.pop();
+		_NetworkOutRoot.getHighQueue().pop();
 	}
 }
 
@@ -520,7 +504,7 @@ void PlayerThread::ProcessQueue() {
 */
 
 void PlayerThread::Packet0_KeepAlive() {
-	_lowNetwork.readInt(); //Get id
+	_NetworkInRoot.readInt(); //Get id
 }
 
 void PlayerThread::Packet1_Login() {
@@ -528,7 +512,7 @@ void PlayerThread::Packet1_Login() {
 
 	try {
 		//Check minecraft version
-		iProtocolVersion = _lowNetwork.readInt(); //Protocol Version
+		iProtocolVersion = _NetworkInRoot.readInt(); //Protocol Version
 
 
 		if (iProtocolVersion > SettingsHandler::getSupportedProtocolVersion()) {
@@ -541,8 +525,10 @@ void PlayerThread::Packet1_Login() {
 			return;
 		}
 
-		_lowNetwork.readString(); //Username (already known)	
-		_lowNetwork.read(16);
+		_NetworkInRoot.readString(); //Username (already known)	
+		_NetworkInRoot.readInt64();
+		_NetworkInRoot.readInt();
+		_NetworkInRoot.readInt(); //This are 4 unused byte fields
 
 		//Check premium 
 		if (SettingsHandler::isOnlineModeActivated()) {
@@ -594,26 +580,26 @@ void PlayerThread::Packet1_Login() {
 		* Response
 		*/
 		//Login response
-		_highNetwork.Lock();
+		NetworkOut Out = _NetworkOutRoot.New();
 
-		_highNetwork.addByte(0x1);
-		_highNetwork.addInt(_iEntityID);
-		_highNetwork.addString("");
-		_highNetwork.addInt64(SettingsHandler::getMapSeed());
-		_highNetwork.addInt(SettingsHandler::getServerMode());
-		_highNetwork.addByte(0);
-		_highNetwork.addByte(SettingsHandler::getDifficulty());
-		_highNetwork.addByte(SettingsHandler::getWorldHeight());
-		_highNetwork.addByte((unsigned char)SettingsHandler::getPlayerSlotCount());
-		_highNetwork.Flush();
+		Out.addByte(0x1);
+		Out.addInt(_iEntityID);
+		Out.addString("");
+		Out.addInt64(SettingsHandler::getMapSeed());
+		Out.addInt(SettingsHandler::getServerMode());
+		Out.addByte(0);
+		Out.addByte(SettingsHandler::getDifficulty());
+		Out.addByte(SettingsHandler::getWorldHeight());
+		Out.addByte((unsigned char)SettingsHandler::getPlayerSlotCount());
+		
+		Out.Finalize(FC_QUEUE_HIGH);
 
 		//compass
-		_highNetwork.addByte(0x6);
-		_highNetwork.addInt(0); //X
-		_highNetwork.addInt(0); // Y
-		_highNetwork.addInt(0); // Z 
-		_highNetwork.Flush();
-		_highNetwork.UnLock();
+		Out.addByte(0x6);
+		Out.addInt(0); //X
+		Out.addInt(0); // Y
+		Out.addInt(0); // Z 
+		Out.Finalize(FC_QUEUE_HIGH);
 
 		//Time
 		sendTime(); 
@@ -685,7 +671,7 @@ void PlayerThread::Packet1_Login() {
 
 void PlayerThread::Packet2_Handshake() {
 	try {
-		_sName = _highNetwork.readString();
+		_sName = _NetworkInRoot.readString();
 	} catch(Poco::RuntimeException) {
 		Disconnect(FC_LEAVE_OTHER);
 	}
@@ -696,16 +682,15 @@ void PlayerThread::Packet2_Handshake() {
 	}
 
 	//Send response (Connection Hash)
-	_highNetwork.Lock();
-	_highNetwork.addByte(0x02);
+	NetworkOut Out = _NetworkOutRoot.New();
+	Out.addByte(0x02);
 
 	if (SettingsHandler::isOnlineModeActivated()) {
-		_highNetwork.addString(generateConnectionHash());
+		Out.addString(generateConnectionHash());
 	}else{
-		_highNetwork.addString("-");
+		Out.addString("-");
 	}
-	_highNetwork.Flush();
-	_highNetwork.UnLock();
+	Out.Finalize(FC_QUEUE_HIGH);
 
 	ProcessQueue();
 }
@@ -714,7 +699,7 @@ void PlayerThread::Packet3_Chat() {
 	string Message("");
 
 	try {
-		Message = _lowNetwork.readString();
+		Message = _NetworkInRoot.readString();
 		if (Message.length() > 100) {
 			Kick("Received string too long");
 			return;
@@ -733,7 +718,7 @@ void PlayerThread::Packet3_Chat() {
 
 void PlayerThread::Packet10_Player() {
 	try {
-		_Coordinates.OnGround = _lowNetwork.readBool();
+		_Coordinates.OnGround = _NetworkInRoot.readBool();
 	} catch(Poco::RuntimeException) {
 		Disconnect(FC_LEAVE_OTHER);
 	}
@@ -744,11 +729,11 @@ void PlayerThread::Packet11_Position() {
 
 	try {
 		//Read coordinates in a temporary variable
-		TmpCoord.X = _lowNetwork.readDouble();
-		TmpCoord.Y = _lowNetwork.readDouble();
-		TmpCoord.Stance = _lowNetwork.readDouble();
-		TmpCoord.Z = _lowNetwork.readDouble();
-		TmpCoord.OnGround = _lowNetwork.readBool();
+		TmpCoord.X = _NetworkInRoot.readDouble();
+		TmpCoord.Y = _NetworkInRoot.readDouble();
+		TmpCoord.Stance = _NetworkInRoot.readDouble();
+		TmpCoord.Z = _NetworkInRoot.readDouble();
+		TmpCoord.OnGround = _NetworkInRoot.readBool();
 
 		//if X and Z ==  8.5000000000000000 , there is crap in the tcp buffer -> ignore it
 		if (TmpCoord.X == 8.5000000000000000 && TmpCoord.Z == 8.5000000000000000) { 
@@ -767,9 +752,9 @@ void PlayerThread::Packet11_Position() {
 
 void PlayerThread::Packet12_Look() {
 	try {
-		_Coordinates.Yaw = _lowNetwork.readFloat();
-		_Coordinates.Pitch = _lowNetwork.readFloat();
-		_Coordinates.OnGround = _lowNetwork.readBool();
+		_Coordinates.Yaw = _NetworkInRoot.readFloat();
+		_Coordinates.Pitch = _NetworkInRoot.readFloat();
+		_Coordinates.OnGround = _NetworkInRoot.readBool();
 	} catch(Poco::RuntimeException) {
 		Disconnect(FC_LEAVE_OTHER);
 	}
@@ -780,13 +765,13 @@ void PlayerThread::Packet13_PosAndLook() {
 
 	//Read coordinates in a temporary variable
 	try {
-		TmpCoord.X = _lowNetwork.readDouble();
-		TmpCoord.Y = _lowNetwork.readDouble();
-		TmpCoord.Stance = _lowNetwork.readDouble();
-		TmpCoord.Z = _lowNetwork.readDouble();
-		TmpCoord.Yaw = _lowNetwork.readFloat();
-		TmpCoord.Pitch = _lowNetwork.readFloat();
-		TmpCoord.OnGround = _lowNetwork.readBool();
+		TmpCoord.X = _NetworkInRoot.readDouble();
+		TmpCoord.Y = _NetworkInRoot.readDouble();
+		TmpCoord.Stance = _NetworkInRoot.readDouble();
+		TmpCoord.Z = _NetworkInRoot.readDouble();
+		TmpCoord.Yaw = _NetworkInRoot.readFloat();
+		TmpCoord.Pitch = _NetworkInRoot.readFloat();
+		TmpCoord.OnGround = _NetworkInRoot.readBool();
 
 		//if X and Z ==  8.5000000000000000 , there is crap in the tcp buffer -> ignore it
 		if (TmpCoord.X == 8.5000000000000000 && TmpCoord.Z == 8.5000000000000000) { 
@@ -812,7 +797,7 @@ void PlayerThread::Packet254_ServerListPing() {
 
 void PlayerThread::Packet255_Disconnect() {
 	try {
-		_sLeaveMessage = _lowNetwork.readString();
+		_sLeaveMessage = _NetworkInRoot.readString();
 	} catch(Poco::RuntimeException) {
 		Disconnect(FC_LEAVE_OTHER);
 	}
@@ -832,35 +817,18 @@ void PlayerThread::PlayerInfoList(bool fSpawn,string Name) {
 		_Spawned_PlayerInfoList--;
 	}
 
-	_highNetwork.Lock();
-	_highNetwork.addByte(0xc9);
-	_highNetwork.addString(Name);
-	_highNetwork.addBool(fSpawn);
-	_highNetwork.addShort(10);
-	_highNetwork.Flush();
-	_highNetwork.UnLock();
-}
-
-void PlayerThread::sendLowClientPosition() {
-	_lowNetwork.Lock();
-
-	_lowNetwork.addByte(0x0D);
-	_lowNetwork.addDouble(_Coordinates.X);
-	_lowNetwork.addDouble(_Coordinates.Stance);
-	_lowNetwork.addDouble(_Coordinates.Y);
-	_lowNetwork.addDouble(_Coordinates.Z);
-	_lowNetwork.addFloat(_Coordinates.Yaw);
-	_lowNetwork.addFloat(_Coordinates.Pitch);
-	_lowNetwork.addBool(_Coordinates.OnGround);
-	_lowNetwork.Flush();
-
-	_lowNetwork.UnLock();
+	NetworkOut Out = _NetworkOutRoot.New();
+	Out.addByte(0xc9);
+	Out.addString(Name);
+	Out.addBool(fSpawn);
+	Out.addShort(10);
+	Out.Finalize(FC_QUEUE_HIGH);
 }
 
 void PlayerThread::Packet16_HoldingChange() {
 	short iSlot;
 	try{
-		iSlot = _lowNetwork.readShort();
+		iSlot = _NetworkInRoot.readShort();
 		if (iSlot < 0 || iSlot > 8) {
 			Kick("Illegal holding slotID");
 			return;
@@ -873,7 +841,7 @@ void PlayerThread::Packet16_HoldingChange() {
 
 void PlayerThread::Packet101_CloseWindow() {
 	try {	
-		char iWinID = _lowNetwork.readByte();
+		char iWinID = _NetworkInRoot.readByte();
 		if (iWinID == 0) {
 			_Inventory.HandleWindowClose(_pPoolMaster);
 		}
@@ -921,22 +889,21 @@ void PlayerThread::spawnPlayer(int ID,EntityPlayer& rPlayer) {
 
 	_vSpawnedEntities.push_back(Entry);
 
-	_highNetwork.Lock();
-	_highNetwork.addByte(0x14);
-	_highNetwork.addInt(ID);
-	_highNetwork.addString(rPlayer._sName);
+	NetworkOut Out = _NetworkOutRoot.New();
+	Out.addByte(0x14);
+	Out.addInt(ID);
+	Out.addString(rPlayer._sName);
 
-	_highNetwork.addInt( (int) (rPlayer._Coordinates.X * 32.0));
-	_highNetwork.addInt( (int) (rPlayer._Coordinates.Y * 32.0));
-	_highNetwork.addInt( (int) (rPlayer._Coordinates.Z * 32.0));
+	Out.addInt( (int) (rPlayer._Coordinates.X * 32.0));
+	Out.addInt( (int) (rPlayer._Coordinates.Y * 32.0));
+	Out.addInt( (int) (rPlayer._Coordinates.Z * 32.0));
 
-	_highNetwork.addByte( (char) rPlayer._Coordinates.Yaw);
-	_highNetwork.addByte( (char) rPlayer._Coordinates.Pitch);
+	Out.addByte( (char) rPlayer._Coordinates.Yaw);
+	Out.addByte( (char) rPlayer._Coordinates.Pitch);
 
-	_highNetwork.addShort(267); //rPlayer._aHeldItems[0]);
+	Out.addShort(267); //rPlayer._aHeldItems[0]);
 
-	_highNetwork.Flush();
-	_highNetwork.UnLock();
+	Out.Finalize(FC_QUEUE_HIGH);
 }
 
 bool PlayerThread::isEntitySpawned(int ID) {
@@ -972,7 +939,7 @@ void PlayerThread::updateEntityPosition(int ID,EntityCoordinates Coordinates) {
 		return; //Coordinates are equal -> no update
 	}
 
-	_highNetwork.Lock();
+	NetworkOut Out = _NetworkOutRoot.New();
 
 	double dX =  Coordinates.X - _vSpawnedEntities[id].oldPosition.X;
 	double dY =  Coordinates.Y - _vSpawnedEntities[id].oldPosition.Y;
@@ -983,13 +950,12 @@ void PlayerThread::updateEntityPosition(int ID,EntityCoordinates Coordinates) {
 	if(_vSpawnedEntities[id].oldPosition.LookEqual(Coordinates)) {	//Player just moved around and doesn't change camera 
 		if (fabs(dX) <= 4.0 && fabs(dY) <= 4.0 && fabs(dZ) <= 4.0 ) {//Movement under 4 blocks
 			//relative move
-			_highNetwork.addByte(0x1F);
-			_highNetwork.addInt(ID);
-			_highNetwork.addByte(   (char) (dX*32.0) );
-			_highNetwork.addByte(   (char) (dY*32.0) );
-			_highNetwork.addByte(   (char) (dZ*32.0) );
-			_highNetwork.Flush();
-			_highNetwork.UnLock();
+			Out.addByte(0x1F);
+			Out.addInt(ID);
+			Out.addByte(   (char) (dX*32.0) );
+			Out.addByte(   (char) (dY*32.0) );
+			Out.addByte(   (char) (dZ*32.0) );
+			Out.Finalize(FC_QUEUE_HIGH);
 			_vSpawnedEntities[id].oldPosition = Coordinates;
 			return;
 		}else {
@@ -997,26 +963,24 @@ void PlayerThread::updateEntityPosition(int ID,EntityCoordinates Coordinates) {
 		}
 	}else{ //player moved camera
 		if (_vSpawnedEntities[id].oldPosition.CoordinatesEqual(Coordinates)) { //Just moved camera
-			_highNetwork.addByte(0x20);
-			_highNetwork.addInt(ID);
-			_highNetwork.addByte( (char) ((Coordinates.Yaw * 256.0F) / 360.0F) );
-			_highNetwork.addByte( (char) ((Coordinates.Pitch * 256.0F) / 360.0F) );
-			_highNetwork.Flush();
-			_highNetwork.UnLock();
+			Out.addByte(0x20);
+			Out.addInt(ID);
+			Out.addByte( (char) ((Coordinates.Yaw * 256.0F) / 360.0F) );
+			Out.addByte( (char) ((Coordinates.Pitch * 256.0F) / 360.0F) );
+			Out.Finalize(FC_QUEUE_HIGH);
 			_vSpawnedEntities[id].oldPosition = Coordinates;
 			return;
 		}
 		if (fabs(dX) <= 4.0 && fabs(dY) <= 4.0 && fabs(dZ) <= 4.0 ) {//Movement under 4 blocks
 			//relative move + camera
-			_highNetwork.addByte(0x21);
-			_highNetwork.addInt(ID);
-			_highNetwork.addByte(   (char) (dX*32.0) );
-			_highNetwork.addByte(   (char) (dY*32.0) );
-			_highNetwork.addByte(   (char) (dZ*32.0) );
-			_highNetwork.addByte( (char) ((Coordinates.Yaw * 256.0F) / 360.0F) );
-			_highNetwork.addByte( (char) ((Coordinates.Pitch * 256.0F) / 360.0F) );
-			_highNetwork.Flush();
-			_highNetwork.UnLock();
+			Out.addByte(0x21);
+			Out.addInt(ID);
+			Out.addByte(   (char) (dX*32.0) );
+			Out.addByte(   (char) (dY*32.0) );
+			Out.addByte(   (char) (dZ*32.0) );
+			Out.addByte( (char) ((Coordinates.Yaw * 256.0F) / 360.0F) );
+			Out.addByte( (char) ((Coordinates.Pitch * 256.0F) / 360.0F) );
+			Out.Finalize(FC_QUEUE_HIGH);
 			_vSpawnedEntities[id].oldPosition = Coordinates;
 			return;
 		}else {
@@ -1024,19 +988,18 @@ void PlayerThread::updateEntityPosition(int ID,EntityCoordinates Coordinates) {
 		}
 	}
 		
-	_highNetwork.addByte(0x22);
+	Out.addByte(0x22);
 
-	_highNetwork.addInt(ID);
+	Out.addInt(ID);
 
-	_highNetwork.addInt( (int) (Coordinates.X * 32.0));
-	_highNetwork.addInt( (int) (Coordinates.Y * 32.0));
-	_highNetwork.addInt( (int) (Coordinates.Z * 32.0));
+	Out.addInt( (int) (Coordinates.X * 32.0));
+	Out.addInt( (int) (Coordinates.Y * 32.0));
+	Out.addInt( (int) (Coordinates.Z * 32.0));
 
-	_highNetwork.addByte( (char) ((Coordinates.Yaw * 256.0F) / 360.0F) );
-	_highNetwork.addByte( (char) ((Coordinates.Pitch * 256.0F) / 360.0F) );
+	Out.addByte( (char) ((Coordinates.Yaw * 256.0F) / 360.0F) );
+	Out.addByte( (char) ((Coordinates.Pitch * 256.0F) / 360.0F) );
 
-	_highNetwork.Flush();
-	_highNetwork.UnLock();
+	Out.Finalize(FC_QUEUE_HIGH);
 
 	_vSpawnedEntities[id].oldPosition = Coordinates;
 }
@@ -1060,11 +1023,10 @@ void PlayerThread::despawnEntity(int ID) {
 
 	_vSpawnedEntities.erase(_vSpawnedEntities.begin()+id);
 
-	_highNetwork.Lock();
-	_highNetwork.addByte(0x1D);
-	_highNetwork.addInt(ID);
-	_highNetwork.Flush();
-	_highNetwork.UnLock();
+	NetworkOut Out = _NetworkOutRoot.New();
+	Out.addByte(0x1D);
+	Out.addInt(ID);
+	Out.Finalize(FC_QUEUE_HIGH);
 }
 
 int PlayerThread::getEntityID() {
@@ -1073,8 +1035,8 @@ int PlayerThread::getEntityID() {
 
 void PlayerThread::Packet18_Animation() {
 	try {
-		int iEID = _lowNetwork.readInt();
-		char iAnimID = _lowNetwork.readByte();
+		int iEID = _NetworkInRoot.readInt();
+		char iAnimID = _NetworkInRoot.readByte();
 
 		if (iEID != _iEntityID){
 			Kick("You can't use other EntityID's as yours"); 
@@ -1089,8 +1051,8 @@ void PlayerThread::Packet18_Animation() {
 
 void PlayerThread::Packet19_EntityAction() {
 	try {
-		int iEID = _lowNetwork.readInt();
-		char iActionID = _lowNetwork.readByte();
+		int iEID = _NetworkInRoot.readInt();
+		char iActionID = _NetworkInRoot.readByte();
 
 		if (iEID != _iEntityID){
 			Kick("You can't use other EntityID's as yours"); 
@@ -1108,13 +1070,12 @@ void PlayerThread::playAnimationOnEntity(int ID,char AnimID) {
 		throw Poco::RuntimeException("Not spawned!");
 	}
 
-	_highNetwork.Lock();
-	_highNetwork.addByte(0x12);
-	_highNetwork.addInt(ID);
-	_highNetwork.addByte(AnimID);
+	NetworkOut Out = _NetworkOutRoot.New();
+	Out.addByte(0x12);
+	Out.addInt(ID);
+	Out.addByte(AnimID);
 
-	_highNetwork.Flush();
-	_highNetwork.UnLock();
+	Out.Finalize(FC_QUEUE_HIGH);
 }
 
 /*

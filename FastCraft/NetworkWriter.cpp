@@ -45,7 +45,6 @@ void NetworkWriter::run() {
 			//Process high level queue
 			while (!_rhighQ.empty()) {
 				string & rStr = _rhighQ.front();
-
 				try {
 					_rStrm.sendBytes(rStr.c_str(),rStr.length()); //Send
 				}catch(Poco::Net::ConnectionAbortedException) {
@@ -75,6 +74,7 @@ void NetworkWriter::run() {
 
 
 			if (_rlowQ.empty()) {
+				Thread::sleep(10);
 				continue;
 			}
 
@@ -108,6 +108,7 @@ void NetworkWriter::run() {
 			_rlowQ.pop();
 
 		}catch(Poco::RuntimeException) {
+			std::cout<<"exception"<<"\n";
 			continue; //Queue exception
 		}
 	}

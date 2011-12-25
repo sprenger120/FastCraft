@@ -15,9 +15,11 @@ GNU General Public License for more details.
 
 #include "PackingThread.h"
 #include <Poco/Thread.h>
-#include "NetworkIO.h"
-
+#include "NetworkOutRoot.h"
+#include "NetworkOut.h"
+#include "Constants.h"
 #include <iostream>
+
 using Poco::Thread;
 
 PackingThread::PackingThread() : 
@@ -48,16 +50,16 @@ void PackingThread::run() {
 }
 
 void PackingThread::ProcessJob(PackJob& rJob) {	
-	//prechunk
-	rJob.pNetwork->Lock();
+	NetworkOut Out = rJob.pNetwork->New();
 
-	rJob.pNetwork->addByte(0x33);
-	rJob.pNetwork->addInt((rJob.X)<<4);
-	rJob.pNetwork->addShort(0);
-	rJob.pNetwork->addInt((rJob.Z)<<4);
-	rJob.pNetwork->addByte(15);
-	rJob.pNetwork->addByte(127);
-	rJob.pNetwork->addByte(15);
+
+	Out.addByte(0x33);
+	Out.addInt((rJob.X)<<4);
+	Out.addShort(0);
+	Out.addInt((rJob.Z)<<4);
+	Out.addByte(15);
+	Out.addByte(127);
+	Out.addByte(15);
 
 
 	//deflate
@@ -68,15 +70,14 @@ void PackingThread::ProcessJob(PackJob& rJob) {
 
 	_deflatingStrm.flush();
 
-	rJob.pNetwork->addInt(_stringStrm.str().length());
-	rJob.pNetwork->Str().append(_stringStrm.str());
+	Out.addInt(_stringStrm.str().length());
+	Out.getStr().append(_stringStrm.str());
 
 
 	_stringStrm.clear();
 	_deflatingStrm.clear();
 
-	rJob.pNetwork->Flush();
-	rJob.pNetwork->UnLock();
+	Out.Finalize(FC_QUEUE_LOW);
 }
 
 void PackingThread::AddJob(PackJob& rJob) {

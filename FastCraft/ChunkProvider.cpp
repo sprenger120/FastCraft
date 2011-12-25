@@ -18,12 +18,14 @@ GNU General Public License for more details.
 #include <Poco/DeflatingStream.h>
 #include <Poco/Exception.h>
 #include "Structs.h"
-#include "NetworkIO.h"
+#include "NetworkOutRoot.h"
+#include "NetworkOut.h"
 #include "PlayerThread.h"
 #include "ChunkMath.h"
 #include "ChunkRoot.h"
 #include "PackingThread.h"
 #include "SettingsHandler.h"
+#include "Constants.h"
 
 using std::cout;
 using std::endl;
@@ -32,9 +34,9 @@ using std::stringstream;
 using Poco::DeflatingOutputStream;
 
 
-ChunkProvider::ChunkProvider(ChunkRoot& rChunkRoot,NetworkIO& rNetworkIO,PackingThread& rPackingThread,PlayerThread* pPlayer) :
+ChunkProvider::ChunkProvider(ChunkRoot& rChunkRoot,NetworkOutRoot& rNetwork,PackingThread& rPackingThread,PlayerThread* pPlayer) :
 _rChunkRoot(rChunkRoot),
-	_rNetwork(rNetworkIO),
+	_rNetwork(rNetwork),
 	_rPackingThread(rPackingThread),
 	_vSpawnedChunks(0)
 {
@@ -84,25 +86,25 @@ bool ChunkProvider::isChunkListEmpty() {
 
 
 void ChunkProvider::sendSpawn(int X,int Z) {
-	_rNetwork.Lock();
-
-	_rNetwork.addByte(0x32);
-	_rNetwork.addInt(X);
-	_rNetwork.addInt(Z);
-	_rNetwork.addBool(true);
-	_rNetwork.Flush();
-
-	_rNetwork.UnLock();
+	NetworkOut Out = _rNetwork.New();
+	
+	Out.addByte(0x32);
+	Out.addInt(X);
+	Out.addInt(Z);
+	Out.addBool(true);
+	
+	Out.Finalize(FC_QUEUE_HIGH);
 }
 
 void ChunkProvider::sendDespawn(int X,int Z){
-	_rNetwork.Lock();
-	_rNetwork.addByte(0x32);
-	_rNetwork.addInt(X);
-	_rNetwork.addInt(Z);
-	_rNetwork.addBool(false);
-	_rNetwork.Flush();
-	_rNetwork.UnLock();
+	NetworkOut Out = _rNetwork.New();
+
+	Out.addByte(0x32);
+	Out.addInt(X);
+	Out.addInt(Z);
+	Out.addBool(false);
+
+	Out.Finalize(FC_QUEUE_HIGH);
 }
 
 
@@ -237,7 +239,7 @@ bool ChunkProvider::CheckChunkCircle() {
 	}
 
 	if (_fNewPlayer) { //Prevent suffocation if chunk who player stands on wasn't transmitted yet
-		_pPlayer->sendLowClientPosition();
+		//_pPlayer->sendLowClientPosition();
 		_fNewPlayer = false;
 	}
 

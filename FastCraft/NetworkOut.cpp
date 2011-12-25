@@ -171,4 +171,5 @@ void NetworkOut::Finalize(char iType) {
 	}
 	string & rStr = _sNetworkBuffer;
 	_pMaster->Add(iType,rStr);
+	_sNetworkBuffer.clear();
 }

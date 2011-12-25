@@ -27,7 +27,9 @@ GNU General Public License for more details.
 #include <vector>
 #include "ThreadSafeQueue.h"
 #include "Structs.h"
-#include "NetworkIO.h"
+#include "NetworkIn.h"
+#include "NetworkOutRoot.h"
+#include "NetworkOut.h"
 #include "ChunkProvider.h"
 #include "EntityFlags.h"
 #include "NetworkWriter.h"
@@ -58,6 +60,15 @@ struct EntityListEntry {
 	EntityCoordinates oldPosition;
 };
 
+/*
+NetworkOut Out = _NetworkOutRoot.New();
+
+
+Out.Finalize(FC_QUEUE_HIGH);
+
+_NetworkInRoot
+*/
+
 class PlayerThread : public Poco::Runnable {
 private:
 	//Player specific data
@@ -80,10 +91,8 @@ private:
 	//TCP stuff
 	string _sTemp;
 	Poco::Net::StreamSocket _Connection;
-	ThreadSafeQueue<string> _lowLevelSendQueue;
-	ThreadSafeQueue<string> _highLevelSendQueue;
-	NetworkIO _lowNetwork;	
-	NetworkIO _highNetwork;
+	NetworkOutRoot _NetworkOutRoot;
+	NetworkIn _NetworkInRoot;
 
 	NetworkWriter _NetworkWriter;
 	Poco::Thread _threadNetworkWriter;
@@ -192,13 +201,6 @@ public:
 
 
 	/*
-	* Returns a reference to player's NetworkIO object
-	* For right NetworkIO handling, have a look in NetworkIO.h
-	*/
-	NetworkIO& getConnection();
-
-
-	/*
 	* Returns Players coordinates and look
 	*/
 	EntityCoordinates getCoordinates();
@@ -296,13 +298,6 @@ public:
 	* Use only for crouching, leaving a bed, or sprinting!
 	*/
 	//void playActionOnEntity(int,char);
-
-	/*
-	* These are internal functions 
-	* DONT USE THEM
-	*/
-	void sendLowClientPosition();
-	void appendQueue(string&);
 private:
 	//Queue
 	void ClearQueue();

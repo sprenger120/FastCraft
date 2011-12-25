@@ -13,7 +13,7 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 */
 #include "AcceptThread.h" 
-#include "NetworkIO.h"
+#include "NetworkOut.h"
 #include "SettingsHandler.h"
 #include "PlayerPool.h"
 #include <Poco/Net/ServerSocket.h>
@@ -29,7 +29,7 @@ AcceptThread::AcceptThread(PlayerPool& rPlayerPool):
 	_ServerFullMsg("")
 {
 	_ServerFullMsg.append<unsigned char>(1,0xFF);
-	NetworkIO::packString(_ServerFullMsg,"Server full!");
+	NetworkOut::addString(_ServerFullMsg,"Server full!");
 }
 
 AcceptThread::~AcceptThread() {

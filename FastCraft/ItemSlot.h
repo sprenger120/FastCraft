@@ -20,7 +20,7 @@ GNU General Public License for more details.
 #include "Structs.h"
 
 using std::vector;
-class NetworkIO;
+class NetworkIn;
 
 /*
 Class Note: If you change something with set... functions, it won't be sync with client
@@ -70,7 +70,7 @@ public:
 	Parameter:
 	@1 : NetworkIO reference
 	*/
-	ItemSlot(NetworkIO&);
+	ItemSlot(NetworkIn&);
 
 
 	/*
@@ -181,6 +181,6 @@ public:
 	Parameter:
 	@1 : Reference to a vaild NetworkIO instance
 	*/
-	void readFromNetwork(NetworkIO&);
+	void readFromNetwork(NetworkIn&);
 };
 #endif

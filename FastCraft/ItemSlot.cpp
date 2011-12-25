@@ -16,7 +16,7 @@ GNU General Public License for more details.
 #include "ItemSlot.h"
 #include "ItemInfoStorage.h"
 #include <Poco/Exception.h>
-#include "NetworkIO.h"
+#include "NetworkIn.h"
 
 ItemSlot::ItemSlot(): 
 _vEnchantments(0)
@@ -107,7 +107,7 @@ _vEnchantments(0)
 	}
 }
 
-ItemSlot::ItemSlot(NetworkIO& rNetwork) {
+ItemSlot::ItemSlot(NetworkIn& rNetwork) {
 	try {
 		readFromNetwork(rNetwork);
 	} catch(Poco::RuntimeException& ex) {
@@ -222,7 +222,7 @@ bool ItemSlot::isEmpty() {
 	}
 }
 
-void ItemSlot::readFromNetwork(NetworkIO& rNetwork) {
+void ItemSlot::readFromNetwork(NetworkIn& rNetwork) {
 	try {
 	_iItemID = rNetwork.readShort();
 	if (_iItemID == -1) { //Slot is empty

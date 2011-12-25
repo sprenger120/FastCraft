@@ -13,7 +13,9 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 */
 #include "PlayerInventory.h"
-#include "NetworkIO.h"
+#include "NetworkOutRoot.h"
+#include "NetworkOut.h"
+#include "NetworkIn.h"
 #include "PlayerThread.h"
 #include "ItemInfoStorage.h"
 #include "ItemSlot.h"
@@ -22,10 +24,11 @@ GNU General Public License for more details.
 
 using std::cout;
 
-PlayerInventory::PlayerInventory(NetworkIO& rNtwk) :
+PlayerInventory::PlayerInventory(NetworkOutRoot& rNtwk,NetworkIn& rIn) :
 _vItemStack(45),
 	_rNetwork(rNtwk),
-	_ItemInHand()
+	_ItemInHand(),
+	_rNetworkIn(rIn)
 {
 	_iSlotSelection = 0;
 	clear();
@@ -36,24 +39,25 @@ PlayerInventory::~PlayerInventory() {
 }
 
 void PlayerInventory::synchronizeInventory() {
-	_rNetwork.Lock();
-	_rNetwork.addByte(0x68);
-	_rNetwork.addByte(0);
-	_rNetwork.addShort(45); //Slots in inventory
+	NetworkOut Out = _rNetwork.New();
+
+	Out.addByte(0x68);
+	Out.addByte(0);
+	Out.addShort(45); //Slots in inventory
 
 	//Build payload
 	short iItemID= 0;
 	for (int x=0;x<=_vItemStack.size()-1;x++){
 		iItemID = _vItemStack[x].getItemID();
 		if (iItemID == 0) { //Slot is empty
-			_rNetwork.addShort(-1);
+			Out.addShort(-1);
 		}else{
-			_rNetwork.addShort(iItemID);
-			_rNetwork.addByte(_vItemStack[x].getStackSize());
-			_rNetwork.addShort(_vItemStack[x].getUsage());
+			Out.addShort(iItemID);
+			Out.addByte(_vItemStack[x].getStackSize());
+			Out.addShort(_vItemStack[x].getUsage());
 
 			if (ItemInfoStorage::isDamageable(iItemID)) { //Item has a usage bar
-				_rNetwork.addShort(-1); //enchantments are not supported yet - a java nullpointer exception blocks the enchantment phrasing in client
+				Out.addShort(-1); //enchantments are not supported yet - a java nullpointer exception blocks the enchantment phrasing in client
 
 				/*
 				//Add nbt tag
@@ -67,10 +71,7 @@ void PlayerInventory::synchronizeInventory() {
 		}
 	}
 
-
-
-	_rNetwork.Flush();
-	_rNetwork.UnLock();
+	Out.Finalize(FC_QUEUE_HIGH);
 }
 
 void PlayerInventory::clear() {
@@ -120,13 +121,13 @@ void PlayerInventory::HandleWindowClick(PlayerThread* pPlayer) {
 	ItemSlot Item;
 
 	try{
-		iWindowID = _rNetwork.readByte();
-		iSlot = _rNetwork.readShort();
-		fRightClick = _rNetwork.readBool();
-		iActionNumber = _rNetwork.readShort();
-		fShift = _rNetwork.readBool();
+		iWindowID = _rNetworkIn.readByte();
+		iSlot = _rNetworkIn.readShort();
+		fRightClick = _rNetworkIn.readBool();
+		iActionNumber = _rNetworkIn.readShort();
+		fShift = _rNetworkIn.readBool();
 
-		Item.readFromNetwork(_rNetwork);
+		Item.readFromNetwork(_rNetworkIn);
 
 		//Check data
 		if (iWindowID != 0) {

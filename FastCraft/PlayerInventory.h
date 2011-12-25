@@ -19,7 +19,8 @@ GNU General Public License for more details.
 #include "ItemSlot.h"
 
 using std::vector;
-class NetworkIO;
+class NetworkOutRoot;
+class NetworkIn;
 class PlayerThread;
 class PlayerPool;
 
@@ -28,18 +29,17 @@ private:
 	vector<ItemSlot> _vItemStack;
 	ItemSlot _ItemInHand;
 	short _iSlotSelection;
-	NetworkIO& _rNetwork;
-
-	static const short _EnchantableItems[40];
-	static const short _DestructibleItems[49];
+	NetworkOutRoot& _rNetwork;
+	NetworkIn& _rNetworkIn;
 public:
 	/*
 	* Constructor
 
 	Parameter:
-	@1 : Refernce to a high level NetworkIO
+	@1 : Refernce to player's NetworkOutRoot
+	@2 : Reference to player's NetworkIn
 	*/
-	PlayerInventory(NetworkIO&);
+	PlayerInventory(NetworkOutRoot&,NetworkIn&);
 
 
 	/*

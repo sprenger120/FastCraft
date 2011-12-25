@@ -20,7 +20,7 @@ GNU General Public License for more details.
 #include "EntityCoordinates.h"
 #include <vector>
 
-class NetworkIO;
+class NetworkOutRoot;
 class ChunkRoot;
 class PackingThread;
 class PlayerThread;
@@ -35,11 +35,11 @@ private:
 
 	bool _fNewPlayer;
 	ChunkRoot& _rChunkRoot;
-	NetworkIO& _rNetwork;
+	NetworkOutRoot& _rNetwork;
 	PackingThread& _rPackingThread;
 	PlayerThread* _pPlayer;
 public:
-	ChunkProvider(ChunkRoot&,NetworkIO&,PackingThread&,PlayerThread*);
+	ChunkProvider(ChunkRoot&,NetworkOutRoot&,PackingThread&,PlayerThread*);
 	~ChunkProvider();
 
 	void HandleNewPlayer();

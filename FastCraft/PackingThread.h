@@ -21,12 +21,12 @@ GNU General Public License for more details.
 #include <Poco/DeflatingStream.h>
 #include "Structs.h"
 
-class NetworkIO;
+class NetworkOutRoot;
 
 struct PackJob {
 	int X;
 	int Z;
-	NetworkIO* pNetwork;
+	NetworkOutRoot* pNetwork;
 	MapChunk* pChunk;
 };
 
