@@ -16,6 +16,7 @@ GNU General Public License for more details.
 #include "ItemSlot.h"
 #include "ItemInfoStorage.h"
 #include <Poco/Exception.h>
+#include <iostream>
 #include "NetworkIn.h"
 
 ItemSlot::ItemSlot(): 
