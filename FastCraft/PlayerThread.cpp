@@ -601,6 +601,10 @@ void PlayerThread::Packet1_Login() {
 		Out.addInt(0); // Z 
 		Out.Finalize(FC_QUEUE_HIGH);
 
+
+		//Client position
+		sendClientPosition(); //Make client leave downloading map screen
+
 		//Time
 		sendTime(); 
 
@@ -630,37 +634,11 @@ void PlayerThread::Packet1_Login() {
 		}
 
 
-		//Client position
-		sendClientPosition(); //Make client leave downloading map screen | chunk provider will send clients position again, after spawning chunk who standing on
+		insertChat("§dWelcome to FastCraft 0.0.2 Alpha server.");
 
 		//Send login packages
 		ProcessQueue();
 		_fSpawned = true;
-
-		/*
-		EntityPlayer James;
-		//James._aHeldItems[0].
-
-		for (int z = 0; z<=20;z+=2) {
-			for (int y = 31;y<=31;y+=2) {
-				for (int x = 0;x<=20;x+=2) {
-					int id = EntityID::New();
-					James._Flags.clear();
-					James._sName.assign("Solidier");
-					James._Coordinates.X = (double)x;
-					James._Coordinates.Y = (double)y;
-					James._Coordinates.Z = (double)z;
-
-					James._Coordinates.Pitch = 0.0F;
-					James._Coordinates.Yaw = 0.0F;
-
-					spawnPlayer(id,James);
-				}
-			}
-		}
-		*/
-
-		insertChat("§dWelcome to FastCraft 0.0.2 Alpha server.");
 
 		//Chunks
 		_ChunkProvider.HandleMovement(_Coordinates);
