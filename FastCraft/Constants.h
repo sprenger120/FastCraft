@@ -72,4 +72,8 @@ GNU General Public License for more details.
 #define FC_ENTITY_PICKUP				2
 #define FC_ENTITY_MOB					3
 #define FC_ENITIY_DRIVEABLE				4 //minecarts, boats..
+
+//Queue Types
+#define FC_QUEUE_LOW					1
+#define FC_QUEUE_HIGH					2
 #endif
