@@ -49,22 +49,23 @@ void NetworkWriter::run() {
 				try {
 					_rStrm.sendBytes(rStr.c_str(),rStr.length()); //Send
 				}catch(Poco::Net::ConnectionAbortedException) {
+					_rhighQ.pop();
 					waitTillDisconnected();
 					continue;
 				}catch(Poco::Net::InvalidSocketException) {
+					_rhighQ.pop();
 					waitTillDisconnected();
 					continue;
 				}catch(Poco::TimeoutException) {
+					_rhighQ.pop();
 					waitTillDisconnected();
 					continue;
 				}catch(Poco::Net::ConnectionResetException) {
+					_rhighQ.pop();
 					waitTillDisconnected();
 					continue;
 				}catch(Poco::IOException) {
-					waitTillDisconnected();
-					continue;
-				}catch(Poco::RuntimeException& err) {
-					std::cout<<err.message()<<"\n";
+					_rhighQ.pop();
 					waitTillDisconnected();
 					continue;
 				}
@@ -74,7 +75,6 @@ void NetworkWriter::run() {
 
 
 			if (_rlowQ.empty()) {
-				Thread::sleep(5);
 				continue;
 			}
 
@@ -83,18 +83,23 @@ void NetworkWriter::run() {
 			try {
 				_rStrm.sendBytes(rStr.c_str(),rStr.length()); //Send
 			}catch(Poco::Net::ConnectionAbortedException) {
+				_rlowQ.pop();
 				waitTillDisconnected();
 				continue;
 			}catch(Poco::Net::InvalidSocketException) {
+				_rlowQ.pop();
 				waitTillDisconnected();
 				continue;
 			}catch(Poco::TimeoutException) {
+				_rlowQ.pop();
 				waitTillDisconnected();
 				continue;
 			}catch(Poco::Net::ConnectionResetException) {
+				_rlowQ.pop();
 				waitTillDisconnected();
 				continue;
 			}catch(Poco::IOException) {
+				_rlowQ.pop();
 				waitTillDisconnected();
 				continue;
 			}
