@@ -27,9 +27,9 @@ NetworkWriter::NetworkWriter(ThreadSafeQueue<string>& lowQ,ThreadSafeQueue<strin
 _rlowQ(lowQ),
 	_rhighQ(highQ),
 	_rStrm(s),
-	_pPlayer(p)
+	_pPlayer(p),
+	_fClear(false)
 {
-	_fClear=false;
 }
 
 NetworkWriter::~NetworkWriter() {
@@ -37,12 +37,6 @@ NetworkWriter::~NetworkWriter() {
 
 void NetworkWriter::run() {
 	while (1) {
-		if (!_pPlayer->isSpawned()) {
-			Thread::sleep(50);
-			continue;
-		}
-
-
 		if (_fClear) {
 			_fClear=false;
 			if (!_rhighQ.empty()) {
@@ -51,6 +45,11 @@ void NetworkWriter::run() {
 			if(!_rlowQ.empty()) {
 				_rlowQ.clear();
 			}
+		}
+
+		if (!_pPlayer->isSpawned()) {
+			Thread::sleep(50);
+			continue;
 		}
 
 		try{
@@ -91,8 +90,6 @@ void NetworkWriter::run() {
 			}
 
 			string & rStr = _rlowQ.front();
-			Thread::sleep(10);
-
 			try {
 				_rStrm.sendBytes(rStr.c_str(),rStr.length()); //Send
 			}catch(Poco::Net::ConnectionAbortedException) {
