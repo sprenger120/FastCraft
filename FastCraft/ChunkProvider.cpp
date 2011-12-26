@@ -122,10 +122,8 @@ bool ChunkProvider::CheckChunkCircle() {
 	MapChunk* pChunk;
 	PackJob Job;
 	ChunkCoordinates CircleRoot,Temp;
-	int iPlayerChunkVectorIndex = -1;
 
 	vector<PackJob> vJobs;
-
 
 	Job.pNetwork = &(_rNetwork);
 
@@ -139,6 +137,8 @@ bool ChunkProvider::CheckChunkCircle() {
 				return true;
 			}
 
+			cout<<"spawn player chunk"<<"\n";
+
 			Job.X = _PlayerCoordinates.X;
 			Job.Z = _PlayerCoordinates.Z;
 			Job.pChunk = pChunk;
@@ -146,7 +146,6 @@ bool ChunkProvider::CheckChunkCircle() {
 			sendSpawn(Job.X,Job.Z);
 
 			vJobs.push_back(Job);
-			iPlayerChunkVectorIndex = vJobs.size()-1;
 
 			AddChunkToList(_PlayerCoordinates.X,_PlayerCoordinates.Z);
 		}
@@ -166,13 +165,9 @@ bool ChunkProvider::CheckChunkCircle() {
 				Temp.Z = Z;
 
 				if ( ! isSpawned(Temp)) {
-					/*cout<<"Spawn Chunk X:"<<X<<" Z:"<<Z<<
-					"\t"<<"Array:"<<_vSpawnedChunks.size()<<"\n";
-					*/
 					pChunk = _rChunkRoot.getChunk(X,Z);
 					if (pChunk==NULL) {
 						cout<<"CheckChunkCircle nullpointer"<<"\n";
-						//Todo: end of world reached message in players chat
 						return true;
 					}
 
@@ -232,17 +227,6 @@ bool ChunkProvider::CheckChunkCircle() {
 		return false;
 	}
 
-	if (iPlayerChunkVectorIndex != -1) {
-		//Send player chunk, before send him his position
-		_rPackingThread.AddJob(vJobs[iPlayerChunkVectorIndex]);
-		vJobs.erase(vJobs.begin() + iPlayerChunkVectorIndex);
-	}
-
-	if (_fNewPlayer) { //Prevent suffocation if chunk who player stands on wasn't transmitted yet
-		//_pPlayer->sendLowClientPosition();
-		_fNewPlayer = false;
-	}
-
 	for (int x=0;x<=vJobs.size()-1;x++) {
 		_rPackingThread.AddJob(vJobs[x]);
 	}
@@ -255,7 +239,7 @@ bool ChunkProvider::CheckChunkCircle() {
 void ChunkProvider::CheckSpawnedChunkList() {
 	if (_vSpawnedChunks.size() == 0) { return; }
 
-	bool fDespawn=false;
+	bool fDespawn=false; 
 	int iViewDistance = SettingsHandler::getViewDistance(),x;
 
 	for (x=_vSpawnedChunks.size()-1;x>=0;x--) {
