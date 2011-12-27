@@ -18,7 +18,7 @@ GNU General Public License for more details.
 #include "SettingsHandler.h"
 #include "PackingThread.h"
 #include "EntityPlayer.h"
-
+#include "MathHelper.h"
 #include <Poco/Thread.h>
 #include <Poco/Exception.h>
 #include <iostream>
@@ -93,7 +93,7 @@ void PlayerPool::run() {
 						if (_vPlayerThreads[x] == Event.getPtr() ) {continue;}
 
 						//Check distance 
-						if ( distance2D(_vPlayerThreads[x]->getCoordinates(),Event.getCoordinates()) > FC_PLAYERSPAWNRADIUS) {
+						if ( MathHelper::distance2D(_vPlayerThreads[x]->getCoordinates(),Event.getCoordinates()) > FC_PLAYERSPAWNRADIUS) {
 							if (_vPlayerThreads[x]->isEntitySpawned(SourcePlayerID)) { //Despawn player, too distant
 								_vPlayerThreads[x]->despawnEntity(SourcePlayerID);
 							}
@@ -125,7 +125,7 @@ void PlayerPool::run() {
 						_vPlayerThreads[x]->PlayerInfoList(true,Event.getName()); //Update player list
 
 						if (_vPlayerThreads[x] == Event.getPtr() ) {continue;} //dont spawn event source
-						if ( distance2D(_vPlayerThreads[x]->getCoordinates(),SourcePlayer._Coordinates) > 100.0) {continue;} //Too distant -> don't spawn
+						if (MathHelper::distance2D(_vPlayerThreads[x]->getCoordinates(),SourcePlayer._Coordinates) > 100.0) {continue;} //Too distant -> don't spawn
 
 						_vPlayerThreads[x]->spawnPlayer(SourcePlayerID,SourcePlayer); //Spawn new player	
 
@@ -181,7 +181,7 @@ void PlayerPool::run() {
 
 		_qEventQueue.pop();
 		} catch(Poco::RuntimeException& ex) {
-			cout<<"exception:"<<ex.message()<<"\n";
+			cout<<"PlayerPool::run exception:"<<ex.message()<<"\n";
 			_qEventQueue.pop();
 		}
 	}
@@ -246,10 +246,4 @@ vector<string> PlayerPool::ListPlayers(int iMax) {
 	}
 
 	return vNames;
-}
-
-
-double PlayerPool::distance2D(EntityCoordinates c1,EntityCoordinates c2) {
-	return  sqrt (   (c1.X-c2.X) * (c1.X-c2.X) + 
-		(c1.Z-c2.Z) * (c1.Z-c2.Z));
 }
