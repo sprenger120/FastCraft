@@ -97,6 +97,7 @@ SettingsHandler::SettingsHandler(){
 		pConf->setBool("PVP",_fPVP);
 
 		pConf->save(ConfPath.toString());
+		return;
 	}else{ //Load configuration
 		AutoPtr<PropertyFileConfiguration> pConf;
 		pConf = new PropertyFileConfiguration(ConfPath.toString());
@@ -188,6 +189,10 @@ SettingsHandler::SettingsHandler(){
 			_iViewDistance++;
 		}
 
+		if (!_fOnlineMode) {
+			cout<<"***Config WARNING: Server runs in unsafe mode. Hackers can connect without verification!"<<"\n";
+			cout<<"***Solution: Set OnlineMode in your fastcraft.properties to true."<<"\n";
+		}
 	}
 }
 
