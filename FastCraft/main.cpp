@@ -30,12 +30,10 @@ using std::stringstream;
 using Poco::Thread;
 
 int main() {
-	SettingsHandler Settings;
-
 	cout<<"--- FAST CRAFT v. "<<SettingsHandler::getFastCraftVersion()<<" for Minecraft "<<SettingsHandler::getSupportedMCVersion()<<" ---"<<"\n";
 
 	try {
-		Settings = SettingsHandler(); //Load configuration into static variables
+		SettingsHandler(); //Load configuration into static variables
 	} catch (Poco::RuntimeException) {
 		Thread::sleep(3000);
 		return 1;
