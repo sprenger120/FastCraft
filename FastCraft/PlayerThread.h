@@ -52,6 +52,7 @@ struct TimeJobs {
 	long long LastKeepAliveSend;
 	long long LastHandleMovement;
 	long long LastMovementSend;
+	long long LastSpeedCalculation;
 };
 
 struct EntityListEntry {
@@ -86,6 +87,7 @@ private:
     bool _fSpawned;
 	int _Spawned_PlayerInfoList;
 	PlayerInventory _Inventory;
+	double _dRunnedMeters;
 
 
 	//TCP stuff
@@ -305,7 +307,8 @@ private:
 	void Interval_KeepAlive();
 	void Interval_Time();
 	void Interval_HandleMovement();
-	void Inverval_Movement();
+	void Interval_Movement();
+	void Interval_CalculateSpeed();
 
 	void sendTime();
 	void pushChatEvent(string&);

@@ -22,6 +22,7 @@ GNU General Public License for more details.
 #include "ChunkRoot.h"
 #include "ItemInfoStorage.h"
 #include "PlayerPoolEvent.h"
+#include "MathHelper.h"
 #include <sstream>
 #include <istream>
 #include <Poco/Timespan.h>
@@ -71,6 +72,8 @@ _sName(""),
 	_TimeJobs.LastKeepAliveSend = 0L;
 	_TimeJobs.LastHandleMovement = 0L;
 	_TimeJobs.LastMovementSend = 0L;
+	_TimeJobs.LastSpeedCalculation=0L;
+	_dRunnedMeters=0.0;
 
 	_iEntityID=0;
 	_Spawned_PlayerInfoList = 0;
@@ -135,7 +138,8 @@ void PlayerThread::run() {
 			Interval_KeepAlive(); 
 			Interval_Time();
 			Interval_HandleMovement();
-			Inverval_Movement();
+			Interval_Movement();
+			Interval_CalculateSpeed();
 
 			iPacket = _NetworkInRoot.readByte();
 
@@ -209,7 +213,7 @@ void PlayerThread::run() {
 
 void PlayerThread::Disconnect(char iLeaveMode) {
 	if (!_fAssigned) { return; }
-	if (isSpawned()) {
+	if (_Spawned_PlayerInfoList > 0) {
 		_ChunkProvider.HandleDisconnect();
 		_Inventory.HandleDisconnect();
 		_PlayerCount--;
@@ -245,6 +249,9 @@ void PlayerThread::Disconnect(char iLeaveMode) {
 	_TimeJobs.LastTimeSend = 0L;
 	_TimeJobs.LastHandleMovement = 0L;
 	_TimeJobs.LastMovementSend = 0L;
+	_TimeJobs.LastSpeedCalculation = 0L;
+	_dRunnedMeters=0;
+	_Spawned_PlayerInfoList=0;
 
 	_Connection.close();
 	_vSpawnedEntities.clear();
@@ -265,6 +272,9 @@ void PlayerThread::Connect(Poco::Net::StreamSocket& Sock) {
 }
 
 void PlayerThread::Kick(string sReason) {
+	_NetworkWriter.clearQueues();
+	_fSpawned=false;
+
 	_sTemp.clear();
 	_sTemp.append<unsigned char>(1,0xFF);
 	NetworkOut::addString(_sTemp,sReason);
@@ -299,6 +309,9 @@ void PlayerThread::Kick(string sReason) {
 }
 
 void PlayerThread::Kick() {
+	_NetworkWriter.clearQueues();
+	_fSpawned=false;
+
 	_sTemp.clear();
 	_sTemp.append<unsigned char>(1,0xFF);
 	_sTemp.append<char>(2,0x0);
@@ -468,6 +481,7 @@ void PlayerThread::insertChat(string rString) {
 
 
 void PlayerThread::ProcessQueue() {			
+	//All elements from high queue
 	while (!_NetworkOutRoot.getHighQueue().empty()) {
 		string & rJob = _NetworkOutRoot.getHighQueue().front();
 
@@ -494,11 +508,6 @@ void PlayerThread::ProcessQueue() {
 		_NetworkOutRoot.getHighQueue().pop();
 	}
 }
-
-
-/*
-* Packets
-*/
 
 void PlayerThread::Packet0_KeepAlive() {
 	_NetworkInRoot.readInt(); //Get id
@@ -557,9 +566,9 @@ void PlayerThread::Packet1_Login() {
 		_ChunkProvider.HandleNewPlayer();
 
 		//Set start coordinates
-		_Coordinates.X = 5.0;
+		_Coordinates.X = 0.0;
 		_Coordinates.Y = 500.0;
-		_Coordinates.Z = 5.0;
+		_Coordinates.Z = 0.0;
 		_Coordinates.Stance = 250.0;
 		_Coordinates.OnGround = false;
 		_Coordinates.Pitch = 0.0F;
@@ -707,6 +716,7 @@ void PlayerThread::Packet11_Position() {
 		if (TmpCoord.X == 8.5000000000000000 && TmpCoord.Z == 8.5000000000000000) { 
 			return;
 		}else{
+			_dRunnedMeters += MathHelper::distance2D(_Coordinates,TmpCoord);
 			_Coordinates.X = TmpCoord.X;
 			_Coordinates.Y = TmpCoord.Y;
 			_Coordinates.Stance = TmpCoord.Stance;
@@ -745,6 +755,7 @@ void PlayerThread::Packet13_PosAndLook() {
 		if (TmpCoord.X == 8.5000000000000000 && TmpCoord.Z == 8.5000000000000000) { 
 			return;
 		}else{
+			_dRunnedMeters += MathHelper::distance2D(_Coordinates,TmpCoord);
 			_Coordinates = TmpCoord;
 		}
 	} catch(Poco::RuntimeException) {
@@ -820,9 +831,10 @@ void PlayerThread::Packet101_CloseWindow() {
 
 void PlayerThread::Packet102_WindowClick() {
 	_Inventory.HandleWindowClick(this);	
+	//_Inventory.synchronizeInventory();
 }
 
-void PlayerThread::Inverval_Movement() {
+void PlayerThread::Interval_Movement() {
 	if (!isSpawned()) {return;}
 	if (_TimeJobs.LastMovementSend + FC_INTERVAL_MOVEMENT <= getTicks()) { //Send new keep alive
 		if (!(_Coordinates == _lastCoordinates)) {
@@ -1060,3 +1072,18 @@ _highNetwork.addByte(AnimID);
 _highNetwork.Flush();
 _highNetwork.UnLock();
 }*/
+
+void PlayerThread::Interval_CalculateSpeed() {
+	if (!isSpawned()) {return;}
+	if (_TimeJobs.LastSpeedCalculation + FC_INTERVAL_CALCULATESPEED <= getTicks()) {
+		double iTime = double(getTicks()) - double(_TimeJobs.LastSpeedCalculation);
+		_TimeJobs.LastSpeedCalculation = getTicks();
+	
+
+		double iSpeed = (_dRunnedMeters * 60.0 * 60.0) / (iTime*3.6);
+		if (iSpeed > 7.5) {
+			Kick("Speedhack");
+		}
+		_dRunnedMeters=0.0;
+	}
+}
