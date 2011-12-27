@@ -135,6 +135,61 @@ void PlayerInventory::HandleWindowClick(PlayerThread* pPlayer) {
 			return;
 		}
 		if (iSlot < 0 || iSlot > 45) { //Invalid slot id, caused by clicking out of inventory field
+			pPlayer->Kick("Invalid slot ID");
+			return;
+		}
+
+		if (fShift) { //Shift was pressed
+			if (_vItemStack[iSlot].getItemID() == 0) { //Affected slot is empty
+				return; 
+			}
+
+			char iMaxStackSize = ItemInfoStorage::getMaxStackSize(_vItemStack[iSlot].getItemID());
+			short iFrom=0;
+			short iTo=0;
+
+			if (iSlot < 9) {//Crafting and amor slots -> Main inventory
+				iFrom = 9;
+				iTo = 35;
+			}
+			if (iSlot >= 9 && iSlot <= 35) { //Main inventory -> action bar
+				iFrom = 36;
+				iTo = 44;
+			}
+			if (iSlot >= 36 && iSlot <= 44) {//Action bar -> main inventory
+				iFrom = 9;
+				iTo = 35;
+			}
+
+			if (iTo==0 && iFrom==0) {
+				std::cout<<"logical error"<<"\n";
+			}
+
+			//Merge same item stacks
+			for (int x=iFrom;x<=iTo;x++) { 
+				if(_vItemStack[x].getItemID()==_vItemStack[iSlot].getItemID()) {
+					short iSum = _vItemStack[x].getStackSize() + _vItemStack[iSlot].getStackSize();
+
+					if (iSum < iMaxStackSize) { //Stacks fit in each other
+						_vItemStack[x].setStackSize((char)iSum);
+						_vItemStack[iSlot].clear();
+					}else{ //Stack size reached
+						_vItemStack[x].setStackSize(iMaxStackSize); //set to maximal
+						_vItemStack[iSlot].setStackSize(iSum-iMaxStackSize); //leave rest in slot
+					}
+				}
+			}
+			
+			//If there are still some items in the affected slot
+			if (_vItemStack[iSlot].getStackSize() > 0) { //Look for a free slot
+				for (int x=iFrom;x<=iTo;x++) {
+					if(_vItemStack[x].getItemID()==0) {
+						_vItemStack[x] = _vItemStack[iSlot];
+						_vItemStack[iSlot].clear();
+						break;
+					}
+				}
+			}
 			return;
 		}
 
@@ -181,7 +236,7 @@ void PlayerInventory::HandleWindowClick(PlayerThread* pPlayer) {
 				_ItemInHand.setStackSize(iFullStackSize/2  +  ( iFullStackSize%2 ? 1 : 0 ) ); //if stack size odd: bigger part is in players hand
 			}else{//item in hand -> put one item into other stack
 				if (_vItemStack[iSlot].getItemID() == 0) { //Put one item into an empty slot
-					
+
 					_vItemStack[iSlot].setItemID(_ItemInHand.getItemID());
 					_vItemStack[iSlot].setStackSize(1);
 
