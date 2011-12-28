@@ -17,6 +17,7 @@ GNU General Public License for more details.
 #define _FASTCRAFTHEADER_PLAYERPOOLEVENT
 #include <string>
 #include "EntityCoordinates.h"
+#include "EntityFlags.h"
 
 using std::string;
 class PlayerThread;
@@ -30,7 +31,7 @@ private:
 	bool _fMode;
 	bool _fKicked;
 	char _iAnimID;
-	char _iEntityAction;
+	EntityFlags _Flags;
 	PlayerThread* _pThread; //Pointer to affected class
 public:
 	/*
@@ -67,14 +68,23 @@ public:
 
 
 	/*
-	* Construct as an animation/entity action event
+	* Construct as an animation event
 
 	Parameter: 
-	@1 : Animation ID /  EntityAction ID - For a id table have a look at Constants.h (FC_ANIM_ / FC_ACTION_ )
-	@2 : true for animation, false for entity action 
-	@3 : this pointer of class that pushes event to queue
+	@1 : Animation ID - For a id table have a look at Constants.h (FC_ANIM_)
+	@2 : this pointer of class that pushes event to queue
 	*/
-	PlayerPoolEvent(char,bool,PlayerThread*);
+	PlayerPoolEvent(char,PlayerThread*);
+
+
+	/*
+	* Construct as a metadata update event
+
+	Parameter:
+	@1 : EntityFlags instance of player
+	@2 : this pointer of class that pushes event to queue
+	*/
+	PlayerPoolEvent(EntityFlags,PlayerThread*);
 
 
 	/*
@@ -87,7 +97,7 @@ public:
 	char getJobID();
 	bool getMode();
 	char getAnimationID();
-	char getActionID();
+	EntityFlags getFlags();
 	PlayerThread* getPtr();
 	bool isKicked();
 

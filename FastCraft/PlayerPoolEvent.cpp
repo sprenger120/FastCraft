@@ -55,20 +55,22 @@ _Name("")
 }
 
 //animation event
-PlayerPoolEvent::PlayerPoolEvent(char anim,bool fAnim,PlayerThread* p) :
+PlayerPoolEvent::PlayerPoolEvent(char anim,PlayerThread* p) :
 _Message(""),
 _Name("")
 {
 	_pThread = p;
-	switch(fAnim) {
-	case true:
-		_JobID = FC_PPEVENT_ANIMATION;
-		_iAnimID = anim;
-		break;
-	case false:
-		_JobID = FC_PPEVENT_ACTION;
-		_iEntityAction = anim;
-	}
+	_JobID = FC_PPEVENT_ANIMATION;
+	_iAnimID = anim;
+}
+
+PlayerPoolEvent::PlayerPoolEvent(EntityFlags flags,PlayerThread*p) :
+_Message(""),
+_Name("")
+{
+	_pThread = p;
+	_JobID = FC_PPEVENT_METADATA;
+	_Flags = flags;
 }
 
 PlayerPoolEvent::~PlayerPoolEvent() {
@@ -126,9 +128,9 @@ string PlayerPoolEvent::getName() {
 	return _Name;
 }
 
-char PlayerPoolEvent::getActionID() {
-	if (_JobID != FC_PPEVENT_ACTION) {
+EntityFlags PlayerPoolEvent::getFlags() {
+	if (_JobID != FC_PPEVENT_METADATA) {
 		throw Poco::RuntimeException("Data unavailable");
 	}
-	return _iEntityAction;
+	return _Flags;
 }
