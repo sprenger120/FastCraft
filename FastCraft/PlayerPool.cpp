@@ -18,6 +18,7 @@ GNU General Public License for more details.
 #include "SettingsHandler.h"
 #include "PackingThread.h"
 #include "EntityPlayer.h"
+#include "EntityFlags.h"
 #include "MathHelper.h"
 #include <Poco/Thread.h>
 #include <Poco/Exception.h>
@@ -173,8 +174,21 @@ void PlayerPool::run() {
 				}
 			}
 			break;
-		case FC_PPEVENT_ACTION: 
-			cout<<"PP: action event"<<"\n";
+		case FC_PPEVENT_METADATA: 
+			{
+				int SourcePlayerID = Event.getPtr()->getEntityID(); 
+				EntityFlags & rF = Event.getFlags();
+
+				for (int x=0;x<=_vPlayerThreads.size()-1;x++) {
+					if( _vPlayerThreads[x]->isAssigned() && _vPlayerThreads[x]->isSpawned()) {
+						if (_vPlayerThreads[x] == Event.getPtr() ) {continue;}
+
+						if (_vPlayerThreads[x]->isEntitySpawned(SourcePlayerID)) {
+							_vPlayerThreads[x]->updateEntityMetadata(SourcePlayerID,rF);
+						}
+					}
+				}
+			}
 
 			break;
 		}

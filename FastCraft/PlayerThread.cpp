@@ -610,7 +610,7 @@ void PlayerThread::Packet1_Login() {
 		UpdateHealth(20,20,5.0F); //Health
 
 		//Inventory
-		ItemSlot Item1(1,34);
+		ItemSlot Item1(360,34);
 		ItemSlot Item2(1,50);
 		ItemSlot Item3(3,3);
 
@@ -1023,7 +1023,7 @@ void PlayerThread::Packet18_Animation() {
 			Kick("You can't use other EntityID's as yours"); 
 		}
 
-		PlayerPoolEvent Event(iAnimID,true,this);
+		PlayerPoolEvent Event(iAnimID,this);
 		_pPoolMaster->Event(Event);
 	}catch(Poco::RuntimeException) {
 		Disconnect(FC_LEAVE_OTHER);
@@ -1039,7 +1039,25 @@ void PlayerThread::Packet19_EntityAction() {
 			Kick("You can't use other EntityID's as yours"); 
 		}
 
-		PlayerPoolEvent Event(iActionID,false,this);
+		switch(iActionID) {
+		case FC_ACTION_CROUCH:
+			_Flags.setCrouched(true);
+			break;
+		case FC_ACTION_UNCROUCH:
+			_Flags.setCrouched(false);
+			break;
+		case FC_ACTION_STARTSPRINTING:
+			_Flags.setSprinting(true);
+			break;
+		case FC_ACTION_STOPSPRINTING:
+			_Flags.setSprinting(false);
+			break;
+		default:
+			Kick("Unsupported action.");
+			break;
+		}
+
+		PlayerPoolEvent Event(_Flags,this);
 		_pPoolMaster->Event(Event);
 	}catch(Poco::RuntimeException) {
 		Disconnect(FC_LEAVE_OTHER);
@@ -1059,20 +1077,34 @@ void PlayerThread::playAnimationOnEntity(int ID,char AnimID) {
 	Out.Finalize(FC_QUEUE_HIGH);
 }
 
-/*
-void PlayerThread::playActionOnEntity(int ID,char AnimID) {
-if (!isEntitySpawned(ID)) {
-throw Poco::RuntimeException("Not spawned!");
+
+void PlayerThread::updateEntityMetadata(int ID,EntityFlags& rFlags) {
+	if (!isEntitySpawned(ID)) {
+		throw Poco::RuntimeException("Not spawned!");
+	}
+	NetworkOut Out = _NetworkOutRoot.New();
+
+	Out.addByte(0x28);
+	Out.addInt(ID);
+
+
+	char iMetadata = 0;
+	//Flags 
+
+
+	//Index 0 , general metadata
+	Out.addByte(0); //Index = 0| Type=0
+	iMetadata=0;
+	iMetadata |= ((char)rFlags.isOnFire()) & 1;
+	iMetadata |= (((char)rFlags.isCrouched()) & 1)<<1;
+	iMetadata |= (((char)rFlags.isRiding()) & 1 )<<2;
+	iMetadata |= (((char)rFlags.isSprinting()) & 1)<<3;
+	iMetadata |= (((char)rFlags.isEating()) & 1)<<4;
+	Out.addByte(iMetadata);
+
+	Out.addByte(127); //End of metadata
+	Out.Finalize(FC_QUEUE_HIGH);
 }
-
-_highNetwork.Lock();
-_highNetwork.addByte(0x12);
-_highNetwork.addInt(ID);
-_highNetwork.addByte(AnimID);
-
-_highNetwork.Flush();
-_highNetwork.UnLock();
-}*/
 
 void PlayerThread::Interval_CalculateSpeed() {
 	if (!isSpawned()) {return;}

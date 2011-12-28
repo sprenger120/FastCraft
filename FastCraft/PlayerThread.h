@@ -61,15 +61,6 @@ struct EntityListEntry {
 	EntityCoordinates oldPosition;
 };
 
-/*
-NetworkOut Out = _NetworkOutRoot.New();
-
-
-Out.Finalize(FC_QUEUE_HIGH);
-
-_NetworkInRoot
-*/
-
 class PlayerThread : public Poco::Runnable {
 private:
 	//Player specific data
@@ -298,8 +289,12 @@ public:
 	* Will throw Poco::RuntimeException if Entity isn't spawned 
 	* Will not check action id existance - please use FC_ACTION constants
 	* Use only for crouching, leaving a bed, or sprinting!
+
+	Parameter:
+	@1 : EntityID
+	@2 : EntityFlags reference
 	*/
-	//void playActionOnEntity(int,char);
+	void updateEntityMetadata(int,EntityFlags&);
 private:
 	void ProcessQueue();
 	 
