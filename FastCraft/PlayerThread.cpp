@@ -611,12 +611,16 @@ void PlayerThread::Packet1_Login() {
 
 		//Inventory
 		ItemSlot Item1(360,34);
-		ItemSlot Item2(1,50);
-		ItemSlot Item3(3,3);
+		ItemSlot Item2(310,1);
+		ItemSlot Item3(315,1);
+		ItemSlot Item4(300,1);
+		ItemSlot Item5(305,1);
 
 		_Inventory.setSlot(36,Item1); 
-		_Inventory.setSlot(37,Item2);   
-		_Inventory.setSlot(38,Item3);  
+		_Inventory.setSlot(5,Item2); 
+		_Inventory.setSlot(6,Item3); 
+		_Inventory.setSlot(7,Item4); 
+		_Inventory.setSlot(8,Item5); 
 		_Inventory.synchronizeInventory();
 
 		sendClientPosition();
@@ -814,6 +818,9 @@ void PlayerThread::Packet16_HoldingChange() {
 			return;
 		}
 		_Inventory.HandleSelectionChange(iSlot);
+
+		PlayerPoolEvent Event(0,_Inventory.getSlot(36+iSlot),this);
+		_pPoolMaster->Event(Event);
 	} catch(Poco::RuntimeException) {
 		Disconnect(FC_LEAVE_OTHER);
 	}
@@ -831,8 +838,31 @@ void PlayerThread::Packet101_CloseWindow() {
 }
 
 void PlayerThread::Packet102_WindowClick() {
+	ItemSlot aHeld[5];
+
+	aHeld[0] = _Inventory.getSlot(36 + _Inventory.getSlotSelection());
+	aHeld[1] = _Inventory.getSlot(8);
+	aHeld[2] = _Inventory.getSlot(7);
+	aHeld[3] = _Inventory.getSlot(6);
+	aHeld[4] = _Inventory.getSlot(5);
+
 	_Inventory.HandleWindowClick(this);	
 	//_Inventory.synchronizeInventory();
+
+
+	if (aHeld[0].getItemID() != _Inventory.getSlot(36 + _Inventory.getSlotSelection()).getItemID()) { //Check if held item were changed
+		PlayerPoolEvent Event(0,_Inventory.getSlot(36 + _Inventory.getSlotSelection()),this);
+		_pPoolMaster->Event(Event);
+	}
+
+	int s=8;
+	for (int x=1;x<=4;x++) {
+		if (aHeld[x].getItemID() != _Inventory.getSlot(s).getItemID()) {//Check if boots were changed
+			PlayerPoolEvent Event(x,_Inventory.getSlot(s),this);
+			_pPoolMaster->Event(Event);
+		}
+		s--;
+	}
 }
 
 void PlayerThread::Interval_Movement() {
@@ -871,6 +901,7 @@ void PlayerThread::spawnPlayer(int ID,EntityPlayer& rPlayer) {
 	_vSpawnedEntities.push_back(Entry);
 
 	NetworkOut Out = _NetworkOutRoot.New();
+	//Spawn player
 	Out.addByte(0x14);
 	Out.addInt(ID);
 	Out.addString(rPlayer._sName);
@@ -882,9 +913,23 @@ void PlayerThread::spawnPlayer(int ID,EntityPlayer& rPlayer) {
 	Out.addByte( (char) rPlayer._Coordinates.Yaw);
 	Out.addByte( (char) rPlayer._Coordinates.Pitch);
 
-	Out.addShort(267); //rPlayer._aHeldItems[0]);
+	Out.addShort(rPlayer._aHeldItems[0].getItemID());
 
 	Out.Finalize(FC_QUEUE_HIGH);
+
+	//Spawn his equipment
+	for (int x=0;x<=4;x++) {
+		Out.addByte(0x05);
+		Out.addInt(ID);
+		Out.addShort(x);
+		if (rPlayer._aHeldItems[x].getItemID() == 0) {
+			Out.addShort(-1);
+		}else{
+			Out.addShort(rPlayer._aHeldItems[x].getItemID());
+		}
+		Out.addShort(0); //Damage/Metadata
+		Out.Finalize(FC_QUEUE_HIGH);
+	}
 }
 
 bool PlayerThread::isEntitySpawned(int ID) {
@@ -1119,4 +1164,33 @@ void PlayerThread::Interval_CalculateSpeed() {
 		}
 		_dRunnedMeters=0.0;
 	}
+}
+
+PlayerInventory& PlayerThread::getInventory() {
+	return _Inventory;
+}
+
+EntityFlags PlayerThread::getFlags() {
+	return _Flags;
+}
+
+void PlayerThread::updateEntityEquipment(int ID,short Slot,ItemSlot Item) {
+	if (!isEntitySpawned(ID)) {
+		throw Poco::RuntimeException("Not spawned!");
+	}
+	if (Slot < 0 || Slot > 4) {
+		throw Poco::RuntimeException("Invalid slot");
+	}
+
+	NetworkOut Out = _NetworkOutRoot.New();
+	Out.addByte(0x05);
+	Out.addInt(ID);
+	Out.addShort(Slot);
+	if (Item.getItemID() == 0) {
+		Out.addShort(-1);
+	}else{
+		Out.addShort(Item.getItemID());
+	}
+	Out.addShort(0); //Damage/Metadata
+	Out.Finalize(FC_QUEUE_HIGH);
 }

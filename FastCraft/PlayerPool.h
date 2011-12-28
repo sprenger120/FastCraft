@@ -28,6 +28,7 @@ GNU General Public License for more details.
 #include "EntityCoordinates.h"
 #include "PlayerPoolEvent.h"
 #include "ThreadSafeQueue.h"
+#include "EntityPlayer.h"
 
 class PlayerThread;
 class PackingThread;
@@ -91,6 +92,16 @@ public:
 	@1 : Maxiaml size of vector
 	*/
 	vector<string> ListPlayers(int);
+
+
+	/*
+	* Builds a EntityPlayer instance from a PlayerThread pointer
+	* Will throw Poco::RuntimeException if Player isn't spawned
+
+	Parameter:
+	@1 : Pointer to a spawned PlayerThread
+	*/
+	static EntityPlayer buildEntityPlayerFromPlayerPtr(PlayerThread*);
 private:
 	int getFreeSlot(); //Returns -1 if there is no free slot
 	void sendMessageToAll(string);

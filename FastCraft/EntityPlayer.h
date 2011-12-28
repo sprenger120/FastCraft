@@ -26,8 +26,7 @@ struct EntityPlayer {
 	EntityFlags _Flags;
 	EntityCoordinates _Coordinates;
 	string _sName;
-
-	//ItemSlot _aHeldItems[5];
+	ItemSlot _aHeldItems[5];
 };
 
 #endif

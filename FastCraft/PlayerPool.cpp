@@ -17,9 +17,9 @@ GNU General Public License for more details.
 #include "PlayerThread.h"
 #include "SettingsHandler.h"
 #include "PackingThread.h"
-#include "EntityPlayer.h"
 #include "EntityFlags.h"
 #include "MathHelper.h"
+#include "PlayerInventory.h"
 #include <Poco/Thread.h>
 #include <Poco/Exception.h>
 #include <iostream>
@@ -84,9 +84,7 @@ void PlayerPool::run() {
 		case FC_PPEVENT_MOVE:
 			{
 				//Build playerEntity
-				EntityPlayer SourcePlayer;
-				SourcePlayer._Coordinates = Event.getPtr()->getCoordinates();
-				SourcePlayer._sName = Event.getPtr()->getUsername();
+				EntityPlayer SourcePlayer = buildEntityPlayerFromPlayerPtr(Event.getPtr());
 				int SourcePlayerID = Event.getPtr()->getEntityID();
 
 				for (int x=0;x<=_vPlayerThreads.size()-1;x++) {
@@ -115,9 +113,7 @@ void PlayerPool::run() {
 			{
 				sendMessageToAll(Event.getName() + " joined game");
 
-				EntityPlayer SourcePlayer;
-				SourcePlayer._Coordinates = Event.getPtr()->getCoordinates();
-				SourcePlayer._sName = Event.getName();
+				EntityPlayer SourcePlayer = buildEntityPlayerFromPlayerPtr(Event.getPtr());
 				int SourcePlayerID = Event.getPtr()->getEntityID();
 
 
@@ -131,10 +127,7 @@ void PlayerPool::run() {
 						_vPlayerThreads[x]->spawnPlayer(SourcePlayerID,SourcePlayer); //Spawn new player	
 
 						//Spawn this player to event source
-						EntityPlayer TargetPlayer; 
-
-						TargetPlayer._Coordinates = _vPlayerThreads[x]->getCoordinates();
-						TargetPlayer._sName = _vPlayerThreads[x]->getUsername();
+						EntityPlayer TargetPlayer = buildEntityPlayerFromPlayerPtr(_vPlayerThreads[x]); 
 						int TargetPlayerID = _vPlayerThreads[x]->getEntityID();
 
 						Event.getPtr()->spawnPlayer(TargetPlayerID,TargetPlayer);
@@ -187,6 +180,21 @@ void PlayerPool::run() {
 					}
 				}
 			}
+			break;
+		case FC_PPEVENT_CHANGEHELD:
+			{
+				int SourcePlayerID = Event.getPtr()->getEntityID(); 
+				for (int x=0;x<=_vPlayerThreads.size()-1;x++) {
+					if( _vPlayerThreads[x]->isAssigned() && _vPlayerThreads[x]->isSpawned()) {
+						if (_vPlayerThreads[x] == Event.getPtr() ) {continue;}
+
+						if (_vPlayerThreads[x]->isEntitySpawned(SourcePlayerID)) {
+							_vPlayerThreads[x]->updateEntityEquipment(SourcePlayerID,Event.getSlot(),Event.getItem());
+						}
+					}
+				}
+			}
+
 
 			break;
 		}
@@ -258,4 +266,21 @@ vector<string> PlayerPool::ListPlayers(int iMax) {
 	}
 
 	return vNames;
+}
+
+EntityPlayer PlayerPool::buildEntityPlayerFromPlayerPtr(PlayerThread* pPlayer) {
+	EntityPlayer Player;
+
+	Player._Coordinates = pPlayer->getCoordinates();
+	Player._sName = pPlayer->getUsername();
+	Player._Flags = pPlayer->getFlags();
+	
+	PlayerInventory & Inventory =  pPlayer->getInventory();
+
+	Player._aHeldItems[0] = Inventory.getSlot(36 + Inventory.getSlotSelection());
+	Player._aHeldItems[1] = Inventory.getSlot(8);
+	Player._aHeldItems[2] = Inventory.getSlot(7);
+	Player._aHeldItems[3] = Inventory.getSlot(6);
+	Player._aHeldItems[4] = Inventory.getSlot(5);
+	return Player;
 }

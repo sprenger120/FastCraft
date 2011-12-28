@@ -214,6 +214,7 @@ public:
 	*/
 	void PlayerInfoList(bool,string);
 
+
 	/*
 	* Closes connection and clears object
 
@@ -295,6 +296,28 @@ public:
 	@2 : EntityFlags reference
 	*/
 	void updateEntityMetadata(int,EntityFlags);
+
+
+	/*
+	* Returns a reference to player's inventory
+	*/
+	PlayerInventory& getInventory();
+
+
+	/*
+	* Returns players flags
+	*/
+	EntityFlags getFlags();
+
+
+	/*
+	* Updates entitys equipment
+
+	Parameter:
+	@1 : EntityID
+	@2 : SlotID (0=held, 4=helmet,3=chestplate,2=pants,1=boots)
+	*/
+	void updateEntityEquipment(int,short,ItemSlot);
 private:
 	void ProcessQueue();
 	 

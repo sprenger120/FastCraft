@@ -258,7 +258,7 @@ void ItemSlot::readFromNetwork(NetworkIn& rNetwork) {
 	//Check if item has a damage bar
 	if (ItemInfoStorage::isDamageable(_iItemID)) {
 		_isTool=true;
-		std::cout<<"NBT Playload:"<< rNetwork.readShort()<<"\n";
+		rNetwork.readShort();
 	}
 	}catch(Poco::RuntimeException& ex) {
 		ex.rethrow();

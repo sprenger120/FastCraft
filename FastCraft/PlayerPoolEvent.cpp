@@ -73,6 +73,16 @@ _Name("")
 	_Flags = flags;
 }
 
+PlayerPoolEvent::PlayerPoolEvent(short SlotID,ItemSlot Item,PlayerThread* p) :
+_Message(""),
+_Name("")
+{
+	_pThread = p;
+	_JobID = FC_PPEVENT_CHANGEHELD;
+	_iSlotID = SlotID;
+	_Item = Item;
+}
+
 PlayerPoolEvent::~PlayerPoolEvent() {
 	_Message.clear();
 	_Name.clear();
@@ -133,4 +143,18 @@ EntityFlags PlayerPoolEvent::getFlags() {
 		throw Poco::RuntimeException("Data unavailable");
 	}
 	return _Flags;
+}
+
+ItemSlot PlayerPoolEvent::getItem() {
+	if (_JobID != FC_PPEVENT_CHANGEHELD) {
+		throw Poco::RuntimeException("Data unavailable");
+	}
+	return _Item;
+}
+
+short PlayerPoolEvent::getSlot() {
+	if (_JobID != FC_PPEVENT_CHANGEHELD) {
+		throw Poco::RuntimeException("Data unavailable");
+	}
+	return _iSlotID;
 }

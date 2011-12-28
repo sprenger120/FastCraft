@@ -18,21 +18,34 @@ GNU General Public License for more details.
 #include <string>
 #include "EntityCoordinates.h"
 #include "EntityFlags.h"
-
+#include "ItemSlot.h"
 using std::string;
 class PlayerThread;
 
 class PlayerPoolEvent{
 private:
+	//General
+	PlayerThread* _pThread; 
+	char _JobID;
+
+	//Chat event
 	EntityCoordinates _Coordinates; //Used for Move and chat
 	string _Message; //Used for chat 	
+
+	//Join/Disconnect event
 	string _Name;
-	char _JobID;
-	bool _fMode;
 	bool _fKicked;
+	bool _fMode;
+	
+	//Animation event
 	char _iAnimID;
+
+	//Metadata event
 	EntityFlags _Flags;
-	PlayerThread* _pThread; //Pointer to affected class
+
+	//Change held event
+	short _iSlotID;
+	ItemSlot _Item;
 public:
 	/*
 	* Constructs as a chat event
@@ -88,18 +101,42 @@ public:
 
 
 	/*
+	* Construct as a held change event
+
+	@1 : SlotID (0=held, 4=helmet,3=chestplate,2=pants,1=boots)
+	@2 : Item data
+	@3 : this pointer of class that pushes event to queue
+	*/
+	PlayerPoolEvent(short,ItemSlot,PlayerThread*);
+
+	/*
 	* Accessator
 	* They will throw Poco::RuntimeException if requested data is unavailable
 	*/
-	EntityCoordinates getCoordinates();
-	string getMessage();
-	string getName();
-	char getJobID();
-	bool getMode();
-	char getAnimationID();
-	EntityFlags getFlags();
+
+	//General
 	PlayerThread* getPtr();
+	char getJobID();
+
+	//Chat event 
+	EntityCoordinates getCoordinates(); // Used in move event too
+	string getMessage();
+
+	//Join/Disconnect event
+	string getName();
+	bool getMode();
 	bool isKicked();
+
+	//Animation Event
+	char getAnimationID();
+
+	//Metadata event
+	EntityFlags getFlags();
+	
+	//Held change event
+	ItemSlot getItem();
+	short getSlot();
+
 
 	/*
 	* Destructor

@@ -51,6 +51,7 @@ GNU General Public License for more details.
 #define FC_PPEVENT_DISCONNECT			4
 #define FC_PPEVENT_ANIMATION			5
 #define FC_PPEVENT_METADATA				6
+#define FC_PPEVENT_CHANGEHELD			7
 
 //Animation ID's 
 #define FC_ANIM_NOANIM					0	//Send to remove all animations 
