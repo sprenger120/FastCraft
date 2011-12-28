@@ -1078,7 +1078,7 @@ void PlayerThread::playAnimationOnEntity(int ID,char AnimID) {
 }
 
 
-void PlayerThread::updateEntityMetadata(int ID,EntityFlags& rFlags) {
+void PlayerThread::updateEntityMetadata(int ID,EntityFlags Flags) {
 	if (!isEntitySpawned(ID)) {
 		throw Poco::RuntimeException("Not spawned!");
 	}
@@ -1095,11 +1095,11 @@ void PlayerThread::updateEntityMetadata(int ID,EntityFlags& rFlags) {
 	//Index 0 , general metadata
 	Out.addByte(0); //Index = 0| Type=0
 	iMetadata=0;
-	iMetadata |= ((char)rFlags.isOnFire()) & 1;
-	iMetadata |= (((char)rFlags.isCrouched()) & 1)<<1;
-	iMetadata |= (((char)rFlags.isRiding()) & 1 )<<2;
-	iMetadata |= (((char)rFlags.isSprinting()) & 1)<<3;
-	iMetadata |= (((char)rFlags.isEating()) & 1)<<4;
+	iMetadata |= ((char)Flags.isOnFire()) & 1;
+	iMetadata |= (((char)Flags.isCrouched()) & 1)<<1;
+	iMetadata |= (((char)Flags.isRiding()) & 1 )<<2;
+	iMetadata |= (((char)Flags.isSprinting()) & 1)<<3;
+	iMetadata |= (((char)Flags.isEating()) & 1)<<4;
 	Out.addByte(iMetadata);
 
 	Out.addByte(127); //End of metadata

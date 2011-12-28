@@ -294,7 +294,7 @@ public:
 	@1 : EntityID
 	@2 : EntityFlags reference
 	*/
-	void updateEntityMetadata(int,EntityFlags&);
+	void updateEntityMetadata(int,EntityFlags);
 private:
 	void ProcessQueue();
 	 
