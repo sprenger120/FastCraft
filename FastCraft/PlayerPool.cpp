@@ -182,7 +182,7 @@ void PlayerPool::run() {
 						if (_vPlayerThreads[x] == Event.getPtr() ) {continue;}
 
 						if (_vPlayerThreads[x]->isEntitySpawned(SourcePlayerID)) {
-							_vPlayerThreads[x]->updateEntityMetadata(SourcePlayerID,(EntityFlags&)Event.getFlags());
+							_vPlayerThreads[x]->updateEntityMetadata(SourcePlayerID,Event.getFlags());
 						}
 					}
 				}
