@@ -17,6 +17,7 @@ GNU General Public License for more details.
 #include <Poco/Thread.h>
 #include "NetworkOutRoot.h"
 #include "NetworkOut.h"
+#include "PlayerThread.h"
 #include "Constants.h"
 #include <iostream>
 
@@ -41,8 +42,7 @@ void PackingThread::run() {
 			Thread::sleep(50);
 			continue;
 		}
-		
-		while(_vPackJobs.size()) {
+		while(!_vPackJobs.empty()) {
 			ProcessJob(_vPackJobs.front());
 			_vPackJobs.pop();
 		}
@@ -50,6 +50,9 @@ void PackingThread::run() {
 }
 
 void PackingThread::ProcessJob(PackJob& rJob) {	
+	if (!rJob.pPlayer->isAssigned()) { //Player is offline but a job for him is in queue -> skip it
+		return; 
+	}
 	NetworkOut Out = rJob.pNetwork->New();
 
 

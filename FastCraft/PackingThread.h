@@ -22,12 +22,14 @@ GNU General Public License for more details.
 #include "ThreadSafeQueue.h"
 
 class NetworkOutRoot;
+class PlayerThread;
 
 struct PackJob {
 	int X;
 	int Z;
 	NetworkOutRoot* pNetwork;
 	MapChunk* pChunk;
+	PlayerThread* pPlayer;
 };
 
 using std::queue;

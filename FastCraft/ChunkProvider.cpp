@@ -126,6 +126,7 @@ bool ChunkProvider::CheckChunkCircle() {
 	vector<PackJob> vJobs;
 
 	Job.pNetwork = &(_rNetwork);
+	Job.pPlayer = _pPlayer;
 
 	try {
 		//Check chunk who player stands on
@@ -137,16 +138,12 @@ bool ChunkProvider::CheckChunkCircle() {
 				return true;
 			}
 
-			cout<<"spawn player chunk"<<"\n";
-
 			Job.X = _PlayerCoordinates.X;
 			Job.Z = _PlayerCoordinates.Z;
 			Job.pChunk = pChunk;
 
 			sendSpawn(Job.X,Job.Z);
-
 			vJobs.push_back(Job);
-
 			AddChunkToList(_PlayerCoordinates.X,_PlayerCoordinates.Z);
 		}
 		int iViewDistance = SettingsHandler::getViewDistance();

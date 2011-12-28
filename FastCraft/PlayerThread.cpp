@@ -213,7 +213,8 @@ void PlayerThread::run() {
 
 void PlayerThread::Disconnect(char iLeaveMode) {
 	if (!_fAssigned) { return; }
-	if (_Spawned_PlayerInfoList > 0) {
+	if (_Spawned_PlayerInfoList > 0) { //Horrobile hack, but it's the best way to check if player was spawned and suspend the 
+									   //network writer thread with _fSpawned = false; 
 		_ChunkProvider.HandleDisconnect();
 		_Inventory.HandleDisconnect();
 		_PlayerCount--;
@@ -632,7 +633,7 @@ void PlayerThread::Packet1_Login() {
 
 		//Spawn other player
 		vector<string> vNames;
-		vNames = _pPoolMaster->ListPlayers(60);
+		vNames = _pPoolMaster->ListPlayers(59);
 
 		if (vNames.size() > 0) {
 			for ( int x = 0;x<= vNames.size()-1;x++) {
