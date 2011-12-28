@@ -88,6 +88,6 @@ void PackingThread::ProcessJob(PackJob& rJob) {
 	Out.Finalize(FC_QUEUE_LOW);
 }
 
-void PackingThread::AddJob(PackJob& rJob) {
-	_vPackJobs.push(rJob);
+void PackingThread::AddJobs(std::vector<PackJob> & rvJob) {
+	_vPackJobs.multiPush(rvJob);
 }

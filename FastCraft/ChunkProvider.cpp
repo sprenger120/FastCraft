@@ -224,11 +224,9 @@ bool ChunkProvider::CheckChunkCircle() {
 		return false;
 	}
 
-	for (int x=0;x<=vJobs.size()-1;x++) {
-		_rPackingThread.AddJob(vJobs[x]);
-	}
-
+	_rPackingThread.AddJobs(vJobs);
 	vJobs.clear();
+
 	return true;
 }
 

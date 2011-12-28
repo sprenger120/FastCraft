@@ -17,6 +17,7 @@ GNU General Public License for more details.
 #define _FASTCRAFTHEADER_PACKINGTHREAD
 #include <Poco/Runnable.h>
 #include <sstream>
+#include <vector>
 #include <Poco/DeflatingStream.h>
 #include "Structs.h"
 #include "ThreadSafeQueue.h"
@@ -45,7 +46,7 @@ public:
 
 	virtual void run();
 
-	void AddJob(PackJob&);
+	void AddJobs(std::vector<PackJob>&);
 private:
 	void ProcessJob(PackJob&);
 };

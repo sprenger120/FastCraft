@@ -20,15 +20,17 @@ GNU General Public License for more details.
 #include <queue>
 #include <Poco/Exception.h>
 #include <iostream>
+#include <vector>
 
 using Poco::RuntimeException;
 using std::queue;
-
+using std::vector;
 
 template <typename T>
 class ThreadSafeQueue {
 public:
 	void push(T&);
+	void multiPush(vector<T>);
 	void pop();
 	void clear();
 	T& front();
@@ -53,9 +55,24 @@ _pfront(NULL)
 
 template <typename T>
 inline ThreadSafeQueue<T>::~ThreadSafeQueue() {
+	std::cout<<"destroying queue container"<<"\n";
 	clear();
 }
 
+
+template <typename T>
+inline void ThreadSafeQueue<T>::multiPush(vector<T> v) {
+	_Mutex.lock();
+	if (v.size()>0) {
+		for (int x=0;x<=v.size()-1;x++) {
+			_q.push(v[x]);
+			if (_q.size()==1) {
+				_pfront=&(_q.front());
+			}
+		}
+	}
+	_Mutex.unlock();
+}
 
 template <typename T> 
 inline void ThreadSafeQueue<T>::push(T& t) {
