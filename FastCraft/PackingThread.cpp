@@ -29,7 +29,7 @@ PackingThread::PackingThread() :
 	_vPackJobs()
 {
 	_iNeededTime = 1;
-	_iProcessedJobs = 0;
+	_iProcessedJobs = 1;
 }
 
 
@@ -42,11 +42,11 @@ void PackingThread::run() {
 	Poco::Stopwatch Timer;
 	Timer.start();
 	while (1) { 
-		if (Timer.elapsed() > 1000 * 1000) {
+		if (Timer.elapsed() > 5000 * 1000) {
 			Timer.stop();
 			Timer.reset();
 			Timer.start();
-			std::cout<<"Packer queue size:"<< _vPackJobs.size()<<"\t"<<" average i/s:"<<_iProcessedJobs/_iNeededTime<<" ms"<<"\t"<<" processed elements:"<<_iProcessedJobs<<"\n";
+			std::cout<<"Packer queue size:"<< _vPackJobs.size()<<"\t"<<" average i/s:"<<_iNeededTime/_iProcessedJobs<<" ms"<<"\t"<<" processed elements:"<<_iProcessedJobs<<"\n";
 		}
 		if (_vPackJobs.size() == 0) {
 			Thread::sleep(10);

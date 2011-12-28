@@ -194,8 +194,6 @@ void PlayerPool::run() {
 					}
 				}
 			}
-
-
 			break;
 		}
 
