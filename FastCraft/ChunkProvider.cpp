@@ -224,6 +224,7 @@ bool ChunkProvider::CheckChunkCircle() {
 		return false;
 	}
 
+	cout<<"ChunkProvider::CheckChunkCircle submits "<<vJobs.size()<<" jobs to Packer."<<"\n";
 	_rPackingThread.AddJobs(vJobs);
 	vJobs.clear();
 

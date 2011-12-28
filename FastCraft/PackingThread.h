@@ -40,6 +40,9 @@ private:
 	ThreadSafeQueue<PackJob> _vPackJobs;
 	std::stringstream _stringStrm;
 	Poco::DeflatingOutputStream _deflatingStrm;
+
+	int _iNeededTime;
+	int _iProcessedJobs;
 public:
 	PackingThread();
 	~PackingThread();
