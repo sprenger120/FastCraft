@@ -20,7 +20,6 @@ GNU General Public License for more details.
 #include "PlayerThread.h"
 #include "Constants.h"
 #include <iostream>
-#include "Poco/Stopwatch.h"
 using Poco::Thread;
 
 PackingThread::PackingThread() : 
@@ -28,8 +27,6 @@ PackingThread::PackingThread() :
 	_deflatingStrm(_stringStrm,Poco::DeflatingStreamBuf::STREAM_ZLIB,-1),
 	_vPackJobs()
 {
-	_iNeededTime = 1;
-	_iProcessedJobs = 1;
 }
 
 
@@ -39,21 +36,12 @@ PackingThread::~PackingThread() {
 }
 
 void PackingThread::run() {
-	Poco::Stopwatch Timer;
-	Timer.start();
 	while (1) { 
-		if (Timer.elapsed() > 5000 * 1000) {
-			Timer.stop();
-			Timer.reset();
-			Timer.start();
-			std::cout<<"Packer queue size:"<< _vPackJobs.size()<<"\t"<<" average i/s:"<<_iNeededTime/_iProcessedJobs<<" ms"<<"\t"<<" processed elements:"<<_iProcessedJobs<<"\n";
-		}
 		if (_vPackJobs.size() == 0) {
 			Thread::sleep(10);
 			continue;
 		}
 		while(!_vPackJobs.empty()) {
-			_iProcessedJobs++;
 			ProcessJob(_vPackJobs.front());
 			_vPackJobs.pop();
 		}
@@ -64,8 +52,6 @@ void PackingThread::ProcessJob(PackJob& rJob) {
 	if (!rJob.pPlayer->isAssigned()) { //Player is offline but a job for him is in queue -> skip it
 		return; 
 	}
-	Poco::Stopwatch Sw;
-	Sw.start();
 	NetworkOut Out = rJob.pNetwork->New();
 
 
@@ -76,8 +62,6 @@ void PackingThread::ProcessJob(PackJob& rJob) {
 	Out.addByte(15);
 	Out.addByte(127);
 	Out.addByte(15);
-
-	//std::cout<<"writing X:"<<rJob.X<<" Z:"<<rJob.Z<<"\n";
 
 	//deflate
 	if(rJob.pChunk==NULL) {
@@ -99,10 +83,12 @@ void PackingThread::ProcessJob(PackJob& rJob) {
 	_deflatingStrm.clear();
 
 	Out.Finalize(FC_QUEUE_LOW);
-	Sw.stop();
-	_iNeededTime += Sw.elapsed() / 1000;
 }
 
 void PackingThread::AddJobs(std::vector<PackJob> & rvJob) {
 	_vPackJobs.multiPush(rvJob);
+}
+
+void PackingThread::AddJob(PackJob& rJob) {
+	_vPackJobs.push(rJob);
 }
