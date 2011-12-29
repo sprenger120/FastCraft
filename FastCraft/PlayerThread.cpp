@@ -266,8 +266,11 @@ void PlayerThread::Connect(Poco::Net::StreamSocket& Sock) {
 	}
 	_fAssigned=true;
 	_Connection = Sock; 
-	_Inventory.clear();
+	_Connection.setLinger(true,5);
+	_Connection.setNoDelay(false);
+	_Connection.setBlocking(true);
 
+	_Inventory.clear();
 	_sIP.assign(_Connection.peerAddress().toString());
 	_iThreadTicks = 0;
 }
