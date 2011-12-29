@@ -154,7 +154,7 @@ void ChunkRoot::generateMap(int X,int Z) {
 
 		Block.BlockID = 12;
 
-		for (short y=1;y<=30;y++) {
+		for (short y=1;y<=70;y++) {
 			ChunkTerraEditor::setPlate(_vpChunks[index],y,Block);
 		}
 	} catch (Poco::RuntimeException& err) {
