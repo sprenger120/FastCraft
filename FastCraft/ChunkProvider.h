@@ -18,11 +18,11 @@ GNU General Public License for more details.
 
 #include "Structs.h"
 #include "EntityCoordinates.h"
+#include "PackingThread.h"
 #include <vector>
 
 class NetworkOutRoot;
 class ChunkRoot;
-class PackingThread;
 class PlayerThread;
 
 using std::vector;
@@ -30,6 +30,7 @@ using std::vector;
 class ChunkProvider {
 private:
 	vector<ChunkCoordinates> _vSpawnedChunks;
+	vector<PackJob> _vToBeSendChunks;
 	ChunkCoordinates _PlayerCoordinates;
 	ChunkCoordinates _oldPlayerCoordinates;
 
@@ -46,7 +47,7 @@ public:
 	void HandleDisconnect();
 
 	void HandleMovement(const EntityCoordinates&);
-	
+	void NextChunk();
 public: 
 	bool CheckChunkCircle();
 	void CheckSpawnedChunkList();

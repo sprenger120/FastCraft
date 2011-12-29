@@ -23,7 +23,6 @@ GNU General Public License for more details.
 #include "PlayerThread.h"
 #include "ChunkMath.h"
 #include "ChunkRoot.h"
-#include "PackingThread.h"
 #include "SettingsHandler.h"
 #include "Constants.h"
 
@@ -45,6 +44,7 @@ _rChunkRoot(rChunkRoot),
 
 ChunkProvider::~ChunkProvider() {
 	_vSpawnedChunks.clear();
+	_vToBeSendChunks.clear();
 }
 
 void ChunkProvider::HandleNewPlayer() {
@@ -53,6 +53,7 @@ void ChunkProvider::HandleNewPlayer() {
 
 void ChunkProvider::HandleDisconnect() {
 	_vSpawnedChunks.clear();
+	_vToBeSendChunks.clear();
 	_fNewPlayer = false;
 }
 
@@ -87,12 +88,12 @@ bool ChunkProvider::isChunkListEmpty() {
 
 void ChunkProvider::sendSpawn(int X,int Z) {
 	NetworkOut Out = _rNetwork.New();
-	
+
 	Out.addByte(0x32);
 	Out.addInt(X);
 	Out.addInt(Z);
 	Out.addBool(true);
-	
+
 	Out.Finalize(FC_QUEUE_HIGH);
 }
 
@@ -120,33 +121,49 @@ bool ChunkProvider::isSpawned(ChunkCoordinates coord) {
 
 bool ChunkProvider::CheckChunkCircle() {
 	MapChunk* pChunk;
-	PackJob Job;
 	ChunkCoordinates CircleRoot,Temp;
-
-	vector<PackJob> vJobs;
+	PackJob Job;
+	int iViewDistance = SettingsHandler::getViewDistance();
 
 	Job.pNetwork = &(_rNetwork);
 	Job.pPlayer = _pPlayer;
 
+	/*
+	Check already queued chunks
+	*/
+	if ( _vToBeSendChunks.size() > 0) {
+		bool fDespawn=false; 
+
+		for (int x=_vToBeSendChunks.size()-1;x>=0;x--) {
+			if (_vToBeSendChunks[x].X < _PlayerCoordinates.X - iViewDistance) {fDespawn=true;}
+			if (_vToBeSendChunks[x].X > _PlayerCoordinates.X + iViewDistance) {fDespawn=true;}
+			if (_vToBeSendChunks[x].Z < _PlayerCoordinates.Z - iViewDistance) {fDespawn=true;}
+			if (_vToBeSendChunks[x].Z > _PlayerCoordinates.Z + iViewDistance) {fDespawn=true;}
+
+			if(fDespawn) {
+				sendDespawn(_vToBeSendChunks[x].X,_vToBeSendChunks[x].Z);
+				_vToBeSendChunks.erase(_vToBeSendChunks.begin()+x);
+			}
+			fDespawn = false;
+		}
+	}
+
+
 	try {
-		//Check chunk who player stands on
-		if ( ! isSpawned(_PlayerCoordinates)) {
+		if (!isSpawned(_PlayerCoordinates)) { //Check chunk who player stands on
 			pChunk = _rChunkRoot.getChunk(_PlayerCoordinates.X,_PlayerCoordinates.Z);
 			if (pChunk==NULL) {
 				cout<<"CheckChunkCircle nullpointer"<<"\n";
-				//Todo: end of world reached message in players chat
-				return true;
+				return false;
 			}
 
 			Job.X = _PlayerCoordinates.X;
 			Job.Z = _PlayerCoordinates.Z;
 			Job.pChunk = pChunk;
-
 			sendSpawn(Job.X,Job.Z);
-			vJobs.push_back(Job);
+			_vToBeSendChunks.push_back(Job); //Queue chunk
 			AddChunkToList(_PlayerCoordinates.X,_PlayerCoordinates.Z);
-		}
-		int iViewDistance = SettingsHandler::getViewDistance();
+		}	
 
 		int X;
 		int Z;
@@ -165,7 +182,7 @@ bool ChunkProvider::CheckChunkCircle() {
 					pChunk = _rChunkRoot.getChunk(X,Z);
 					if (pChunk==NULL) {
 						cout<<"CheckChunkCircle nullpointer"<<"\n";
-						return true;
+						return false;
 					}
 
 					Job.X = X;
@@ -173,8 +190,7 @@ bool ChunkProvider::CheckChunkCircle() {
 					Job.pChunk = pChunk;
 
 					sendSpawn(X,Z);
-					vJobs.push_back(Job);
-
+					_vToBeSendChunks.push_back(Job);
 					AddChunkToList(X,Z);
 				}
 
@@ -223,11 +239,6 @@ bool ChunkProvider::CheckChunkCircle() {
 		cout<<"CheckChunkCircle error:"<<err.message()<<"\n";
 		return false;
 	}
-
-	cout<<"ChunkProvider::CheckChunkCircle submits "<<vJobs.size()<<" jobs to Packer."<<"\n";
-	_rPackingThread.AddJobs(vJobs);
-	vJobs.clear();
-
 	return true;
 }
 
@@ -259,4 +270,13 @@ void ChunkProvider::AddChunkToList(int X,int Z) {
 	Coord.Z = Z;
 
 	_vSpawnedChunks.push_back(Coord);
+}
+
+void ChunkProvider::NextChunk() {
+	if (_vToBeSendChunks.size()==0) {
+		return;
+	}
+	PackJob & rJob = _vToBeSendChunks.front();
+	_rPackingThread.AddJob(rJob);
+	_vToBeSendChunks.erase(_vToBeSendChunks.begin());
 }

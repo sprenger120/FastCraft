@@ -699,6 +699,9 @@ void PlayerThread::Packet3_Chat() {
 }
 
 void PlayerThread::Packet10_Player() {
+	if (isSpawned()) {
+		_ChunkProvider.NextChunk();
+	}
 	try {
 		_Coordinates.OnGround = _NetworkInRoot.readBool();
 	} catch(Poco::RuntimeException) {
@@ -708,7 +711,9 @@ void PlayerThread::Packet10_Player() {
 
 void PlayerThread::Packet11_Position() {
 	EntityCoordinates TmpCoord;
-
+	if (isSpawned()) {
+		_ChunkProvider.NextChunk();
+	}
 	try {
 		//Read coordinates in a temporary variable
 		TmpCoord.X = _NetworkInRoot.readDouble();
@@ -734,6 +739,9 @@ void PlayerThread::Packet11_Position() {
 }
 
 void PlayerThread::Packet12_Look() {
+	if (isSpawned()) {
+		_ChunkProvider.NextChunk();
+	}
 	try {
 		_Coordinates.Yaw = _NetworkInRoot.readFloat();
 		_Coordinates.Pitch = _NetworkInRoot.readFloat();
@@ -745,6 +753,10 @@ void PlayerThread::Packet12_Look() {
 
 void PlayerThread::Packet13_PosAndLook() {
 	EntityCoordinates TmpCoord;
+
+	if (isSpawned()) {
+		_ChunkProvider.NextChunk();
+	}
 
 	//Read coordinates in a temporary variable
 	try {
