@@ -116,6 +116,9 @@ inline T& ThreadSafeQueue<T>::front() {
 		std::cout<<"FRONT exception, queue is empty"<<"\n";
 		throw Poco::RuntimeException("Queue is empty");
 	}
+	if (_pfront == NULL) {
+		std::cout<<"ThreadSafeQueue<T>::front nullptr"<<"\n";
+	}
 	return (T&)(*_pfront);
 }
 
