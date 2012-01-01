@@ -16,7 +16,7 @@ GNU General Public License for more details.
 #ifndef _FASTCRAFTHEADER_THREADSAVEQUEUE
 #define _FASTCRAFTHEADER_THREADSAVEQUEUE
 
-#include <Poco/Mutex.h>
+//#include <Poco/Mutex.h>
 #include <queue>
 #include <Poco/Exception.h>
 #include <iostream>
@@ -41,16 +41,16 @@ public:
 	ThreadSafeQueue(void);
 	~ThreadSafeQueue();
 private:
-	Poco::Mutex _Mutex;
+	bool _fLocked;
+	//Poco::Mutex _Mutex;
 	queue<T> _q;
-
-	T* _pfront;
 };
 
 template <typename T>
-inline ThreadSafeQueue<T>::ThreadSafeQueue(void) : 
-_pfront(NULL)
+inline ThreadSafeQueue<T>::ThreadSafeQueue(void) :
+_q()
 {
+	_fLocked=false;
 }
 
 template <typename T>
@@ -62,64 +62,66 @@ inline ThreadSafeQueue<T>::~ThreadSafeQueue() {
 
 template <typename T>
 inline void ThreadSafeQueue<T>::multiPush(vector<T> v) {
-	_Mutex.lock();
+	//_Mutex.lock();
+	while(_fLocked) {
+	}
+	_fLocked = true;
 	if (v.size()>0) {
 		for (int x=0;x<=v.size()-1;x++) {
 			_q.push(v[x]);
-			if (_q.size()==1) {
-				_pfront=&(_q.front());
-			}
 		}
 	}
-	_Mutex.unlock();
+	_fLocked=false;
+	//_Mutex.unlock();
 }
 
 template <typename T> 
 inline void ThreadSafeQueue<T>::push(T& t) {
-	_Mutex.lock();
-	_q.push(t);
-	if (_q.size()==1) {
-		_pfront=&(_q.front());
+	//_Mutex.lock();
+	while(_fLocked) {
 	}
-	_Mutex.unlock();
+	_fLocked = true;
+	_q.push(t);
+	_fLocked=false;
+	//_Mutex.unlock();
 }
 
 
 template <typename T> 
 inline void ThreadSafeQueue<T>::pop() {
-	_Mutex.lock();
+	//_Mutex.lock();
 	if (_q.empty()) { 
-		std::cout<<"POP exception, queue is empty"<<"\n";
+		std::cout<<"ThreadSafeQueue<T>::pop queue is empty"<<"\n";
 		throw Poco::RuntimeException("Queue is empty");
 	}
-	_q.pop();
-	if (_q.size() > 0) {
-		_pfront=&(_q.front());
-	}else{
-		_pfront=NULL;
+	while(_fLocked) {
 	}
-	_Mutex.unlock();
+	_fLocked = true;
+	_q.pop();
+	_fLocked=false;
+	//_Mutex.unlock();
 }
 
 template <typename T> 
 inline void ThreadSafeQueue<T>::clear() {
-	_Mutex.lock();
+	//_Mutex.lock();
+		while(_fLocked) {
+	}
+	_fLocked = true;
 	while (!_q.empty()) {
 		_q.pop();
 	}
-	_Mutex.unlock();
+	_fLocked=false;
+	//_Mutex.unlock();
 }
 
 template <typename T> 
 inline T& ThreadSafeQueue<T>::front() {
 	if (_q.empty()) { 
-		std::cout<<"FRONT exception, queue is empty"<<"\n";
+		std::cout<<"ThreadSafeQueue<T>::front queue is empty"<<"\n";
 		throw Poco::RuntimeException("Queue is empty");
 	}
-	if (_pfront == NULL) {
-		std::cout<<"ThreadSafeQueue<T>::front nullptr"<<"\n";
-	}
-	return (T&)(*_pfront);
+	return _q.front();
 }
 
 
