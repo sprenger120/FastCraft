@@ -49,6 +49,10 @@ void PackingThread::run() {
 }
 
 void PackingThread::ProcessJob(PackJob& rJob) {	
+	if (rJob.pPlayer==NULL || rJob.pNetwork==NULL || rJob.pChunk == NULL) {
+		std::cout<<"PackingThread::ProcessJob Nullpointer"<<"\n";
+		return;
+	}
 	if (!rJob.pPlayer->isAssigned()) { //Player is offline but a job for him is in queue -> skip it
 		return; 
 	}
@@ -64,10 +68,6 @@ void PackingThread::ProcessJob(PackJob& rJob) {
 	Out.addByte(15);
 
 	//deflate
-	if(rJob.pChunk==NULL) {
-		std::cout<<"PackingThread::ProcessJob Nullpointer"<<"\n";
-		return;
-	}
 	_deflatingStrm.write(rJob.pChunk->Blocks,FC_CHUNK_BLOCKCOUNT);
 	_deflatingStrm.write(rJob.pChunk->Metadata,FC_CHUNK_NIBBLECOUNT);
 	_deflatingStrm.write(rJob.pChunk->BlockLight,FC_CHUNK_NIBBLECOUNT);
