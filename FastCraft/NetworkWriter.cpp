@@ -12,7 +12,7 @@ but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 */
-
+#define VERSIONINFO
 #include "NetworkWriter.h"
 #include "PlayerThread.h"
 #include "Constants.h"
@@ -36,11 +36,6 @@ NetworkWriter::~NetworkWriter() {
 }
 
 void NetworkWriter::run() {
-	Poco::Stopwatch Timer;
-	Poco::Stopwatch T2;
-	T2.start();
-	int i=1;
-	int time=0;
 	while (1) {
 		if (_fClear) {
 			_fClear=false;
@@ -55,11 +50,6 @@ void NetworkWriter::run() {
 		if (!_pPlayer->isSpawned()) {
 			Thread::sleep(50);
 			continue;
-		}
-		if (T2.elapsed() > 1000*1000) {
-			T2.reset();
-			T2.start();
-			std::cout<<"Writer queue size:"<<_rhighQ.size()<<"/"<<_rlowQ.size()<<"\t"<<" average i/s:"<<time/i<<" ms"<<"\t"<<" processed elements:"<<i<<"\n";
 		}
 		try{
 			//Process high level queue
@@ -97,8 +87,8 @@ void NetworkWriter::run() {
 				Thread::sleep(10);
 				continue;
 			}
-			Timer.start();
 			string & rStr = _rlowQ.front();
+
 			try {
 				_rStrm.sendBytes(rStr.c_str(),rStr.length()); //Send
 			}catch(Poco::Net::ConnectionAbortedException) {
@@ -125,10 +115,6 @@ void NetworkWriter::run() {
 
 
 			_rlowQ.pop();
-			i++;
-			Timer.stop();
-			time += Timer.elapsed() / 1000;
-			Timer.reset();
 		}catch(Poco::RuntimeException& ex) {
 			std::cout<<"NetworkWriter::run exception:"<<ex.message()<<"\n";
 			waitTillDisconnected();
