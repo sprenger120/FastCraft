@@ -138,7 +138,7 @@ void NetworkOut::addFloat(float dVal) {
 
 void NetworkOut::addDouble(double dVal) {
 	_ItD.d = dVal;
-	_ItD.i = Poco::ByteOrder::toBigEndian(_ItD.i); //switch endian
+	_ItD.i = Poco::ByteOrder::toBigEndian((Poco::Int64)_ItD.i); //switch endian
 	memcpy(_sEndianBuffer,&_ItD.i,8);//copy to endian buffer
 	_sNetworkBuffer.append(_sEndianBuffer,8);//append
 }
