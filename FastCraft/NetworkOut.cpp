@@ -67,7 +67,6 @@ void NetworkOut::addInt64(string& rBuff,long long iInt) {
 void NetworkOut::addFloat(string& rBuff,float dVal) {
 	int iBuff;
 	char EndianBuffer[4];
-
 	memcpy(&iBuff,&dVal,4);
 	iBuff = Poco::ByteOrder::toBigEndian(iBuff);
 	memcpy(EndianBuffer,&iBuff,4);
@@ -130,21 +129,17 @@ void NetworkOut::addInt64(long long iInt) {
 }
 
 void NetworkOut::addFloat(float dVal) {
-	int iBuff;
-
-	memcpy(&iBuff,&dVal,4);
-	iBuff = Poco::ByteOrder::toBigEndian(iBuff);
-	memcpy(_sEndianBuffer,&iBuff,4);
+	_ItF.d = dVal;
+	_ItF.i = Poco::ByteOrder::toBigEndian(_ItF.i);
+	memcpy(_sEndianBuffer,&_ItF.i,4);
 	_sNetworkBuffer.append(_sEndianBuffer,4);
 }
 
 
 void NetworkOut::addDouble(double dVal) {
-	long long int iBuff;
-
-	memcpy(&iBuff,&dVal,8); //copy double to an int64
-	iBuff = Poco::ByteOrder::toBigEndian(Poco::Int64(iBuff)); //switch endian
-	memcpy(_sEndianBuffer,&iBuff,8);//copy to endian buffer
+	_ItD.d = dVal;
+	_ItD.i = Poco::ByteOrder::toBigEndian(_ItD.i); //switch endian
+	memcpy(_sEndianBuffer,&_ItD.i,8);//copy to endian buffer
 	_sNetworkBuffer.append(_sEndianBuffer,8);//append
 }
 

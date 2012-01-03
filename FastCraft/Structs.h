@@ -47,4 +47,14 @@ struct Enchantment {
 	short EnchID;
 	short Level;
 };
+
+union IntToFloat {
+	int i;
+	float d;
+};
+
+union Int64ToDouble {
+	long long i;
+	double d;
+};
 #endif

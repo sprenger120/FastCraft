@@ -17,12 +17,14 @@ GNU General Public License for more details.
 #define _FASTCRAFTHEADER_NETWORKIN
 #include <Poco/Net/StreamSocket.h>
 #include <string>
-
+#include "Structs.h"
 using Poco::Net::StreamSocket;
 using std::string;
 
 class NetworkIn {
 private:
+	IntToFloat _ItF;
+	Int64ToDouble _ItD;
 	StreamSocket & _rSocket;
 	char _sReadBuffer[8];
 	static unsigned long long _iReadTraffic;

@@ -15,8 +15,7 @@ GNU General Public License for more details.
 #include "NetworkIn.h"
 #include <Poco/Exception.h>
 #include <Poco/Net/NetException.h>
-#include <Poco/ByteOrder.h>
-#include <cstring>
+
 using Poco::RuntimeException;
 
 NetworkIn::NetworkIn(StreamSocket& r) :
@@ -89,41 +88,34 @@ long long NetworkIn::readInt64() {
 		ex.rethrow();
 	}
 
-	long long iVal;
-	memcpy(&iVal,_sReadBuffer,8);
-
-	return Poco::ByteOrder::fromBigEndian(Poco::Int64(iVal));
+	return((((long long)_sReadBuffer[0])<<56  & 0xFF00000000000000) |
+            (((long long)_sReadBuffer[1])<<48 & 0x00FF000000000000) |
+			(((long long)_sReadBuffer[2])<<40 & 0x0000FF0000000000) |
+			(((long long)_sReadBuffer[3])<<32 & 0x000000FF00000000) |
+			(((long long)_sReadBuffer[4])<<24 & 0x00000000FF000000) |
+			(((long long)_sReadBuffer[5])<<16 & 0x0000000000FF0000) |
+			(((long long)_sReadBuffer[6])<<8  & 0x000000000000FF00) |
+			((long long)_sReadBuffer[7]       & 0x00000000000000FF));
 }
 
 float NetworkIn::readFloat() {
-	int iInt;
-
 	try {
-		iInt = readInt();
+		_ItF.i = readInt();
 	} catch(Poco::RuntimeException& ex) {
 		ex.rethrow();
 	}
 
-	float dVal;
-
-	memcpy(&dVal,&iInt,4);
-
-	return dVal;
+	return _ItF.d;
 }
 
 
 double NetworkIn::readDouble() {
-	Poco::Int64 iInt;
-
 	try {
-		iInt = readInt64();
+		_ItD.i = readInt64();
 	} catch(Poco::RuntimeException& ex) {
 		ex.rethrow();
 	}
-
-	double dVal;
-	memcpy(&dVal,&iInt,8);
-	return dVal;
+	return _ItD.d;
 }
 
 string NetworkIn::readString() {
@@ -183,7 +175,6 @@ void NetworkIn::read(int iLenght) {
 			fUnderflow = true;
 		}
 	}
-
 	_iReadTraffic += iLenght;
 }
 

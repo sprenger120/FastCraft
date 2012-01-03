@@ -16,7 +16,7 @@ GNU General Public License for more details.
 #ifndef _FASTCRAFTHEADER_NETWORKOUT
 #define _FASTCRAFTHEADER_NETWORKOUT
 #include <string>
-
+#include "Structs.h"
 using std::string;
 
 //Forward definitions
@@ -24,6 +24,9 @@ class NetworkOutRoot;
 
 class NetworkOut {
 private:
+	IntToFloat _ItF;
+	Int64ToDouble _ItD;
+
 	char _sEndianBuffer[8];
 	string _sNetworkBuffer;
 
