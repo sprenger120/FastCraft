@@ -16,7 +16,7 @@ GNU General Public License for more details.
 #ifndef _FASTCRAFTHEADER_THREADSAVEQUEUE
 #define _FASTCRAFTHEADER_THREADSAVEQUEUE
 
-//#include <Poco/Mutex.h>
+#include <Poco/Mutex.h>
 #include <queue>
 #include <Poco/Exception.h>
 #include <iostream>
@@ -41,8 +41,7 @@ public:
 	ThreadSafeQueue(void);
 	~ThreadSafeQueue();
 private:
-	bool _fLocked;
-	//Poco::Mutex _Mutex;
+	Poco::Mutex _Mutex;
 	queue<T> _q;
 };
 
@@ -50,7 +49,6 @@ template <typename T>
 inline ThreadSafeQueue<T>::ThreadSafeQueue(void) :
 _q()
 {
-	_fLocked=false;
 }
 
 template <typename T>
@@ -62,57 +60,44 @@ inline ThreadSafeQueue<T>::~ThreadSafeQueue() {
 
 template <typename T>
 inline void ThreadSafeQueue<T>::multiPush(vector<T> v) {
-	//_Mutex.lock();
-	while(_fLocked) {
-	}
-	_fLocked = true;
+	_Mutex.lock();
 	if (v.size()>0) {
 		for (int x=0;x<=v.size()-1;x++) {
 			_q.push(v[x]);
 		}
 	}
-	_fLocked=false;
-	//_Mutex.unlock();
+	_Mutex.unlock();
 }
 
 template <typename T> 
 inline void ThreadSafeQueue<T>::push(T& t) {
-	//_Mutex.lock();
-	while(_fLocked) {
-	}
-	_fLocked = true;
+	_Mutex.lock();
+	//std::cout<<"push"<<std::endl;
 	_q.push(t);
-	_fLocked=false;
-	//_Mutex.unlock();
+	_Mutex.unlock();
 }
 
 
 template <typename T> 
 inline void ThreadSafeQueue<T>::pop() {
-	//_Mutex.lock();
+	_Mutex.lock();
 	if (_q.empty()) { 
 		std::cout<<"ThreadSafeQueue<T>::pop queue is empty"<<"\n";
 		throw Poco::RuntimeException("Queue is empty");
 	}
-	while(_fLocked) {
-	}
-	_fLocked = true;
+	//std::cout<<"pop"<<std::endl;
 	_q.pop();
-	_fLocked=false;
-	//_Mutex.unlock();
+	_Mutex.unlock();
 }
 
 template <typename T> 
 inline void ThreadSafeQueue<T>::clear() {
-	//_Mutex.lock();
-		while(_fLocked) {
-	}
-	_fLocked = true;
+	_Mutex.lock();
 	while (!_q.empty()) {
 		_q.pop();
 	}
-	_fLocked=false;
-	//_Mutex.unlock();
+	//std::cout<<"clear"<<std::endl;
+	_Mutex.unlock();
 }
 
 template <typename T> 
@@ -121,6 +106,7 @@ inline T& ThreadSafeQueue<T>::front() {
 		std::cout<<"ThreadSafeQueue<T>::front queue is empty"<<"\n";
 		throw Poco::RuntimeException("Queue is empty");
 	}
+	//std::cout<<"front"<<std::endl;
 	return _q.front();
 }
 
