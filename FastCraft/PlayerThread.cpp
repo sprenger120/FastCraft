@@ -563,6 +563,12 @@ void PlayerThread::Packet1_Login() {
 			}
 		}
 
+		//Check if there is a player with same name
+		PlayerThread* pPlayer = _pPoolMaster->getPlayerByName(_sName,this);
+		if (pPlayer != NULL) {
+			pPlayer->Kick("Logged in from another location.");
+		}
+
 
 		//YES DUDE, you got it !
 		_PlayerCount++; //There is an new spawned player
@@ -1175,7 +1181,7 @@ void PlayerThread::Interval_CalculateSpeed() {
 
 		double iSpeed = (_dRunnedMeters * 60.0 * 60.0) / (iTime*3.6);
 		if (iSpeed > 7.5) {
-			Kick("Speedhack");
+			//Kick("Speedhack");
 		}
 		_dRunnedMeters=0.0;
 	}
