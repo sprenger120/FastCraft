@@ -24,6 +24,7 @@ GNU General Public License for more details.
 #include <Poco/Exception.h>
 #include <iostream>
 #include <cmath>
+#include <Poco/String.h>
 
 using Poco::Thread;
 using std::cout;
@@ -281,4 +282,15 @@ EntityPlayer PlayerPool::buildEntityPlayerFromPlayerPtr(PlayerThread* pPlayer) {
 	Player._aHeldItems[3] = Inventory.getSlot(6);
 	Player._aHeldItems[4] = Inventory.getSlot(5);
 	return Player;
+}
+
+
+PlayerThread* PlayerPool::getPlayerByName(string Name,PlayerThread* pCaller) {
+	for (int x=0;x<=_vPlayerThreads.size()-1;x++) {
+		if (_vPlayerThreads[x] == pCaller) { continue; }
+		if (Poco::icompare(_vPlayerThreads[x]->getUsername(),Name) == 0) {
+			return _vPlayerThreads[x];
+		}
+	}
+	return NULL;
 }

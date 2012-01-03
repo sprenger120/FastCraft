@@ -102,6 +102,18 @@ public:
 	@1 : Pointer to a spawned PlayerThread
 	*/
 	static EntityPlayer buildEntityPlayerFromPlayerPtr(PlayerThread*);
+
+
+	/*
+	* Look for PlayerThread thats name fits into given and return it's pointer
+	* Returns NULL if nothing found
+	* This is a cas insensitive search
+
+	Parameter:
+	@1 : Players name
+	@2 : this pointer of class that calls this function
+	*/
+	PlayerThread* getPlayerByName(string,PlayerThread*);
 private:
 	int getFreeSlot(); //Returns -1 if there is no free slot
 	void sendMessageToAll(string);
