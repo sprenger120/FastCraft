@@ -12,14 +12,12 @@ but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 */
-#define VERSIONINFO
 #include "NetworkWriter.h"
 #include "PlayerThread.h"
 #include "Constants.h"
 #include <Poco/Thread.h>
 #include <Poco/Net/NetException.h>
 #include <Poco/Exception.h>
-#include <Poco/Stopwatch.h>
 
 using Poco::Thread;
 
