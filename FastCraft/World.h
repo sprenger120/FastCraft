@@ -79,6 +79,18 @@ public:
 	@3 : Z in world coordiantes
 	*/
 	static pair<ChunkCoordinates,int> WorldCoordinateConverter(int,short,int);
+
+
+	/*
+	* Returns a Y coordinate at given coordinates who player can stand on without suffocate in the wall 
+	* Will generate chunk if not exits
+	* Will return -1 if there is no free space
+
+	Parameter:
+	@1 : X in world coordinates
+	@2 : Z in world coordiantes
+	*/
+	char getFreeSpace(int,int);
 private:
 	void generateChunks(int,int,int,int);
 	MapChunk* generateChunk(int,int);

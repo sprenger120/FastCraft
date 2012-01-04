@@ -202,3 +202,46 @@ pair<ChunkCoordinates,int> World::WorldCoordinateConverter(int X,short Y,int Z) 
 	pair<ChunkCoordinates,int> Pair(Coords,Index);
 	return Pair;
 }
+
+char World::getFreeSpace(int X,int Z) {
+	int ChunkX = X>>4;
+	int ChunkZ = Z>>4;
+	MapChunk* pChunk;
+
+	try {
+		pChunk = getChunkByChunkCoordinates(ChunkX,ChunkZ);
+	}catch (Poco::RuntimeException& ex) {
+		std::cout<<"World::getFreeSpace chunk not found"<<"\n";
+		ex.rethrow();
+	}
+
+	int iOffset = ChunkMath::toIndex(X,SettingsHandler::getWorldHeight(),Z);
+	unsigned char iPlaceHeight = 0,y;
+
+
+	//Get height
+	for (y=SettingsHandler::getWorldHeight();y>0;y--) {
+		if (pChunk->Blocks[iOffset-1+y] == 0) {
+			iPlaceHeight = y;
+		}
+	}
+
+
+	//No space on surface for player, builded up to the sky ... freaks :D
+	if(iPlaceHeight + 2 > SettingsHandler::getWorldHeight()) { 
+		iOffset = ChunkMath::toIndex(X,0,Z);
+		iPlaceHeight = 0;
+
+		//Search a cave 
+		for (y=0;y<=SettingsHandler::getWorldHeight()-2;y++) {
+			if (pChunk->Blocks[iOffset-1+y] == 0) { //Uuh free space
+				if (pChunk->Blocks[iOffset+y] == 0) { //Yep enought space for a player
+					return y;
+				}
+			}
+		}
+		return -1;
+	}else{
+		return iPlaceHeight;
+	}
+}
