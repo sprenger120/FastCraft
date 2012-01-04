@@ -17,6 +17,7 @@ GNU General Public License for more details.
 #define _FASTCRAFTHEADER_CONSTANTS
 
 #define FC_PLAYERSPAWNRADIUS			100.0
+#define FC_MAXLOGINTIME					10000 //10 Seconds to complete login procedure
 
 //Properties
 #define FC_SERVMODE_SURVIVAL			0

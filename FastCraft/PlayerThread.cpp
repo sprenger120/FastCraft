@@ -134,6 +134,10 @@ void PlayerThread::run() {
 			Timer.reset();
 			Timer.start();
 
+			if (!_fSpawned && _iThreadTicks >= FC_MAXLOGINTIME) {
+				Kick("Login timed out");
+				continue;
+			}
 
 			Interval_KeepAlive(); 
 			Interval_Time();
