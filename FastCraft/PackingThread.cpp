@@ -49,7 +49,7 @@ void PackingThread::run() {
 }
 
 void PackingThread::ProcessJob(PackJob& rJob) {	
-	if (rJob.pPlayer==NULL || rJob.pNetwork==NULL || rJob.pChunk == NULL) {
+	if (rJob.pPlayer==NULL || rJob.pNetwork==NULL) {
 		std::cout<<"PackingThread::ProcessJob Nullpointer"<<"\n";
 		return;
 	}

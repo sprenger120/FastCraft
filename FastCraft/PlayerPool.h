@@ -23,7 +23,7 @@ GNU General Public License for more details.
 #include <Poco/Net/StreamSocket.h>
 #include <Poco/ThreadPool.h>
 #include <Poco/Runnable.h>
-#include "ChunkRoot.h"
+#include "World.h"
 #include "Structs.h"
 #include "EntityCoordinates.h"
 #include "PlayerPoolEvent.h"
@@ -43,7 +43,7 @@ private:
 	ThreadSafeQueue<PlayerPoolEvent> _qEventQueue;
 	
 	PackingThread& _PackingThread;
-	ChunkRoot _ChunkRoot;
+	World _World;
 public:
 	/*
 	* De/constructor

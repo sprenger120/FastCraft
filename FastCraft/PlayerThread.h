@@ -40,7 +40,7 @@ GNU General Public License for more details.
 
 class EntityProvider;
 class PlayerPool;
-class ChunkRoot;
+class World;
 class PackingThread;
 
 using std::string;
@@ -114,7 +114,7 @@ public:
 	/*
 	* De- / constructor
 	*/
-	PlayerThread(PlayerPool*,ChunkRoot&,PackingThread&);
+	PlayerThread(PlayerPool*,World&,PackingThread&);
 	~PlayerThread();
 
 

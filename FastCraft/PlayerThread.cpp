@@ -19,7 +19,7 @@ GNU General Public License for more details.
 #include "ServerTime.h"
 #include "PlayerPool.h"
 #include "Constants.h"
-#include "ChunkRoot.h"
+#include "World.h"
 #include "ItemInfoStorage.h"
 #include "PlayerPoolEvent.h"
 #include "MathHelper.h"
@@ -36,7 +36,7 @@ using std::endl;
 using std::dec;
 
 PlayerThread::PlayerThread(PlayerPool* pPoolMaster,
-	ChunkRoot& rChunkRoot,
+	World& rWorld,
 	PackingThread& rPackingThread
 	) : 
 _sName(""),
@@ -55,7 +55,7 @@ _sName(""),
 	_Web_Response(),
 	_Flags(),
 	_Rand(),
-	_ChunkProvider(rChunkRoot,_NetworkOutRoot,rPackingThread,this),
+	_ChunkProvider(rWorld,_NetworkOutRoot,rPackingThread,this),
 	_threadNetworkWriter("NetworkWriter"),
 	_Inventory(_NetworkOutRoot,_NetworkInRoot),
 	_vSpawnedEntities(0)

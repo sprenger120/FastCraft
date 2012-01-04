@@ -22,7 +22,7 @@ GNU General Public License for more details.
 #include "NetworkOut.h"
 #include "PlayerThread.h"
 #include "ChunkMath.h"
-#include "ChunkRoot.h"
+#include "World.h"
 #include "SettingsHandler.h"
 #include "Constants.h"
 
@@ -33,8 +33,8 @@ using std::stringstream;
 using Poco::DeflatingOutputStream;
 
 
-ChunkProvider::ChunkProvider(ChunkRoot& rChunkRoot,NetworkOutRoot& rNetwork,PackingThread& rPackingThread,PlayerThread* pPlayer) :
-_rChunkRoot(rChunkRoot),
+ChunkProvider::ChunkProvider(World& rWorld,NetworkOutRoot& rNetwork,PackingThread& rPackingThread,PlayerThread* pPlayer) :
+_rWorld(rWorld),
 	_rNetwork(rNetwork),
 	_rPackingThread(rPackingThread),
 	_vSpawnedChunks(0)
@@ -151,11 +151,7 @@ bool ChunkProvider::CheckChunkCircle() {
 
 	try {
 		if (!isSpawned(_PlayerCoordinates)) { //Check chunk who player stands on
-			pChunk = _rChunkRoot.getChunk(_PlayerCoordinates.X,_PlayerCoordinates.Z);
-			if (pChunk==NULL) {
-				cout<<"CheckChunkCircle nullpointer"<<"\n";
-				return false;
-			}
+			pChunk = _rWorld.getChunkByChunkCoordinates(_PlayerCoordinates.X,_PlayerCoordinates.Z);
 
 			Job.X = _PlayerCoordinates.X;
 			Job.Z = _PlayerCoordinates.Z;
@@ -179,11 +175,7 @@ bool ChunkProvider::CheckChunkCircle() {
 				Temp.Z = Z;
 
 				if ( ! isSpawned(Temp)) {
-					pChunk = _rChunkRoot.getChunk(X,Z);
-					if (pChunk==NULL) {
-						cout<<"CheckChunkCircle nullpointer"<<"\n";
-						return false;
-					}
+					pChunk = _rWorld.getChunkByChunkCoordinates(X,Z);
 
 					Job.X = X;
 					Job.Z = Z;

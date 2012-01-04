@@ -33,22 +33,16 @@ PlayerPool::PlayerPool(PackingThread& rPackingThread):
 _vPlayerThreads(0),
 	_ThreadPool("PlayerThreads",1,SettingsHandler::getPlayerSlotCount()),
 	_qEventQueue(),
-	_ChunkRoot(),
+	_World("world"),
 	_PackingThread(rPackingThread) 
 {	
-	try {
-		_ChunkRoot.generateMap(0,0,20,20);
-	} catch (Poco::RuntimeException) {
-		throw Poco::RuntimeException("Chunk generation failed");
-	}
-
 	int iSlotCount = SettingsHandler::getPlayerSlotCount();
 
 	_vPlayerThreads.resize(iSlotCount); //Resize to slot count
 
 	//Create Threads
 	for (int x=0;x<=_vPlayerThreads.size()-1;x++) {
-		_vPlayerThreads[x] = new PlayerThread(this,_ChunkRoot,_PackingThread);
+		_vPlayerThreads[x] = new PlayerThread(this,_World,_PackingThread);
 
 		_ThreadPool.defaultPool().start(*_vPlayerThreads[x]);
 	}
@@ -79,7 +73,7 @@ void PlayerPool::run() {
 
 		switch (Event.getJobID()) {
 		case FC_PPEVENT_CHAT:
-			cout<<"Chat: "<<Event.getMessage()<<endl; //Server console
+			cout<<"Chat: "<<Event.getMessage()<<std::endl; //Server console
 			sendMessageToAll(Event.getMessage());
 			break;
 		case FC_PPEVENT_MOVE:

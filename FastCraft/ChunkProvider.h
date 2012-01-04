@@ -22,7 +22,7 @@ GNU General Public License for more details.
 #include <vector>
 
 class NetworkOutRoot;
-class ChunkRoot;
+class World;
 class PlayerThread;
 
 using std::vector;
@@ -35,12 +35,12 @@ private:
 	ChunkCoordinates _oldPlayerCoordinates;
 
 	bool _fNewPlayer;
-	ChunkRoot& _rChunkRoot;
+	World& _rWorld;
 	NetworkOutRoot& _rNetwork;
 	PackingThread& _rPackingThread;
 	PlayerThread* _pPlayer;
 public:
-	ChunkProvider(ChunkRoot&,NetworkOutRoot&,PackingThread&,PlayerThread*);
+	ChunkProvider(World&,NetworkOutRoot&,PackingThread&,PlayerThread*);
 	~ChunkProvider();
 
 	void HandleNewPlayer();
