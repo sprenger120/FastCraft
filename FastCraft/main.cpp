@@ -12,8 +12,7 @@ but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 */
-#define BUILD_VERSION 51
-#define BUILD_DATE "5/5/5"
+#define BUILD_VERSION ""
 #include <iostream>
 #include <sstream>
 
@@ -31,9 +30,9 @@ using std::stringstream;
 using Poco::Thread;
 
 int main() {
-	cout<<"--- FAST CRAFT v. "<<SettingsHandler::getFastCraftVersion()<<" for Minecraft "<<SettingsHandler::getSupportedMCVersion()<<" ---"<<"\n";
-	cout<<"Hudson build #"<<BUILD_VERSION<<" from "<<BUILD_DATE<<"\n";
-
+	cout<<"FastCraft Minecraft Server"<<"\n";
+	cout<<"Version "<<BUILD_VERSION<<"-"<<SettingsHandler::getFastCraftVersion()<<" for Minecraft "<<SettingsHandler::getSupportedMCVersion()<<std::endl;
+	
 	try {
 		SettingsHandler(); //Load configuration into static variables
 	} catch (Poco::RuntimeException) {
