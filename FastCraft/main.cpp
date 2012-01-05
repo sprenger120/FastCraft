@@ -67,7 +67,6 @@ int main() {
 
 
 	cout<<"Ready."<<"\n"<<std::endl;
-	
 
 	while (1) {		
 		Thread::sleep(1000);
