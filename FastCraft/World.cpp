@@ -20,7 +20,10 @@ GNU General Public License for more details.
 #include <iostream>
 #include <cstring>
 #include <cmath>
+#include <math.h>
 #include <Poco/Exception.h>
+using std::cout;
+
 
 World::World(string Name) :
 _WorldName(Name)
@@ -114,7 +117,7 @@ MapChunk* World::generateChunk(int X,int Z) {
 	*/
 	Block b;
 	b.BlockID = 7;
-	
+
 	std::memset(pAffectedChunk->Blocks,0,FC_CHUNK_BLOCKCOUNT); //Clear blocks
 	try {
 		ChunkTerraEditor::setPlate(pAffectedChunk,0,b); //Bedrock 
@@ -184,12 +187,8 @@ pair<ChunkCoordinates,int> World::WorldCoordinateConverter(int X,short Y,int Z) 
 	Coords.X = X>>4;
 	Coords.Z = Z>>4;
 
-	X = abs(X);
-	Z = abs(Z);
-
-	X -=  (X>>4)<<4;
-	Z -=  (Z>>4)<<4;
-	
+	X = ChunkMath::toChunkInternal(X);
+	Z = ChunkMath::toChunkInternal(Z);	
 
 	try {
 		Index = ChunkMath::toIndex(X,Y,Z);
@@ -197,7 +196,7 @@ pair<ChunkCoordinates,int> World::WorldCoordinateConverter(int X,short Y,int Z) 
 		std::cout<<"World::WorldCoordinateConverter index error"<<"\n";
 		throw Poco::RuntimeException("Index error");
 	}
-	
+
 
 	pair<ChunkCoordinates,int> Pair(Coords,Index);
 	return Pair;
@@ -215,33 +214,51 @@ char World::getFreeSpace(int X,int Z) {
 		ex.rethrow();
 	}
 
-	int iOffset = ChunkMath::toIndex(X,SettingsHandler::getWorldHeight(),Z);
-	unsigned char iPlaceHeight = 0,y;
+	X = ChunkMath::toChunkInternal(X);
+	Z = ChunkMath::toChunkInternal(Z);	
 
+
+	int iOffset = ChunkMath::toIndex(X,0,Z);
+	unsigned char y;
+	if (iOffset==-1) {
+		std::cout<<"World::getFreeSpace could not calculate index"<<"\n";
+		throw Poco::RuntimeException("toIndex error");
+	}
 
 	//Get height
-	for (y=SettingsHandler::getWorldHeight();y>0;y--) {
-		if (pChunk->Blocks[iOffset-1+y] == 0) {
-			iPlaceHeight = y;
+	for (y=SettingsHandler::getWorldHeight()-1;y>0;y--) { //For from 128 -> 1
+		if (pChunk->Blocks[iOffset+y] != 0) {
+			return y;
 		}
 	}
 
+	return SettingsHandler::getWorldHeight();
+}
 
-	//No space on surface for player, builded up to the sky ... freaks :D
-	if(iPlaceHeight + 2 > SettingsHandler::getWorldHeight()) { 
-		iOffset = ChunkMath::toIndex(X,0,Z);
-		iPlaceHeight = 0;
+bool World::isSuffocating(EntityCoordinates Coords) {
+	if (Coords.Y <= 0.0) {
+		return true;
+	}
 
-		//Search a cave 
-		for (y=0;y<=SettingsHandler::getWorldHeight()-2;y++) {
-			if (pChunk->Blocks[iOffset-1+y] == 0) { //Uuh free space
-				if (pChunk->Blocks[iOffset+y] == 0) { //Yep enought space for a player
-					return y;
-				}
-			}
-		}
-		return -1;
+	MapChunk* pChunk;
+
+	try {
+		pChunk = getChunkByChunkCoordinates(int(Coords.X)>>4,int(Coords.Z)>>4);
+	}catch (Poco::RuntimeException& ex) {
+		std::cout<<"World::isSuffocating chunk not found"<<"\n";
+		ex.rethrow();
+	}
+
+
+	int iOffset = ChunkMath::toIndex( 
+		ChunkMath::toChunkInternal((int)Coords.X),
+		(int)floor(Coords.Y),
+		ChunkMath::toChunkInternal((int)Coords.Z)
+		);
+
+	if (pChunk->Blocks[iOffset] == 0) {
+		return false;
 	}else{
-		return iPlaceHeight;
+		return true;
 	}
 }

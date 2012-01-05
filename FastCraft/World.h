@@ -21,6 +21,7 @@ GNU General Public License for more details.
 #include <utility>
 #include <Poco/Mutex.h>
 #include "Structs.h"
+#include "EntityCoordinates.h"
 
 using std::vector;
 using std::string;
@@ -91,6 +92,17 @@ public:
 	@2 : Z in world coordiantes
 	*/
 	char getFreeSpace(int,int);
+
+
+	/*
+	* Returns true if player will suffocate at his actual place
+	* Will also return true if player is the void
+	* Will generate chunk if not exist
+
+	Parameter:
+	@1 : Players coordinates
+	*/
+	bool isSuffocating(EntityCoordinates);
 private:
 	void generateChunks(int,int,int,int);
 	MapChunk* generateChunk(int,int);
