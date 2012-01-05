@@ -16,6 +16,7 @@ GNU General Public License for more details.
 #include "ChunkMath.h"
 #include "Constants.h"
 #include <cmath>
+#include <math.h>
 
 ChunkCoordinates ChunkMath::toChunkCoords(BlockCoordinates BlockCoords) {
 	ChunkCoordinates ChunkCoordinates;
@@ -74,4 +75,9 @@ bool ChunkMath::isIndexInBound(int index) {
 	}else{
 		return true;
 	}
+}
+
+int ChunkMath::toChunkInternal(int n) {
+	n=abs(n);
+	return  n - ((n>>4)<<4);
 }
