@@ -45,7 +45,7 @@ _sName(""),
 	_Connection(),
 	_sTemp(""),
 	_sConnectionHash(""),
-
+	_rWorld(rWorld),
 
 	_NetworkOutRoot(),
 	_NetworkInRoot(_Connection),
@@ -73,6 +73,8 @@ _sName(""),
 	_TimeJobs.LastHandleMovement = 0L;
 	_TimeJobs.LastMovementSend = 0L;
 	_TimeJobs.LastSpeedCalculation=0L;
+	_TimeJobs.LastPositionCorrection=0L;
+	_TimeJobs.LastPositionCheck=0L;
 	_dRunnedMeters=0.0;
 
 	_iEntityID=0;
@@ -134,6 +136,7 @@ void PlayerThread::run() {
 			Timer.reset();
 			Timer.start();
 
+
 			if (!_fSpawned && _iThreadTicks >= FC_MAXLOGINTIME) {
 				Kick("Login timed out");
 				continue;
@@ -144,6 +147,7 @@ void PlayerThread::run() {
 			Interval_HandleMovement();
 			Interval_Movement();
 			Interval_CalculateSpeed();
+			Interval_CheckPosition();
 
 			iPacket = _NetworkInRoot.readByte();
 
@@ -218,7 +222,7 @@ void PlayerThread::run() {
 void PlayerThread::Disconnect(char iLeaveMode) {
 	if (!_fAssigned) { return; }
 	if (_Spawned_PlayerInfoList > 0) { //Horrobile hack, but it's the best way to check if player was spawned and suspend the 
-									   //network writer thread with _fSpawned = false; 
+		//network writer thread with _fSpawned = false; 
 		_ChunkProvider.HandleDisconnect();
 		_Inventory.HandleDisconnect();
 		_PlayerCount--;
@@ -255,6 +259,8 @@ void PlayerThread::Disconnect(char iLeaveMode) {
 	_TimeJobs.LastHandleMovement = 0L;
 	_TimeJobs.LastMovementSend = 0L;
 	_TimeJobs.LastSpeedCalculation = 0L;
+	_TimeJobs.LastPositionCorrection=0L;
+	_TimeJobs.LastPositionCheck=0L;
 	_dRunnedMeters=0;
 	_Spawned_PlayerInfoList=0;
 
@@ -424,13 +430,16 @@ void PlayerThread::sendClientPosition() {
 
 	Out.addByte(0x0D);
 	Out.addDouble(_Coordinates.X);
+	if (_Coordinates.Stance - _Coordinates.Y < 0.1 || _Coordinates.Stance - _Coordinates.Y > 1.65) { //Stance is invalid, recalculate
+		_Coordinates.Stance = _Coordinates.Y + 0.1;
+	}
 	Out.addDouble(_Coordinates.Stance);
 	Out.addDouble(_Coordinates.Y);
 	Out.addDouble(_Coordinates.Z);
 	Out.addFloat(_Coordinates.Yaw);
 	Out.addFloat(_Coordinates.Pitch);
 	Out.addBool(_Coordinates.OnGround);
-	
+
 	Out.Finalize(FC_QUEUE_HIGH);
 }
 
@@ -581,9 +590,9 @@ void PlayerThread::Packet1_Login() {
 
 		//Set start coordinates
 		_Coordinates.X = 0.0;
-		_Coordinates.Y = 500.0;
+		_Coordinates.Y = 73.0;
 		_Coordinates.Z = 0.0;
-		_Coordinates.Stance = 250.0;
+		_Coordinates.Stance = 73.1;
 		_Coordinates.OnGround = false;
 		_Coordinates.Pitch = 0.0F;
 		_Coordinates.Yaw = 0.0F;
@@ -604,7 +613,7 @@ void PlayerThread::Packet1_Login() {
 		Out.addByte(SettingsHandler::getDifficulty());
 		Out.addByte(SettingsHandler::getWorldHeight());
 		Out.addByte((unsigned char)SettingsHandler::getPlayerSlotCount());
-		
+
 		Out.Finalize(FC_QUEUE_HIGH);
 
 		//compass
@@ -623,17 +632,13 @@ void PlayerThread::Packet1_Login() {
 		UpdateHealth(20,20,5.0F); //Health
 
 		//Inventory
-		ItemSlot Item1(360,34);
-		ItemSlot Item2(310,1);
-		ItemSlot Item3(315,1);
-		ItemSlot Item4(300,1);
-		ItemSlot Item5(305,1);
+		ItemSlot Item1(1,64);
+		ItemSlot Item2(2,34);
+		ItemSlot Item3(3,44);
 
+		_Inventory.setSlot(38,Item3);
+		_Inventory.setSlot(37,Item2);
 		_Inventory.setSlot(36,Item1); 
-		_Inventory.setSlot(5,Item2); 
-		_Inventory.setSlot(6,Item3); 
-		_Inventory.setSlot(7,Item4); 
-		_Inventory.setSlot(8,Item5); 
 		_Inventory.synchronizeInventory();
 
 		sendClientPosition();
@@ -745,6 +750,8 @@ void PlayerThread::Packet11_Position() {
 			_Coordinates.Stance = TmpCoord.Stance;
 			_Coordinates.Z = TmpCoord.Z;
 			_Coordinates.OnGround = TmpCoord.OnGround;
+
+			CheckPosition();
 		}
 	} catch(Poco::RuntimeException) {
 		Disconnect(FC_LEAVE_OTHER);
@@ -787,6 +794,7 @@ void PlayerThread::Packet13_PosAndLook() {
 		}else{
 			_dRunnedMeters += MathHelper::distance2D(_Coordinates,TmpCoord);
 			_Coordinates = TmpCoord;
+			CheckPosition();
 		}
 	} catch(Poco::RuntimeException) {
 		Disconnect(FC_LEAVE_OTHER);
@@ -1038,7 +1046,7 @@ void PlayerThread::updateEntityPosition(int ID,EntityCoordinates Coordinates) {
 			//Full update
 		}
 	}
-		
+
 	Out.addByte(0x22);
 
 	Out.addInt(ID);
@@ -1181,7 +1189,7 @@ void PlayerThread::Interval_CalculateSpeed() {
 	if (_TimeJobs.LastSpeedCalculation + FC_INTERVAL_CALCULATESPEED <= getTicks()) {
 		double iTime = double(getTicks()) - double(_TimeJobs.LastSpeedCalculation);
 		_TimeJobs.LastSpeedCalculation = getTicks();
-	
+
 
 		double iSpeed = (_dRunnedMeters * 60.0 * 60.0) / (iTime*3.6);
 		if (iSpeed > 7.5) {
@@ -1218,4 +1226,33 @@ void PlayerThread::updateEntityEquipment(int ID,short Slot,ItemSlot Item) {
 	}
 	Out.addShort(0); //Damage/Metadata
 	Out.Finalize(FC_QUEUE_HIGH);
+}
+
+void PlayerThread::CheckPosition() {
+	if (!isSpawned()) {return;}
+
+	if (_TimeJobs.LastPositionCorrection + FC_MINPOSCORRECTIONMARGIN <= getTicks()) {
+		_TimeJobs.LastPositionCorrection = getTicks();
+		if (_rWorld.isSuffocating(_Coordinates)) {
+			char iHeight = -1;
+			while(iHeight == -1) {
+				iHeight = _rWorld.getFreeSpace((int)_Coordinates.X,(int)_Coordinates.Z);
+				if (iHeight == -1) {
+					_Coordinates.X += 1.0;
+					_Coordinates.Z += 1.0;
+					continue;
+				}
+			}
+			_Coordinates.Y = ((double) iHeight) + 2.6;
+			sendClientPosition();
+		}
+	}
+}
+
+void PlayerThread::Interval_CheckPosition() {
+	if (!isSpawned()) {return;}
+	if (_TimeJobs.LastPositionCheck + FC_INTERVAL_CHECKPOSITION <= getTicks()) {
+		_TimeJobs.LastPositionCheck = getTicks();
+		CheckPosition();
+	}
 }

@@ -18,6 +18,7 @@ GNU General Public License for more details.
 
 #define FC_PLAYERSPAWNRADIUS			100.0
 #define FC_MAXLOGINTIME					10000 //10 Seconds to complete login procedure
+#define FC_MINPOSCORRECTIONMARGIN		500
 
 //Properties
 #define FC_SERVMODE_SURVIVAL			0
@@ -34,6 +35,7 @@ GNU General Public License for more details.
 #define FC_INTERVAL_HANDLEMOVEMENT		500
 #define FC_INTERVAL_MOVEMENT			100
 #define FC_INTERVAL_CALCULATESPEED		1000
+#define FC_INTERVAL_CHECKPOSITION		1000
 
 //Chunk Constants
 #define FC_CHUNK_BLOCKCOUNT				32768

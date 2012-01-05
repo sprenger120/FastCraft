@@ -53,6 +53,8 @@ struct TimeJobs {
 	long long LastHandleMovement;
 	long long LastMovementSend;
 	long long LastSpeedCalculation;
+	long long LastPositionCorrection;
+	long long LastPositionCheck;
 };
 
 struct EntityListEntry {
@@ -93,6 +95,7 @@ private:
 	//Needed Classes
 	PlayerPool* _pPoolMaster;
 	ChunkProvider _ChunkProvider;
+	World& _rWorld;
 
 	//Thread specific
 	bool _fAssigned;
@@ -327,6 +330,7 @@ private:
 	void Interval_HandleMovement();
 	void Interval_Movement();
 	void Interval_CalculateSpeed();
+	void Interval_CheckPosition();
 
 	void sendTime();
 	void pushChatEvent(string&);
@@ -338,6 +342,7 @@ private:
 	//Other
 	string generateConnectionHash(); //Generate a new connection hash, write it to _ConnectionHash	
 	template <class T> T fixRange(T,T,T);
+	void CheckPosition(); //Checks stance<->, suffocation and so on
 
 	//Packets - receive only
 	void Packet0_KeepAlive();
