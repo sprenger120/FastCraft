@@ -29,13 +29,10 @@ struct ChunkCoordinates {
 };
 
 struct MapChunk {
-	int X;
-	int Z;
 	char Blocks[FC_CHUNK_BLOCKCOUNT];
 	char Metadata[FC_CHUNK_NIBBLECOUNT];
 	char BlockLight[FC_CHUNK_NIBBLECOUNT];
 	char SkyLight[FC_CHUNK_NIBBLECOUNT];
-	bool Empty;
 };
 
 struct Block {
