@@ -133,6 +133,12 @@ public:
 	@1 : New selected slot id
 	*/
 	void HandleSelectionChange(short);
+
+
+	/*
+	* Returns ItemSlot object of actual selected slot
+	*/
+	ItemSlot getSelectedSlot();
 };
 
 #endif
