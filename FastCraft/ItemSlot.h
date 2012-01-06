@@ -21,6 +21,7 @@ GNU General Public License for more details.
 
 using std::vector;
 class NetworkIn;
+class NetworkOut;
 
 /*
 Class Note: If you change something with set... functions, it won't be sync with client
@@ -179,8 +180,18 @@ public:
 	* Will overwrite existing data
 
 	Parameter:
-	@1 : Reference to a vaild NetworkIO instance
+	@1 : Reference to a vaild NetworkIn instance
 	*/
 	void readFromNetwork(NetworkIn&);
+
+
+	/*
+	* Writes it's item information to network
+	* Will throw Poco::RuntimeException, if connection gets aborded
+
+	Parameter:
+	@1 : Reference to a vaild NetworkOut instance
+	*/
+	void writeToNetwork(NetworkOut&);
 };
 #endif

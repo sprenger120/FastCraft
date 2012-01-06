@@ -18,6 +18,7 @@ GNU General Public License for more details.
 #include <Poco/Exception.h>
 #include <iostream>
 #include "NetworkIn.h"
+#include "NetworkOut.h"
 
 ItemSlot::ItemSlot(): 
 _vEnchantments(0)
@@ -262,5 +263,19 @@ void ItemSlot::readFromNetwork(NetworkIn& rNetwork) {
 	}
 	}catch(Poco::RuntimeException& ex) {
 		ex.rethrow();
+	}
+}
+
+void ItemSlot::writeToNetwork(NetworkOut& Out) {
+	if (_iItemID==0) {
+		Out.addShort(-1);
+		return;
+	}else{
+		Out.addShort(_iItemID);
+		Out.addByte(_iStackSize);
+		Out.addShort(_iUsage);
+		if ( ItemInfoStorage::isDamageable(_iItemID)) {
+			Out.addShort(-1);
+		}
 	}
 }
