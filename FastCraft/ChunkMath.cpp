@@ -16,7 +16,7 @@ GNU General Public License for more details.
 #include "ChunkMath.h"
 #include "Constants.h"
 #include <cmath>
-#include <math.h>
+#include <stdlib.h>
 
 ChunkCoordinates ChunkMath::toChunkCoords(BlockCoordinates BlockCoords) {
 	ChunkCoordinates ChunkCoordinates;
