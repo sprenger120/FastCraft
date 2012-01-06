@@ -249,6 +249,9 @@ bool World::isSuffocating(EntityCoordinates Coords) {
 		ex.rethrow();
 	}
 
+	if (Coords.Y > (double)SettingsHandler::getWorldHeight()) {
+		return false;
+	}
 
 	int iOffset = ChunkMath::toIndex( 
 		ChunkMath::toChunkInternal((int)Coords.X),
