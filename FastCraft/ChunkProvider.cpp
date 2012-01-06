@@ -268,6 +268,7 @@ void ChunkProvider::NextChunk() {
 	if (_vToBeSendChunks.size()==0) {
 		return;
 	}
+	if(_pPlayer->getChunksInQueue() > 20) { return; }
 	PackJob & rJob = _vToBeSendChunks.front();
 	_rPackingThread.AddJob(rJob);
 	_vToBeSendChunks.erase(_vToBeSendChunks.begin());
