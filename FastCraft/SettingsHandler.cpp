@@ -184,11 +184,6 @@ SettingsHandler::SettingsHandler(){
 			_iViewDistance = 10;
 		}
 
-		//ChunkProvider require an even number 
-		if (_iViewDistance%2) { 
-			_iViewDistance++;
-		}
-
 		if (!_fOnlineMode) {
 			cout<<"***Config WARNING: Server runs in unsafe mode. Hackers can connect without verification!"<<"\n";
 			cout<<"***Solution: Set OnlineMode in your fastcraft.properties to true."<<"\n";
