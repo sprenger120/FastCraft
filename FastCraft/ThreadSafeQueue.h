@@ -17,6 +17,7 @@ GNU General Public License for more details.
 #define _FASTCRAFTHEADER_THREADSAVEQUEUE
 
 #include <Poco/Mutex.h>
+#include <Poco/ScopedLock.h>
 #include <queue>
 #include <Poco/Exception.h>
 #include <iostream>
@@ -60,48 +61,51 @@ inline ThreadSafeQueue<T>::~ThreadSafeQueue() {
 
 template <typename T>
 inline void ThreadSafeQueue<T>::multiPush(vector<T> v) {
-	_Mutex.lock();
+	Poco::Mutex::ScopedLock SLock(_Mutex);
+	
 	if (v.size()>0) {
 		for (int x=0;x<=v.size()-1;x++) {
 			_q.push(v[x]);
 		}
 	}
-	_Mutex.unlock();
 }
 
 template <typename T> 
 inline void ThreadSafeQueue<T>::push(T& t) {
-	_Mutex.lock();
+	Poco::Mutex::ScopedLock SLock(_Mutex);
+	
 	//std::cout<<"push"<<std::endl;
 	_q.push(t);
-	_Mutex.unlock();
 }
 
 
 template <typename T> 
 inline void ThreadSafeQueue<T>::pop() {
-	_Mutex.lock();
+	Poco::Mutex::ScopedLock SLock(_Mutex);
+
 	if (_q.empty()) { 
 		std::cout<<"ThreadSafeQueue<T>::pop queue is empty"<<"\n";
 		throw Poco::RuntimeException("Queue is empty");
 	}
+
 	//std::cout<<"pop"<<std::endl;
 	_q.pop();
-	_Mutex.unlock();
 }
 
 template <typename T> 
 inline void ThreadSafeQueue<T>::clear() {
-	_Mutex.lock();
+	Poco::Mutex::ScopedLock SLock(_Mutex);
+
 	while (!_q.empty()) {
 		_q.pop();
 	}
+
 	//std::cout<<"clear"<<std::endl;
-	_Mutex.unlock();
 }
 
 template <typename T> 
 inline T& ThreadSafeQueue<T>::front() {
+	Poco::Mutex::ScopedLock SLock(_Mutex);
 	if (_q.empty()) { 
 		std::cout<<"ThreadSafeQueue<T>::front queue is empty"<<"\n";
 		throw Poco::RuntimeException("Queue is empty");
