@@ -127,5 +127,14 @@ public:
 	@6 : Maximal usage    *Note: set to 0 if item hasn't a damage/usage bar
 	*/
 	static void addItem(short,string,bool,bool,char,short);
+
+
+	/*
+	* Returns true if given Block/Item ID is a block
+
+	Parameter:
+	@1 : A Block/Item ID
+	*/
+	static bool isBlock(short);
 };
 #endif

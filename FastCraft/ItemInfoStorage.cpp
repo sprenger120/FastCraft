@@ -360,3 +360,11 @@ void ItemInfoStorage::addItem(short iId,string sName,bool fDamageable,bool fEnch
 
 	_vItems.push_back(info);
 }
+
+bool ItemInfoStorage::isBlock(short iID) {
+	if (iID >= 0 && iID <= 255) {
+		return true;
+	}else{
+		return false;
+	}
+}
