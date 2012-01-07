@@ -193,5 +193,12 @@ public:
 	@1 : Reference to a vaild NetworkOut instance
 	*/
 	void writeToNetwork(NetworkOut&);
+
+	
+	/* 
+	* Operators
+	*/
+	bool operator == (ItemSlot&);
+	bool operator != (ItemSlot&);
 };
 #endif

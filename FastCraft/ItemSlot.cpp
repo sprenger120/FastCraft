@@ -55,6 +55,10 @@ _vEnchantments(0)
 	}else{
 		_iStackSize = stacksize;
 	}
+		if (stacksize==0) {
+		clear();
+		return;
+	}
 	
 	//Set isTool
 	if (ItemInfoStorage::isDamageable(id)) {
@@ -91,6 +95,10 @@ _vEnchantments(0)
 		std::cout<<"ItemSlot::ItemSlot(ex) Stacksize exceeded. Affected:"<<id<<"\n";
 	}else{
 		_iStackSize = stacksize;
+	}
+	if (stacksize==0) {
+		clear();
+		return;
 	}
 
 	//Check usage
@@ -136,6 +144,10 @@ void ItemSlot::setItemID(short id) {
 		std::cout<<"ItemSlot::setItemID Item wasn't found. Affected:"<<id<<"\n";
 		throw Poco::RuntimeException("ID not registered");
 	}
+	if (id==0) {
+		clear();
+		return;
+	}
 	_iItemID = id;
 }
 
@@ -145,11 +157,14 @@ char ItemSlot::getStackSize() {
 
 void ItemSlot::setStackSize(char size) {
 	char SizeInfo;
-
 	
 	if (size<0){
 		_iStackSize=0;
 		std::cout<<"ItemSlot::setStackSize Stacksize invalid."<<"\n";
+		return;
+	}
+	if (size==0) {
+		clear();
 		return;
 	}
 
@@ -277,5 +292,21 @@ void ItemSlot::writeToNetwork(NetworkOut& Out) {
 		if ( ItemInfoStorage::isDamageable(_iItemID)) {
 			Out.addShort(-1);
 		}
+	}
+}
+
+bool ItemSlot::operator == (ItemSlot& other) {
+	if (_iItemID == other.getItemID() && _iStackSize == other.getStackSize() && _iUsage == other.getUsage()) {
+		return true;
+	}else{
+		return false;
+	}
+}
+
+bool ItemSlot::operator != (ItemSlot& other) {
+	if (_iItemID == other.getItemID() && _iStackSize == other.getStackSize() && _iUsage == other.getUsage()) {
+		return false;
+	}else{
+		return true;
 	}
 }
