@@ -282,6 +282,6 @@ void PlayerInventory::HandleSelectionChange(short iSel) {
 	_iSlotSelection = iSel;
 }
 
-ItemSlot PlayerInventory::getSelectedSlot() {
+ItemSlot& PlayerInventory::getSelectedSlot() {
 	return _vItemStack[36 + _iSlotSelection];
 }
