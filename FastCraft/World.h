@@ -60,6 +60,7 @@ public:
 	/*
 	* Look for a chunk and returns a pointer to it
 	* Generates chunk if not existing
+	* Will throw Poco::RuntimeException if generateChunks failed
 
 	Paramter:
 	@1 : X in chunkcoordinates

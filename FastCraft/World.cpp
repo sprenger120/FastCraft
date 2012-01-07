@@ -254,9 +254,9 @@ bool World::isSuffocating(EntityCoordinates Coords) {
 	}
 
 	int iOffset = ChunkMath::toIndex( 
-		ChunkMath::toChunkInternal((int)Coords.X),
+		ChunkMath::toChunkInternal((int)floor(Coords.X)),
 		(int)floor(Coords.Y),
-		ChunkMath::toChunkInternal((int)Coords.Z)
+		ChunkMath::toChunkInternal((int)floor(Coords.Z))
 		);
 
 	if (pChunk->Blocks[iOffset] == 0) {
