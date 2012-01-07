@@ -38,8 +38,6 @@ using std::queue;
 class PackingThread : public Poco::Runnable{
 private:
 	ThreadSafeQueue<PackJob> _vPackJobs;
-	std::stringstream _stringStrm;
-	Poco::DeflatingOutputStream _deflatingStrm;
 public:
 	PackingThread();
 	~PackingThread();

@@ -23,16 +23,12 @@ GNU General Public License for more details.
 using Poco::Thread;
 
 PackingThread::PackingThread() : 
-	_stringStrm(),
-	_deflatingStrm(_stringStrm,Poco::DeflatingStreamBuf::STREAM_ZLIB,-1),
 	_vPackJobs()
 {
 }
 
 
 PackingThread::~PackingThread() {
-	_stringStrm.clear();
-	_deflatingStrm.clear();
 }
 
 void PackingThread::run() {
@@ -56,8 +52,11 @@ void PackingThread::ProcessJob(PackJob& rJob) {
 	if (!rJob.pPlayer->isAssigned()) { //Player is offline but a job for him is in queue -> skip it
 		return; 
 	}
-	NetworkOut Out = rJob.pNetwork->New();
 
+	std::stringstream _stringStrm;
+	Poco::DeflatingOutputStream _deflatingStrm(_stringStrm,Poco::DeflatingStreamBuf::STREAM_ZLIB,-1);
+
+	NetworkOut Out = rJob.pNetwork->New();
 
 	Out.addByte(0x33);
 	Out.addInt((rJob.X)<<4);
@@ -78,9 +77,9 @@ void PackingThread::ProcessJob(PackJob& rJob) {
 	Out.addInt(_stringStrm.str().length());
 	Out.getStr().append(_stringStrm.str());
 
-
 	_stringStrm.clear();
 	_deflatingStrm.clear();
+	_deflatingStrm.close();
 
 	Out.Finalize(FC_QUEUE_LOW);
 }
