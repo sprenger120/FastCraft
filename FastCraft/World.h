@@ -104,6 +104,21 @@ public:
 	@1 : Players coordinates
 	*/
 	bool isSuffocating(EntityCoordinates);
+
+
+	/*
+	* Sets block
+	* Generates chunk if not existing
+	* Will throw Poco::RuntimeException if generateChunks failed
+	* Will throw Poco::RuntimeException if block not exists
+
+	Parameter:
+	@1 : X in world coordinates
+	@2 : Y in world coordinates
+	@3 : Z in world coordinates
+	@4 : BlockID
+	*/
+	void setBlock(int,short,int,char);
 private:
 	void generateChunks(int,int,int,int);
 	MapChunk* generateChunk(int,int);

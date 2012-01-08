@@ -17,6 +17,7 @@ GNU General Public License for more details.
 #include "Constants.h"
 #include "SettingsHandler.h"
 #include "ChunkMath.h"
+#include "ItemInfoStorage.h"
 #include <iostream>
 #include <cstring>
 #include <cmath>
@@ -264,4 +265,26 @@ bool World::isSuffocating(EntityCoordinates Coords) {
 	}else{
 		return true;
 	}
+}
+
+void World::setBlock(int X,short Y,int Z,char Block) {
+	if (Y < 0 || Y > SettingsHandler::getWorldHeight() -1) {
+		throw Poco::RuntimeException("Y is invalid");
+	}
+	if (!ItemInfoStorage::isRegistered(Block)) {
+		throw Poco::RuntimeException("Block not registered");
+	}
+
+	MapChunk* p;
+	cout<<"chunk coords X:"<<(X>>4)<<" Z:"<<(Z>>4)<<"\n";
+	try {
+		p = getChunkByChunkCoordinates(X>>4,Z>>4);
+	} catch (Poco::RuntimeException& ex) {
+		ex.rethrow();
+	}
+	int Index= ChunkMath::toIndex( ChunkMath::toChunkInternal(X),Y,ChunkMath::toChunkInternal(Z));  
+	if (Index==-1) {
+		throw Poco::RuntimeException("Index out of bound");
+	}
+	p->Blocks[Index] = Block;
 }
