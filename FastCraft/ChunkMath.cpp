@@ -78,6 +78,5 @@ bool ChunkMath::isIndexInBound(int index) {
 }
 
 int ChunkMath::toChunkInternal(int n) {
-	n=abs(n);
 	return  n - ((n>>4)<<4);
 }
