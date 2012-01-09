@@ -51,6 +51,15 @@ public:
 
 
 	/*
+	*  Converts EntityCoordinates to BlockCoordinates
+
+	Parameter:
+	@1 : EntityCoordinates to convert
+	*/
+	static BlockCoordinates toBlockCoords(EntityCoordinates);
+
+
+	/*
 	* Calculates distance between two chunks
 
 	Parameter:

@@ -80,3 +80,12 @@ bool ChunkMath::isIndexInBound(int index) {
 int ChunkMath::toChunkInternal(int n) {
 	return  n - ((n>>4)<<4);
 }
+
+BlockCoordinates ChunkMath::toBlockCoords(EntityCoordinates eCoords) {
+	BlockCoordinates blockCoords;
+
+	blockCoords.X = (int)floor(eCoords.X);
+	blockCoords.Y = (int)floor(eCoords.Y);
+	blockCoords.Z = (int)floor(eCoords.Z);
+	return blockCoords;
+}
