@@ -208,7 +208,7 @@ string SettingsHandler::getSupportedMCVersion() {
 }
 
 string SettingsHandler::getFastCraftVersion() {
-	return "0.0.1";
+	return "0.0.2";
 }
 
 int SettingsHandler::getSupportedProtocolVersion() {
