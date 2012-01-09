@@ -119,6 +119,20 @@ public:
 	@4 : BlockID
 	*/
 	void setBlock(int,short,int,char);
+
+
+	/*
+	* Gets block at given position
+	* Generates chunk if not existing
+	* Will throw Poco::RuntimeException if generateChunks failed
+
+	Parameter:
+	@1 : X in world coordinates
+	@2 : Y in world coordinates
+	@3 : Z in world coordinates
+	*/
+	char getBlock(int,short,int);
+	char getBlock(BlockCoordinates);
 private:
 	void generateChunks(int,int,int,int);
 	MapChunk* generateChunk(int,int);

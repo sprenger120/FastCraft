@@ -180,7 +180,7 @@ pair<ChunkCoordinates,int> World::WorldCoordinateConverter(int X,short Y,int Z) 
 	ChunkCoordinates Coords;
 	int Index;
 
-	if (Y < 0 || Y > SettingsHandler::getWorldHeight()) {
+	if (Y < 0 || Y > SettingsHandler::getWorldHeight()-1) {
 		std::cout<<"World::WorldCoordinateConverter  Y is invalid"<<"\n";
 		throw Poco::RuntimeException("Y is invalid");
 	}
@@ -229,7 +229,7 @@ char World::getFreeSpace(int X,int Z) {
 	//Get height
 	for (y=SettingsHandler::getWorldHeight()-1;y>0;y--) { //For from 128 -> 1
 		if (pChunk->Blocks[iOffset+y] != 0) {
-			return y;
+			return y+1;
 		}
 	}
 
@@ -237,7 +237,7 @@ char World::getFreeSpace(int X,int Z) {
 }
 
 bool World::isSuffocating(EntityCoordinates Coords) {
-	if (Coords.Y <= 0.0) {
+	if (Coords.Y <= 0.9) {
 		return true;
 	}
 
@@ -268,23 +268,34 @@ bool World::isSuffocating(EntityCoordinates Coords) {
 }
 
 void World::setBlock(int X,short Y,int Z,char Block) {
-	if (Y < 0 || Y > SettingsHandler::getWorldHeight() -1) {
-		throw Poco::RuntimeException("Y is invalid");
-	}
 	if (!ItemInfoStorage::isRegistered(Block)) {
 		throw Poco::RuntimeException("Block not registered");
 	}
 
 	MapChunk* p;
-	cout<<"chunk coords X:"<<(X>>4)<<" Z:"<<(Z>>4)<<"\n";
+	
 	try {
-		p = getChunkByChunkCoordinates(X>>4,Z>>4);
+		auto Coords = WorldCoordinateConverter(X,Y,Z);
+		p = getChunkByChunkCoordinates(Coords.first.X,Coords.first.Z);
+		p->Blocks[Coords.second] = Block;
 	} catch (Poco::RuntimeException& ex) {
 		ex.rethrow();
 	}
-	int Index= ChunkMath::toIndex( ChunkMath::toChunkInternal(X),Y,ChunkMath::toChunkInternal(Z));  
-	if (Index==-1) {
-		throw Poco::RuntimeException("Index out of bound");
-	}
-	p->Blocks[Index] = Block;
 }
+
+char World::getBlock(int X,short Y,int Z) {
+	MapChunk* p;
+	
+	try {
+		auto Coords = WorldCoordinateConverter(X,Y,Z);
+		p = getChunkByChunkCoordinates(Coords.first.X,Coords.first.Z);
+		return p->Blocks[Coords.second];
+	} catch (Poco::RuntimeException& ex) {
+		ex.rethrow();
+	}
+	return 0;
+}
+
+char World::getBlock(BlockCoordinates Coords) {
+	return getBlock(Coords.X,(short)Coords.Y,Coords.Z);
+} 
