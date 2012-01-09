@@ -1,6 +1,6 @@
 /*
 FastCraft - Minecraft SMP Server
-Copyright (C) 2011  Michael Albrecht aka Sprenger120
+Copyright (C) 2011 - 2012 Michael Albrecht aka Sprenger120
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -155,6 +155,7 @@ bool ChunkProvider::CheckChunkCircle() {
 
 			Job.X = _PlayerCoordinates.X;
 			Job.Z = _PlayerCoordinates.Z;
+
 			Job.pChunk = pChunk;
 			sendSpawn(Job.X,Job.Z);
 			_vToBeSendChunks.push_back(Job); //Queue chunk
@@ -176,7 +177,7 @@ bool ChunkProvider::CheckChunkCircle() {
 
 				if ( ! isSpawned(Temp)) {
 					pChunk = _rWorld.getChunkByChunkCoordinates(X,Z);
-
+					
 					Job.X = X;
 					Job.Z = Z;
 					Job.pChunk = pChunk;

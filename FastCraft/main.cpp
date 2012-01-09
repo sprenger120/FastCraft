@@ -1,6 +1,6 @@
 /*
 FastCraft - Minecraft SMP Server
-Copyright (C) 2011  Michael Albrecht aka Sprenger120
+Copyright (C) 2011 - 2012 Michael Albrecht aka Sprenger120
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -15,7 +15,6 @@ GNU General Public License for more details.
 #define BUILD_VERSION ""
 #include <iostream>
 #include <sstream>
-
 #include <Poco/Thread.h>
 #include <Poco/Exception.h>
 #include "AcceptThread.h"

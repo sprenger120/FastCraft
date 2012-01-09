@@ -1,6 +1,6 @@
 /*
 FastCraft - Minecraft SMP Server
-Copyright (C) 2011  Michael Albrecht aka Sprenger120
+Copyright (C) 2011 - 2012 Michael Albrecht aka Sprenger120
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -49,6 +49,7 @@ void NetworkWriter::run() {
 			Thread::sleep(50);
 			continue;
 		}
+
 		try{
 			//Process high level queue
 			while (!_rhighQ.empty()) {
@@ -80,13 +81,11 @@ void NetworkWriter::run() {
 				_rhighQ.pop();
 			}
 
-
 			if (_rlowQ.empty()) {
 				Thread::sleep(10);
 				continue;
 			}
 			string & rStr = _rlowQ.front();
-
 			try {
 				_rStrm.sendBytes(rStr.c_str(),rStr.length()); //Send
 			}catch(Poco::Net::ConnectionAbortedException) {
