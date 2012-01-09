@@ -83,6 +83,16 @@ _Name("")
 	_Item = Item;
 }
 
+PlayerPoolEvent::PlayerPoolEvent(BlockCoordinates Coords,char Block,PlayerThread* p) :
+_Message(""),
+_Name("")
+{
+	_pThread = p;
+	_JobID = FC_PPEVENT_SETBLOCK;
+	_BCoords = Coords;
+	_Block = Block;
+}
+
 PlayerPoolEvent::~PlayerPoolEvent() {
 	_Message.clear();
 	_Name.clear();
@@ -157,4 +167,18 @@ short PlayerPoolEvent::getSlot() {
 		throw Poco::RuntimeException("Data unavailable");
 	}
 	return _iSlotID;
+}
+
+BlockCoordinates PlayerPoolEvent::getBlockCoordinates() {
+	if (_JobID != FC_PPEVENT_SETBLOCK) {
+		throw Poco::RuntimeException("Data unavailable");
+	}
+	return _BCoords;
+}
+
+char PlayerPoolEvent::getBlockID() {
+	if (_JobID != FC_PPEVENT_SETBLOCK) {
+		throw Poco::RuntimeException("Data unavailable");
+	}
+	return _Block;
 }

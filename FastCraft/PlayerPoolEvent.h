@@ -46,6 +46,10 @@ private:
 	//Change held event
 	short _iSlotID;
 	ItemSlot _Item;
+
+	//SetBlock event
+	BlockCoordinates _BCoords;
+	char _Block;
 public:
 	/*
 	* Constructs as a chat event
@@ -103,11 +107,24 @@ public:
 	/*
 	* Construct as a held change event
 
+	Parameter:
 	@1 : SlotID (0=held, 4=helmet,3=chestplate,2=pants,1=boots)
 	@2 : Item data
 	@3 : this pointer of class that pushes event to queue
 	*/
 	PlayerPoolEvent(short,ItemSlot,PlayerThread*);
+
+
+	/*
+	* Construct as a setBlock event
+
+	Parameter:
+	@1 : Coordinates of block
+	@2 : BlockID
+	@3 : this pointer of class that pushes event to queue
+	*/
+	PlayerPoolEvent(BlockCoordinates,char,PlayerThread*);
+
 
 	/*
 	* Accessator
@@ -137,6 +154,9 @@ public:
 	ItemSlot getItem();
 	short getSlot();
 
+	//setBlock event
+	BlockCoordinates getBlockCoordinates();
+	char getBlockID();
 
 	/*
 	* Destructor
