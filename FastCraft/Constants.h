@@ -18,7 +18,6 @@ GNU General Public License for more details.
 
 #define FC_PLAYERSPAWNRADIUS			100.0
 #define FC_MAXLOGINTIME					10000 //10 Seconds to complete login procedure
-#define FC_MINPOSCORRECTIONMARGIN		500
 
 //Properties
 #define FC_SERVMODE_SURVIVAL			0
@@ -55,6 +54,7 @@ GNU General Public License for more details.
 #define FC_PPEVENT_ANIMATION			5
 #define FC_PPEVENT_METADATA				6
 #define FC_PPEVENT_CHANGEHELD			7
+#define FC_PPEVENT_SETBLOCK				8
 
 //Animation ID's 
 #define FC_ANIM_NOANIM					0	//Send to remove all animations 
