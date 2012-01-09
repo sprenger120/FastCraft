@@ -19,7 +19,7 @@ GNU General Public License for more details.
 
 struct BlockCoordinates {
 	int X;
-	int Y;
+	char Y;
 	int Z;
 };
 
