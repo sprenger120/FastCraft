@@ -29,6 +29,8 @@ GNU General Public License for more details.
 #include <Poco/Net/NetException.h>
 #include <Poco/Stopwatch.h>
 #include <math.h>
+#include "Structs.h"
+#include "ChunkMath.h"
 
 using Poco::Thread;
 using std::cout;
@@ -73,7 +75,6 @@ _sName(""),
 	_TimeJobs.LastHandleMovement = 0L;
 	_TimeJobs.LastMovementSend = 0L;
 	_TimeJobs.LastSpeedCalculation=0L;
-	_TimeJobs.LastPositionCorrection=0L;
 	_TimeJobs.LastPositionCheck=0L;
 	_dRunnedMeters=0.0;
 
@@ -121,11 +122,12 @@ void PlayerThread::run() {
 	Poco::Stopwatch Timer;
 
 	Timer.start();
-
 	while (1) {
 		if (!isAssigned()) {
-			Thread::sleep(50);
-			continue;
+			while(!isAssigned()) {
+				Thread::sleep(50);
+			}
+			Timer.reset();
 		} 
 
 
@@ -185,6 +187,9 @@ void PlayerThread::run() {
 			case 0xd: 
 				Packet13_PosAndLook();
 				break;
+			case 0xf: 
+				Packet15_PlayerBlockPlacement();
+				break;
 			case 0x10: 
 				Packet16_HoldingChange();
 				break;
@@ -221,8 +226,7 @@ void PlayerThread::run() {
 
 void PlayerThread::Disconnect(char iLeaveMode) {
 	if (!_fAssigned) { return; }
-	if (_Spawned_PlayerInfoList > 0) { //Horrobile hack, but it's the best way to check if player was spawned and suspend the 
-		//network writer thread with _fSpawned = false; 
+	if (isStillConnected()) { 
 		_ChunkProvider.HandleDisconnect();
 		_Inventory.HandleDisconnect();
 		_PlayerCount--;
@@ -259,7 +263,6 @@ void PlayerThread::Disconnect(char iLeaveMode) {
 	_TimeJobs.LastHandleMovement = 0L;
 	_TimeJobs.LastMovementSend = 0L;
 	_TimeJobs.LastSpeedCalculation = 0L;
-	_TimeJobs.LastPositionCorrection=0L;
 	_TimeJobs.LastPositionCheck=0L;
 	_dRunnedMeters=0;
 	_Spawned_PlayerInfoList=0;
@@ -313,7 +316,7 @@ void PlayerThread::Kick(string sReason) {
 	}
 
 
-	if (isSpawned()) { // If names is known
+	if (isStillConnected()) {
 		cout<<_sName<<" was kicked for: "<<sReason<<"\n"; 
 	}
 
@@ -350,7 +353,7 @@ void PlayerThread::Kick() {
 	}
 
 
-	if (isSpawned()) { // If names is known
+	if (isStillConnected()) { // If names is known
 		cout<<_sName<<" was kicked"<<"\n"; 
 	}
 
@@ -430,8 +433,14 @@ void PlayerThread::sendClientPosition() {
 
 	Out.addByte(0x0D);
 	Out.addDouble(_Coordinates.X);
-	if (_Coordinates.Stance - _Coordinates.Y < 0.1 || _Coordinates.Stance - _Coordinates.Y > 1.65) { //Stance is invalid, recalculate
-		_Coordinates.Stance = _Coordinates.Y + 0.1;
+
+	switch(_Flags.isCrouched()) {//FastCraft will never modify Stance so we have to calculate it
+	case true:
+		_Coordinates.Stance = _Coordinates.Y + 1.5; 
+		break;
+	case false:
+		_Coordinates.Stance = _Coordinates.Y + 1.6;
+		break;
 	}
 	Out.addDouble(_Coordinates.Stance);
 	Out.addDouble(_Coordinates.Y);
@@ -590,14 +599,15 @@ void PlayerThread::Packet1_Login() {
 
 		//Set start coordinates
 		_Coordinates.X = 0.0;
-		_Coordinates.Y = 73.0;
+		_Coordinates.Y = 0.0;
 		_Coordinates.Z = 0.0;
-		_Coordinates.Stance = 73.1;
+		_Coordinates.Stance = 0.0;
 		_Coordinates.OnGround = false;
 		_Coordinates.Pitch = 0.0F;
 		_Coordinates.Yaw = 0.0F;
 		_lastCoordinates = _Coordinates;
-
+		CheckPosition(false);
+		
 		/*
 		* Response
 		*/
@@ -633,15 +643,20 @@ void PlayerThread::Packet1_Login() {
 
 		//Inventory
 		ItemSlot Item1(1,64);
-		ItemSlot Item2(2,34);
-		ItemSlot Item3(3,44);
+		ItemSlot Item2(5,64);
+		ItemSlot Item3(55,64);
+		ItemSlot Item4(102,64);
 
-		_Inventory.setSlot(38,Item3);
+		_Inventory.setSlot(38,Item1);
 		_Inventory.setSlot(37,Item2);
-		_Inventory.setSlot(36,Item1); 
+		_Inventory.setSlot(36,Item3);
+		_Inventory.setSlot(39,Item4);
+		_Inventory.setSlot(40,Item2);
+		_Inventory.setSlot(41,Item3);
 		_Inventory.synchronizeInventory();
 
 		sendClientPosition();
+
 		insertChat("§dWelcome to FastCraft 0.0.2 Alpha server.");
 		ProcessQueue(); //Send login packages
 
@@ -750,8 +765,6 @@ void PlayerThread::Packet11_Position() {
 			_Coordinates.Stance = TmpCoord.Stance;
 			_Coordinates.Z = TmpCoord.Z;
 			_Coordinates.OnGround = TmpCoord.OnGround;
-
-			CheckPosition();
 		}
 	} catch(Poco::RuntimeException) {
 		Disconnect(FC_LEAVE_OTHER);
@@ -794,7 +807,6 @@ void PlayerThread::Packet13_PosAndLook() {
 		}else{
 			_dRunnedMeters += MathHelper::distance2D(_Coordinates,TmpCoord);
 			_Coordinates = TmpCoord;
-			CheckPosition();
 		}
 	} catch(Poco::RuntimeException) {
 		Disconnect(FC_LEAVE_OTHER);
@@ -1228,25 +1240,23 @@ void PlayerThread::updateEntityEquipment(int ID,short Slot,ItemSlot Item) {
 	Out.Finalize(FC_QUEUE_HIGH);
 }
 
-void PlayerThread::CheckPosition() {
-	if (!isSpawned()) {return;}
-
-	if (_TimeJobs.LastPositionCorrection + FC_MINPOSCORRECTIONMARGIN <= getTicks()) {
-		_TimeJobs.LastPositionCorrection = getTicks();
+void PlayerThread::CheckPosition(bool fSynchronize) {
 		if (_rWorld.isSuffocating(_Coordinates)) {
 			char iHeight = -1;
+			BlockCoordinates blockCoords = ChunkMath::toBlockCoords(_Coordinates);
 			while(iHeight == -1) {
-				iHeight = _rWorld.getFreeSpace((int)_Coordinates.X,(int)_Coordinates.Z);
+				iHeight = _rWorld.getFreeSpace(blockCoords.X,blockCoords.Z);
 				if (iHeight == -1) {
 					_Coordinates.X += 1.0;
 					_Coordinates.Z += 1.0;
+					blockCoords = ChunkMath::toBlockCoords(_Coordinates);
 					continue;
 				}
 			}
-			_Coordinates.Y = ((double) iHeight) + 2.6;
-			sendClientPosition();
+
+			_Coordinates.Y = ((double) iHeight) + 1.0;
+			if (fSynchronize) {sendClientPosition();}
 		}
-	}
 }
 
 void PlayerThread::Interval_CheckPosition() {
@@ -1254,5 +1264,169 @@ void PlayerThread::Interval_CheckPosition() {
 	if (_TimeJobs.LastPositionCheck + FC_INTERVAL_CHECKPOSITION <= getTicks()) {
 		_TimeJobs.LastPositionCheck = getTicks();
 		CheckPosition();
+	}
+}
+
+void PlayerThread::Packet15_PlayerBlockPlacement() {
+	try {
+		char Direction;
+		ItemSlot Slot;
+		BlockCoordinates ClientCoordinats = ChunkMath::toBlockCoords(_Coordinates);
+		BlockCoordinates blockCoordinates;
+
+		blockCoordinates.X = _NetworkInRoot.readInt();
+		blockCoordinates.Y = _NetworkInRoot.readByte();
+		blockCoordinates.Z = _NetworkInRoot.readInt();
+		Direction = _NetworkInRoot.readByte();
+		Slot.readFromNetwork(_NetworkInRoot);
+
+		ItemSlot & InHand = _Inventory.getSelectedSlot();
+
+		if (Slot.isEmpty()) {
+			InHand.clear();
+			return;
+		}
+
+		if (blockCoordinates.X==-1 && blockCoordinates.Y == -1 && blockCoordinates.Z == -1 && Direction == -1) { //Special action
+			if (ItemInfoStorage::isBlock(_Inventory.getSelectedSlot().getItemID())) { //Special actions are not allowed with blocks
+				sendEmptyBlock(blockCoordinates);
+				return;
+			}
+			Kick("Not supported yet");
+			return; 
+		}else{ //Client wants to place a block
+			if (! ItemInfoStorage::isBlock(_Inventory.getSelectedSlot().getItemID())) { //But it's a item...
+				Kick("You tried to place a item");
+				return;
+			}
+		}
+
+		switch (Direction) {
+		case 0:
+			blockCoordinates.Y--;
+			break;
+		case 1:
+			blockCoordinates.Y++;
+			break;
+		case 2:
+			blockCoordinates.Z--;
+			break;
+		case 3:
+			blockCoordinates.Z++;
+			break;
+		case 4:
+			blockCoordinates.X--;
+			break;
+		case 5:
+			blockCoordinates.X++;
+			break;
+		default:
+			Kick("Illegal block direction: " + int(Direction));
+			return;
+		}
+
+		/*
+			Check blockCoordinates
+		*/
+
+		//Prevent: set a block into your body
+		if ((ClientCoordinats.X == blockCoordinates.X && ClientCoordinats.Z == blockCoordinates.Z)  &&
+			(ClientCoordinats.Y == blockCoordinates.Y || ClientCoordinats.Y+1==blockCoordinates.Y)) { 
+			return;
+		}
+
+		//Prevent: set a block into other body
+		if (_pPoolMaster->willHurtOther(blockCoordinates,this)) { 
+			sendEmptyBlock(blockCoordinates);
+			return;
+		}
+
+		//Prevent: set a block into other block 
+		if (_rWorld.getBlock(blockCoordinates) != 0) { 
+			return;
+		}
+
+		//Prevent: set a block above the map
+		if (blockCoordinates.Y >= SettingsHandler::getWorldHeight()-2) { 
+			sendEmptyBlock(blockCoordinates);
+			return;
+		}
+
+		if (InHand.getStackSize()+1 < Slot.getStackSize()) {
+			Kick("Inventory hack!");
+			return;
+		}else{
+			InHand.setStackSize(Slot.getStackSize());
+			if (Slot.getStackSize() == 0) {
+				InHand.clear();
+			}
+		}
+
+		/*
+		* All test done. 
+		*/
+		NetworkOut Out = _NetworkOutRoot.New();
+		Out.addByte(0x35);
+		Out.addInt(blockCoordinates.X);
+		Out.addByte(blockCoordinates.Y);
+		Out.addInt(blockCoordinates.Z);
+		Out.addByte((char)Slot.getItemID());
+		Out.addByte(0);	
+		Out.Finalize(FC_QUEUE_HIGH);
+
+		//Append to map
+		_rWorld.setBlock(blockCoordinates.X,blockCoordinates.Y,blockCoordinates.Z,(char)Slot.getItemID());
+		
+		//Event to player pool
+		PlayerPoolEvent Event(blockCoordinates,(char)Slot.getItemID(),this);
+		_pPoolMaster->Event(Event);
+	} catch(Poco::RuntimeException& ex ) {
+		cout<<"Exception cateched: "<<ex.message()<<"\n";
+		Disconnect(FC_LEAVE_OTHER);
+	}
+}
+
+int PlayerThread::getChunksInQueue() {
+	return _NetworkOutRoot.getLowQueue().size();
+}
+
+void PlayerThread::spawnBlock(BlockCoordinates blockCoords,char Block) {
+	if (!ItemInfoStorage::isRegistered(Block)) {
+		throw Poco::RuntimeException("Block not registered");
+	}
+
+	ChunkCoordinates Coords;
+	Coords = ChunkMath::toChunkCoords(blockCoords);
+
+	if (!_ChunkProvider.isSpawned(Coords)) {
+		return;
+	}
+
+	NetworkOut Out = _NetworkOutRoot.New();
+	Out.addByte(0x35);
+	Out.addInt(blockCoords.X);
+	Out.addByte((char)blockCoords.Y);
+	Out.addInt(blockCoords.Z);
+	Out.addByte(Block);
+	Out.addByte(0);	
+	Out.Finalize(FC_QUEUE_HIGH);
+}
+
+void PlayerThread::sendEmptyBlock(BlockCoordinates coords) {
+	NetworkOut Out = _NetworkOutRoot.New();
+	Out.addByte(0x35);
+	Out.addInt(coords.X);
+	Out.addByte((char)coords.Y);
+	Out.addInt(coords.Z);
+	Out.addByte(0);
+	Out.addByte(0);		
+	Out.Finalize(FC_QUEUE_HIGH);
+}
+
+bool PlayerThread::isStillConnected() {
+	if (_Spawned_PlayerInfoList > 0) {
+		return true;
+	}else{
+		return false;
 	}
 }

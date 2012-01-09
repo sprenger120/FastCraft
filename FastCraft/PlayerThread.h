@@ -37,6 +37,7 @@ GNU General Public License for more details.
 #include "ItemSlot.h"
 #include "EntityCoordinates.h"
 #include "EntityPlayer.h"
+#include <utility>
 
 class EntityProvider;
 class PlayerPool;
@@ -46,6 +47,7 @@ class PackingThread;
 using std::string;
 using std::stringstream;
 using std::vector;
+using std::pair;
 
 struct TimeJobs {
 	long long LastTimeSend;
@@ -53,7 +55,6 @@ struct TimeJobs {
 	long long LastHandleMovement;
 	long long LastMovementSend;
 	long long LastSpeedCalculation;
-	long long LastPositionCorrection;
 	long long LastPositionCheck;
 };
 
@@ -143,7 +144,7 @@ public:
 
 	/*
 	* Kicks a player without reason
-	* The thread will be free after call
+	* The thread will be freed after call
 	*/
 	void Kick(); 
 
@@ -184,14 +185,13 @@ public:
 
 	/*
 	* Returns Playername
-	* If Authstep FC_AUTHSTEP_HANDSHAKE isn't done, it will return a blank string
 	*/
 	string getUsername();
 
 
 	/*
 	* Returns IP and port of player
-	*  IP:port
+	* IP:port
 	*/
 	string getIP();
 
@@ -321,6 +321,24 @@ public:
 	@2 : SlotID (0=held, 4=helmet,3=chestplate,2=pants,1=boots)
 	*/
 	void updateEntityEquipment(int,short,ItemSlot);
+
+
+	/*
+	* Returns chunk queue size
+	*/
+	int getChunksInQueue();
+
+
+	/*
+	* Sets a block into players view circle
+	* Will ignore call if given chunk isn't spawned
+	* Will throw Poco::RuntimeException if block not exists
+
+	Parameter:
+	@1 : Coordiantes of block
+	@2 : BlockID
+	*/
+	void spawnBlock(BlockCoordinates,char);
 private:
 	void ProcessQueue();
 	 
@@ -335,6 +353,11 @@ private:
 	void sendTime();
 	void pushChatEvent(string&);
 	void sendClientPosition();
+	void CheckPosition(bool=true); //checks players position and correct it. Will synchronize with player if bool is true
+	void sendEmptyBlock(BlockCoordinates);
+
+	//Returns true if client is still connected and successful spawned but ignore fSpawned
+	bool isStillConnected(); 
 
 	//Ticks
 	long long getTicks(); 
@@ -342,7 +365,6 @@ private:
 	//Other
 	string generateConnectionHash(); //Generate a new connection hash, write it to _ConnectionHash	
 	template <class T> T fixRange(T,T,T);
-	void CheckPosition(); //Checks stance<->, suffocation and so on
 
 	//Packets - receive only
 	void Packet0_KeepAlive();
@@ -353,6 +375,7 @@ private:
 	void Packet11_Position();
 	void Packet12_Look();
 	void Packet13_PosAndLook();
+	void Packet15_PlayerBlockPlacement();
 	void Packet16_HoldingChange();
 	void Packet18_Animation();
 	void Packet19_EntityAction();
