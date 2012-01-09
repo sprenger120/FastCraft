@@ -114,6 +114,16 @@ public:
 	@2 : this pointer of class that calls this function
 	*/
 	PlayerThread* getPlayerByName(string,PlayerThread*);
+
+
+	/*
+	* Returns true if your setBlock action will hurt others
+
+	Parameter:
+	@1 : Affected BlockCoordiantes 
+	@2 : this pointer of class that calls this function
+	*/
+	bool willHurtOther(BlockCoordinates,PlayerThread*);
 private:
 	int getFreeSlot(); //Returns -1 if there is no free slot
 	void sendMessageToAll(string);

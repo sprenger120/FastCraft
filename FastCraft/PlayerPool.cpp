@@ -20,11 +20,13 @@ GNU General Public License for more details.
 #include "EntityFlags.h"
 #include "MathHelper.h"
 #include "PlayerInventory.h"
+#include "EntityCoordinates.h"
 #include <Poco/Thread.h>
 #include <Poco/Exception.h>
 #include <iostream>
 #include <cmath>
 #include <Poco/String.h>
+#include "ChunkMath.h"
 
 using Poco::Thread;
 using std::cout;
@@ -59,7 +61,7 @@ PlayerPool::~PlayerPool() {
 
 void PlayerPool::run() {
 	std::string sData;
-	
+
 
 	while (1) {
 		if (_qEventQueue.empty()) {
@@ -68,131 +70,139 @@ void PlayerPool::run() {
 		}
 		try {
 
-		PlayerPoolEvent& Event = _qEventQueue.front();
-		
+			PlayerPoolEvent& Event = _qEventQueue.front();
 
-		switch (Event.getJobID()) {
-		case FC_PPEVENT_CHAT:
-			cout<<"Chat: "<<Event.getMessage()<<std::endl; //Server console
-			sendMessageToAll(Event.getMessage());
-			break;
-		case FC_PPEVENT_MOVE:
-			{
-				//Build playerEntity
-				EntityPlayer SourcePlayer = buildEntityPlayerFromPlayerPtr(Event.getPtr());
-				int SourcePlayerID = Event.getPtr()->getEntityID();
 
-				for (int x=0;x<=_vPlayerThreads.size()-1;x++) {
-					if( _vPlayerThreads[x]->isAssigned() && _vPlayerThreads[x]->isSpawned()) {
-						if (_vPlayerThreads[x] == Event.getPtr() ) {continue;}
+			switch (Event.getJobID()) {
+			case FC_PPEVENT_CHAT:
+				cout<<"Chat: "<<Event.getMessage()<<std::endl; //Server console
+				sendMessageToAll(Event.getMessage());
+				break;
+			case FC_PPEVENT_MOVE:
+				{
+					//Build playerEntity
+					EntityPlayer SourcePlayer = buildEntityPlayerFromPlayerPtr(Event.getPtr());
+					int SourcePlayerID = Event.getPtr()->getEntityID();
 
-						//Check distance 
-						if ( MathHelper::distance2D(_vPlayerThreads[x]->getCoordinates(),Event.getCoordinates()) > FC_PLAYERSPAWNRADIUS) {
-							if (_vPlayerThreads[x]->isEntitySpawned(SourcePlayerID)) { //Despawn player, too distant
+					for (int x=0;x<=_vPlayerThreads.size()-1;x++) {
+						if( _vPlayerThreads[x]->isAssigned() && _vPlayerThreads[x]->isSpawned()) {
+							if (_vPlayerThreads[x] == Event.getPtr() ) {continue;}
+
+							//Check distance 
+							if ( MathHelper::distance2D(_vPlayerThreads[x]->getCoordinates(),Event.getCoordinates()) > FC_PLAYERSPAWNRADIUS) {
+								if (_vPlayerThreads[x]->isEntitySpawned(SourcePlayerID)) { //Despawn player, too distant
+									_vPlayerThreads[x]->despawnEntity(SourcePlayerID);
+								}
+								continue;
+							}
+
+							if (!_vPlayerThreads[x]->isEntitySpawned(SourcePlayerID)) { //Spawn into players view circle
+								_vPlayerThreads[x]->spawnPlayer(SourcePlayerID,SourcePlayer);
+							}else{ //Already spawned -> update position
+								_vPlayerThreads[x]->updateEntityPosition(SourcePlayerID,Event.getCoordinates());
+							}
+						}
+					}
+
+				}
+				break;
+			case FC_PPEVENT_JOIN:
+				{
+					sendMessageToAll(Event.getName() + " joined game");
+
+					EntityPlayer SourcePlayer = buildEntityPlayerFromPlayerPtr(Event.getPtr());
+					int SourcePlayerID = Event.getPtr()->getEntityID();
+
+
+					for (int x=0;x<=_vPlayerThreads.size()-1;x++) {
+						if( _vPlayerThreads[x]->isAssigned() && _vPlayerThreads[x]->isSpawned()) {
+							_vPlayerThreads[x]->PlayerInfoList(true,Event.getName()); //Update player list
+
+							if (_vPlayerThreads[x] == Event.getPtr() ) {continue;} //dont spawn event source
+							if (MathHelper::distance2D(_vPlayerThreads[x]->getCoordinates(),SourcePlayer._Coordinates) > 100.0) {continue;} //Too distant -> don't spawn
+
+							_vPlayerThreads[x]->spawnPlayer(SourcePlayerID,SourcePlayer); //Spawn new player	
+
+							//Spawn this player to event source
+							EntityPlayer TargetPlayer = buildEntityPlayerFromPlayerPtr(_vPlayerThreads[x]); 
+							int TargetPlayerID = _vPlayerThreads[x]->getEntityID();
+
+							Event.getPtr()->spawnPlayer(TargetPlayerID,TargetPlayer);
+						}
+					}
+				}
+				break;
+			case FC_PPEVENT_DISCONNECT:
+				{
+					sendMessageToAll(Event.getName() + " left game");
+					int SourcePlayerID = Event.getPtr()->getEntityID(); //Disconnect don't clear the entity so we can use it 
+
+					for (int x=0;x<=_vPlayerThreads.size()-1;x++) {
+						if( _vPlayerThreads[x]->isAssigned() && _vPlayerThreads[x]->isSpawned()) {
+							_vPlayerThreads[x]->PlayerInfoList(false,Event.getName());
+							if (_vPlayerThreads[x] == Event.getPtr() ) {continue;}
+
+							if (_vPlayerThreads[x]->isEntitySpawned(SourcePlayerID)) {
 								_vPlayerThreads[x]->despawnEntity(SourcePlayerID);
 							}
-							continue;
-						}
-
-						if (!_vPlayerThreads[x]->isEntitySpawned(SourcePlayerID)) { //Spawn into players view circle
-							_vPlayerThreads[x]->spawnPlayer(SourcePlayerID,SourcePlayer);
-						}else{ //Already spawned -> update position
-							_vPlayerThreads[x]->updateEntityPosition(SourcePlayerID,Event.getCoordinates());
 						}
 					}
 				}
+				break;
+			case FC_PPEVENT_ANIMATION:
+				{
+					int SourcePlayerID = Event.getPtr()->getEntityID(); 
 
-			}
-			break;
-		case FC_PPEVENT_JOIN:
-			{
-				sendMessageToAll(Event.getName() + " joined game");
+					for (int x=0;x<=_vPlayerThreads.size()-1;x++) {
+						if( _vPlayerThreads[x]->isAssigned() && _vPlayerThreads[x]->isSpawned()) {
+							if (_vPlayerThreads[x] == Event.getPtr() ) {continue;}
 
-				EntityPlayer SourcePlayer = buildEntityPlayerFromPlayerPtr(Event.getPtr());
-				int SourcePlayerID = Event.getPtr()->getEntityID();
-
-
-				for (int x=0;x<=_vPlayerThreads.size()-1;x++) {
-					if( _vPlayerThreads[x]->isAssigned() && _vPlayerThreads[x]->isSpawned()) {
-						_vPlayerThreads[x]->PlayerInfoList(true,Event.getName()); //Update player list
-
-						if (_vPlayerThreads[x] == Event.getPtr() ) {continue;} //dont spawn event source
-						if (MathHelper::distance2D(_vPlayerThreads[x]->getCoordinates(),SourcePlayer._Coordinates) > 100.0) {continue;} //Too distant -> don't spawn
-
-						_vPlayerThreads[x]->spawnPlayer(SourcePlayerID,SourcePlayer); //Spawn new player	
-
-						//Spawn this player to event source
-						EntityPlayer TargetPlayer = buildEntityPlayerFromPlayerPtr(_vPlayerThreads[x]); 
-						int TargetPlayerID = _vPlayerThreads[x]->getEntityID();
-
-						Event.getPtr()->spawnPlayer(TargetPlayerID,TargetPlayer);
-					}
-				}
-			}
-			break;
-		case FC_PPEVENT_DISCONNECT:
-			{
-				sendMessageToAll(Event.getName() + " left game");
-				int SourcePlayerID = Event.getPtr()->getEntityID(); //Disconnect don't clear the entity so we can use it 
-
-				for (int x=0;x<=_vPlayerThreads.size()-1;x++) {
-					if( _vPlayerThreads[x]->isAssigned() && _vPlayerThreads[x]->isSpawned()) {
-						_vPlayerThreads[x]->PlayerInfoList(false,Event.getName());
-						if (_vPlayerThreads[x] == Event.getPtr() ) {continue;}
-
-						if (_vPlayerThreads[x]->isEntitySpawned(SourcePlayerID)) {
-							_vPlayerThreads[x]->despawnEntity(SourcePlayerID);
+							if (_vPlayerThreads[x]->isEntitySpawned(SourcePlayerID)) {
+								_vPlayerThreads[x]->playAnimationOnEntity(SourcePlayerID,Event.getAnimationID());
+							}
 						}
 					}
 				}
-			}
-			break;
-		case FC_PPEVENT_ANIMATION:
-			{
-				int SourcePlayerID = Event.getPtr()->getEntityID(); 
+				break;
+			case FC_PPEVENT_METADATA: 
+				{
+					int SourcePlayerID = Event.getPtr()->getEntityID(); 
+					for (int x=0;x<=_vPlayerThreads.size()-1;x++) {
+						if( _vPlayerThreads[x]->isAssigned() && _vPlayerThreads[x]->isSpawned()) {
+							if (_vPlayerThreads[x] == Event.getPtr() ) {continue;}
 
+							if (_vPlayerThreads[x]->isEntitySpawned(SourcePlayerID)) {
+								_vPlayerThreads[x]->updateEntityMetadata(SourcePlayerID,Event.getFlags());
+							}
+						}
+					}
+				}
+				break;
+			case FC_PPEVENT_CHANGEHELD:
+				{
+					int SourcePlayerID = Event.getPtr()->getEntityID(); 
+					for (int x=0;x<=_vPlayerThreads.size()-1;x++) {
+						if( _vPlayerThreads[x]->isAssigned() && _vPlayerThreads[x]->isSpawned()) {
+							if (_vPlayerThreads[x] == Event.getPtr() ) {continue;}
+
+							if (_vPlayerThreads[x]->isEntitySpawned(SourcePlayerID)) {
+								_vPlayerThreads[x]->updateEntityEquipment(SourcePlayerID,Event.getSlot(),Event.getItem());
+							}
+						}
+					}
+				}
+				break;
+			case FC_PPEVENT_SETBLOCK:
 				for (int x=0;x<=_vPlayerThreads.size()-1;x++) {
 					if( _vPlayerThreads[x]->isAssigned() && _vPlayerThreads[x]->isSpawned()) {
 						if (_vPlayerThreads[x] == Event.getPtr() ) {continue;}
-
-						if (_vPlayerThreads[x]->isEntitySpawned(SourcePlayerID)) {
-							_vPlayerThreads[x]->playAnimationOnEntity(SourcePlayerID,Event.getAnimationID());
-						}
+						_vPlayerThreads[x]->spawnBlock(Event.getBlockCoordinates(),Event.getBlockID());
 					}
 				}
+				break;
 			}
-			break;
-		case FC_PPEVENT_METADATA: 
-			{
-				int SourcePlayerID = Event.getPtr()->getEntityID(); 
-				for (int x=0;x<=_vPlayerThreads.size()-1;x++) {
-					if( _vPlayerThreads[x]->isAssigned() && _vPlayerThreads[x]->isSpawned()) {
-						if (_vPlayerThreads[x] == Event.getPtr() ) {continue;}
 
-						if (_vPlayerThreads[x]->isEntitySpawned(SourcePlayerID)) {
-							_vPlayerThreads[x]->updateEntityMetadata(SourcePlayerID,Event.getFlags());
-						}
-					}
-				}
-			}
-			break;
-		case FC_PPEVENT_CHANGEHELD:
-			{
-				int SourcePlayerID = Event.getPtr()->getEntityID(); 
-				for (int x=0;x<=_vPlayerThreads.size()-1;x++) {
-					if( _vPlayerThreads[x]->isAssigned() && _vPlayerThreads[x]->isSpawned()) {
-						if (_vPlayerThreads[x] == Event.getPtr() ) {continue;}
-
-						if (_vPlayerThreads[x]->isEntitySpawned(SourcePlayerID)) {
-							_vPlayerThreads[x]->updateEntityEquipment(SourcePlayerID,Event.getSlot(),Event.getItem());
-						}
-					}
-				}
-			}
-			break;
-		}
-
-		_qEventQueue.pop();
+			_qEventQueue.pop();
 		} catch(Poco::RuntimeException& ex) {
 			cout<<"PlayerPool::run exception:"<<ex.message()<<"\n";
 			_qEventQueue.pop();
@@ -267,7 +277,7 @@ EntityPlayer PlayerPool::buildEntityPlayerFromPlayerPtr(PlayerThread* pPlayer) {
 	Player._Coordinates = pPlayer->getCoordinates();
 	Player._sName = pPlayer->getUsername();
 	Player._Flags = pPlayer->getFlags();
-	
+
 	PlayerInventory & Inventory =  pPlayer->getInventory();
 
 	Player._aHeldItems[0] = Inventory.getSlot(36 + Inventory.getSlotSelection());
@@ -287,4 +297,24 @@ PlayerThread* PlayerPool::getPlayerByName(string Name,PlayerThread* pCaller) {
 		}
 	}
 	return NULL;
+}
+
+
+bool PlayerPool::willHurtOther(BlockCoordinates blockCoord,PlayerThread* pPlayer) {
+	if (_vPlayerThreads.size() == 0) {return false;}
+
+	BlockCoordinates playerCoord;
+
+	for ( int x = 0;x<=_vPlayerThreads.size()-1;x++){
+		if ((!_vPlayerThreads[x]->isAssigned()) || (!_vPlayerThreads[x]->isSpawned()) || _vPlayerThreads[x] == pPlayer) {continue;}
+
+		playerCoord = ChunkMath::toBlockCoords(_vPlayerThreads[x]->getCoordinates());
+
+		if ((playerCoord.X == blockCoord.X && playerCoord.Z == blockCoord.Z) && (playerCoord.Y == blockCoord.Y ||  playerCoord.Y+1 == blockCoord.Y)) {
+			return true;
+		}else{
+			return false;
+		}
+	}
+	return false;
 }
