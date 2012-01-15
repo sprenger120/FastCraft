@@ -76,7 +76,7 @@ _vEnchantments(0)
 
 	try	{
 		iStackInfo = ItemInfoStorage::getMaxStackSize(id);
-		iUsageInfo = ItemInfoStorage::getMaxUsage(id);
+		iUsageInfo = ItemInfoStorage::getDurability(id);
 	}catch (Poco::RuntimeException) {
 		std::cout<<"ItemSlot::ItemSlot(ex) Item wasn't found. Affected:"<<id<<"\n";
 		clear();
@@ -188,7 +188,7 @@ void ItemSlot::IncrementUsage() {
 		std::cout<<"ItemSlot::IncrementUsage Not a tool!"<<"\n";
 		throw Poco::RuntimeException("Not a tool");
 	}
-	short iUsageInfo = ItemInfoStorage::getMaxUsage(_iItemID);
+	short iUsageInfo = ItemInfoStorage::getDurability(_iItemID);
 
 	if(_iUsage > iUsageInfo || _iUsage < 0) {
 		if (_iStackSize == 1) {//Last item in stack 
@@ -209,7 +209,7 @@ void ItemSlot::setUsage(short iUsage){
 		throw Poco::RuntimeException("Not a tool");
 	}
 
-	iUsageInfo = ItemInfoStorage::getMaxUsage(_iItemID);
+	iUsageInfo = ItemInfoStorage::getDurability(_iItemID);
 
 	if(iUsage > iUsageInfo || iUsage < 0) {
 		//Decrement stack size if more than one
@@ -255,7 +255,7 @@ void ItemSlot::readFromNetwork(NetworkIn& rNetwork) {
 	char iStackInfo;
 	try	{
 		iStackInfo = ItemInfoStorage::getMaxStackSize(_iItemID);
-		iUsageInfo = ItemInfoStorage::getMaxUsage(_iItemID);
+		iUsageInfo = ItemInfoStorage::getDurability(_iItemID);
 	}catch (Poco::RuntimeException) {
 		std::cout<<"ItemSlot::ItemSlot(fetch) Item wasn't found. Affected:"<<_iItemID<<"\n";
 		clear();
