@@ -23,30 +23,96 @@ GNU General Public License for more details.
 #include "PackingThread.h"
 #include "ServerTime.h"
 #include "ItemInfoStorage.h"
+#include <Poco/Path.h>
+#include <Poco/File.h>
+#include <Poco/Data/SQLite/Connector.h>
 
 using std::cout;
 using std::stringstream;
 using Poco::Thread;
 
-int main() {
+int main(int argc, char *argv[]) {
+	string BuildVer(BUILD_VERSION);
+	Poco::Data::SQLite::Connector::registerConnector();
+
 	cout<<"FastCraft Minecraft Server"<<"\n";
-	cout<<"Version "<<BUILD_VERSION<<"-"<<SettingsHandler::getFastCraftVersion()<<" for Minecraft "<<SettingsHandler::getSupportedMCVersion()<<std::endl;
-	
+	cout<<"Version "<<BUILD_VERSION<<(BuildVer.compare("") == 0 ? "" : "-")<<SettingsHandler::getFastCraftVersion()<<" for Minecraft "<<SettingsHandler::getSupportedMCVersion()<<"\n"<<std::endl;
+
+	/* 
+	* Creating files / directorys
+	*/
+	Poco::Path FCPath(argv[0]); 
+	FCPath.setFileName(""); //Remove filename
+
+	//Main directory
+	FCPath.pushDirectory("Settings");
+	Poco::File settingsDirectory(FCPath.toString());
+
+	//Item databases
+	FCPath.pushDirectory("ItemDatabases");
+	Poco::File itemDatabasesDirectory(FCPath.toString());
+
+	if (!settingsDirectory.exists()) {
+		cout<<"Settings directory not existing. Creating..."<<"\n";
+		settingsDirectory.createDirectories();
+	}
+
+	if (!itemDatabasesDirectory.exists()) {
+		cout<<"Item databases directory not existing. Creating..."<<"\n";
+		itemDatabasesDirectory.createDirectories();
+	}
+
+
+	/*
+	* Read item databases
+	*/
+	cout<<"Loading item databases... "<<"\n";
+	vector<string> vList;
+	itemDatabasesDirectory.list(vList);
+	int iAddedEntrys=0;
+
+	if (vList.size() > 0) {
+		for (int x=0;x<=vList.size()-1;x++) {
+			FCPath.setFileName(vList[x]);
+			Poco::File file(FCPath.toString());
+
+			if (!file.exists() || !file.canRead() || FCPath.getExtension().compare("db") != 0) {continue;}
+
+			cout<<"Loading: "<<vList[x]<<"\n";
+			ItemInfoStorage::loadDatabase(FCPath.toString());
+			iAddedEntrys++;
+		}
+		if (iAddedEntrys==0) {
+			cout<<"No databases found!"<<"\n";
+		}
+	}else{
+		cout<<"No databases found!"<<"\n";
+	}
+	cout<<"Done. (Loaded Entries:"<<ItemInfoStorage::getItemsInCache() + ItemInfoStorage::getBlocksInCache()<<")"<<"\n\n";
+
+
+	/*
+	* Load settings
+	*/
+	cout<<"Loading settings... "<<"\n";
 	try {
 		SettingsHandler(); //Load configuration into static variables
 	} catch (Poco::RuntimeException) {
+		cout<<"Error while loading settings"<<"\n";
 		Thread::sleep(3000);
 		return 1;
 	}
-	cout<<"Running on *:"<<SettingsHandler::getPort()<<" with "<<SettingsHandler::getPlayerSlotCount()<<" player slots"<<std::endl;
+	cout<<"Done."<<"\n\n";
+	
 
+	/*
+	* Create threads 
+	*/
 
 	//Threads
 	Thread threadPackingThread("Chunk Packer");
 	Thread threadPlayerPool("PlayerPool");
 	Thread threadAcceptThread("Network Acceptor");
-
-	ItemInfoStorage::addBasicIDSet();
 
 
 	//Create ChunkPacker Thread
@@ -64,12 +130,17 @@ int main() {
 	threadAcceptThread.start(Acceptor);
 
 
-	cout<<"Ready."<<"\n"<<std::endl;
+	/*
+	* All right :)
+	*/
 
+	cout<<"Running on *:"<<SettingsHandler::getPort()<<" with "<<SettingsHandler::getPlayerSlotCount()<<" player slots"<<std::endl;
+	cout<<"Ready."<<"\n"<<std::endl;
 	while (1) {		
 		Thread::sleep(1000);
 		ServerTime::tick();
 	}
 
+	Poco::Data::SQLite::Connector::unregisterConnector();
 	return 1;
 }
