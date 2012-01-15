@@ -75,7 +75,9 @@ void PlayerPool::run() {
 
 			switch (Event.getJobID()) {
 			case FC_PPEVENT_CHAT:
-				cout<<"Chat: "<<Event.getMessage()<<std::endl; //Server console
+				if(Event.getPtr()->isSpawned()) { //Not a kick message
+					cout<<"Chat: "<<Event.getMessage()<<std::endl; //Server console
+				}
 				sendMessageToAll(Event.getMessage());
 				break;
 			case FC_PPEVENT_MOVE:
@@ -242,10 +244,10 @@ void PlayerPool::Event(PlayerPoolEvent& rEvent) {
 	_qEventQueue.push(rEvent);
 }
 
-void PlayerPool::sendMessageToAll(string rString) {
+void PlayerPool::sendMessageToAll(string str) {
 	for (int x=0;x<=_vPlayerThreads.size()-1;x++) {
 		if( _vPlayerThreads[x]->isAssigned() && _vPlayerThreads[x]->isSpawned()) {
-			_vPlayerThreads[x]->insertChat(rString);
+			_vPlayerThreads[x]->insertChat(str);
 		}
 	}
 }
