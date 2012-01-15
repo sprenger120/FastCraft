@@ -34,7 +34,6 @@ private:
 
 	//Join/Disconnect event
 	string _Name;
-	bool _fKicked;
 	bool _fMode;
 	
 	//Animation event
@@ -56,7 +55,7 @@ public:
 
 	Parameter:
 	@1 : Coordinates of event source (player who sends message)
-	@2 : Message 
+	@2 : Message
 	@3 : this pointer of class that pushes event to queue
 	*/
 	PlayerPoolEvent(EntityCoordinates,string,PlayerThread*);
@@ -67,11 +66,10 @@ public:
 
 	Parameter:
 	@1 : Mode  (true for connect, false for disconnect)
-	@2 : Kicked?
-	@3 : Username 
-	@4 : this pointer of class that pushes event to queue
+	@2 : Username 
+	@3 : this pointer of class that pushes event to queue
 	*/
-	PlayerPoolEvent(bool,bool,string,PlayerThread*);
+	PlayerPoolEvent(bool,string,PlayerThread*);
 
 
 	/*
@@ -142,7 +140,6 @@ public:
 	//Join/Disconnect event
 	string getName();
 	bool getMode();
-	bool isKicked();
 
 	//Animation Event
 	char getAnimationID();

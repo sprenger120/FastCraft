@@ -24,18 +24,19 @@ _Name("")
 	_Coordinates = coord;
 	_pThread = pPlayer;
 	_JobID = FC_PPEVENT_CHAT;
+
+	//Check message lenght
+	if (_Message.length() > 100) {
+		_Message.resize(100);
+	}
 }
 
 //join/disconnect event
-PlayerPoolEvent::PlayerPoolEvent(bool fMode,bool fKicked,string Name,PlayerThread* pPlayer) :
+PlayerPoolEvent::PlayerPoolEvent(bool fMode,string Name,PlayerThread* pPlayer) :
 _Message(""),
 _Name(Name)
 {
 	_fMode = fMode;
-	_fKicked = fKicked;
-	if (fKicked && fMode) {
-		throw Poco::RuntimeException("Connection and kick flags can't be true at same time");
-	}
 	_pThread = pPlayer;
 	if (fMode) {
 		_JobID = FC_PPEVENT_JOIN;
@@ -134,12 +135,6 @@ PlayerThread* PlayerPoolEvent::getPtr() {
 	return _pThread;
 }
 
-bool PlayerPoolEvent::isKicked() {
-	if (_JobID != FC_PPEVENT_DISCONNECT) {
-		throw Poco::RuntimeException("Data unavailable");
-	}
-	return _fKicked;
-}
 
 string PlayerPoolEvent::getName() {
 	if (_JobID != FC_PPEVENT_JOIN && _JobID != FC_PPEVENT_DISCONNECT) {
