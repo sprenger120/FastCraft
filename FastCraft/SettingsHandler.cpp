@@ -204,7 +204,7 @@ int SettingsHandler::getPlayerSlotCount() {
 }
 
 string SettingsHandler::getSupportedMCVersion() {
-	return "1.0.0";
+	return "1.1.0";
 }
 
 string SettingsHandler::getFastCraftVersion() {
@@ -212,7 +212,7 @@ string SettingsHandler::getFastCraftVersion() {
 }
 
 int SettingsHandler::getSupportedProtocolVersion() {
-	return 22;
+	return 23;
 }
 
 string SettingsHandler::getServerDescription() {

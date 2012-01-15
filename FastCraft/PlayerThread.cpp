@@ -545,7 +545,7 @@ void PlayerThread::Packet1_Login() {
 	try {
 		//Check minecraft version
 		iProtocolVersion = _NetworkInRoot.readInt(); //Protocol Version
-
+		
 
 		if (iProtocolVersion > SettingsHandler::getSupportedProtocolVersion()) {
 			Kick("Outdated server! Needed Version: " + SettingsHandler::getSupportedMCVersion());
@@ -559,6 +559,7 @@ void PlayerThread::Packet1_Login() {
 
 		_NetworkInRoot.readString(); //Username (already known)	
 		_NetworkInRoot.readInt64();
+		_NetworkInRoot.readString();
 		_NetworkInRoot.readInt();
 		_NetworkInRoot.readInt(); //This are 4 unused byte fields
 
@@ -618,6 +619,7 @@ void PlayerThread::Packet1_Login() {
 		Out.addInt(_iEntityID);
 		Out.addString("");
 		Out.addInt64(SettingsHandler::getMapSeed());
+		Out.addString("SUPERFLAT");
 		Out.addInt(SettingsHandler::getServerMode());
 		Out.addByte(0);
 		Out.addByte(SettingsHandler::getDifficulty());
@@ -645,7 +647,7 @@ void PlayerThread::Packet1_Login() {
 		ItemSlot Item1(1,64);
 		ItemSlot Item2(5,64);
 		ItemSlot Item3(55,64);
-		ItemSlot Item4(102,64);
+		ItemSlot Item4(360,64);
 
 		_Inventory.setSlot(38,Item1);
 		_Inventory.setSlot(37,Item2);
@@ -1180,7 +1182,6 @@ void PlayerThread::updateEntityMetadata(int ID,EntityFlags Flags) {
 
 	char iMetadata = 0;
 	//Flags 
-
 
 	//Index 0 , general metadata
 	Out.addByte(0); //Index = 0| Type=0
