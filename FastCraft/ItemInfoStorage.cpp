@@ -100,30 +100,137 @@ void ItemInfoStorage::loadDatabase(string Path) {
 }
 
 string ItemInfoStorage::getName(ItemID ID) {
-	return "";
+	int x;
+
+	//Loop through blocks
+	if (!_vBlocks.empty() && isBlock(ID)) {
+		for (x=0;x<=_vBlocks.size()-1;x++) {
+			if (_vBlocks[x].ID == ID.first && _vBlocks[x].SubID == ID.second) {
+				return _vBlocks[x].Name;
+			}
+		}
+	}
+
+	//Loop through items
+	if (!_vItems.empty() && !isBlock(ID)) {
+		for (x=0;x<=_vItems.size()-1;x++) {
+			if (_vItems[x].ID == ID.first && _vItems[x].SubID == ID.second) {
+				return _vItems[x].Name;;
+			}
+		}
+	}
+	throw Poco::RuntimeException("Not found!");
 }
 
 
 string ItemInfoStorage::getName(short ID) {
-	return "";
+	int x;
+
+	//Loop through blocks
+	if (!_vBlocks.empty() && isBlock(ID)) {
+		for (x=0;x<=_vBlocks.size()-1;x++) {
+			if (_vBlocks[x].ID == ID && _vBlocks[x].SubID == 0) {
+				return _vBlocks[x].Name;
+			}
+		}
+	}
+
+	//Loop through items
+	if (!_vItems.empty() && !isBlock(ID)) {
+		for (x=0;x<=_vItems.size()-1;x++) {
+			if (_vItems[x].ID == ID && _vItems[x].SubID == 0) {
+				return _vItems[x].Name;
+			}
+		}
+	}
+
+	throw Poco::RuntimeException("Not found!");
 }
 
 
 bool ItemInfoStorage::isRegistered(ItemID ID) {
+	int x;
+
+	//Loop through blocks
+	if (!_vBlocks.empty() && isBlock(ID)) {
+		for (x=0;x<=_vBlocks.size()-1;x++) {
+			if (_vBlocks[x].ID == ID.first && _vBlocks[x].SubID == ID.second) {
+				return true;
+			}
+		}
+	}
+
+	//Loop through items
+	if (!_vItems.empty() && !isBlock(ID)) {
+		for (x=0;x<=_vItems.size()-1;x++) {
+			if (_vItems[x].ID == ID.first && _vItems[x].SubID == ID.second) {
+				return true;
+			}
+		}
+	}
+
 	return false;
 }
 
 bool ItemInfoStorage::isRegistered(short ID) {
+	int x;
+
+	//Loop through blocks
+	if (!_vBlocks.empty() && isBlock(ID)) {
+		for (x=0;x<=_vBlocks.size()-1;x++) {
+			if (_vBlocks[x].ID == ID  && _vBlocks[x].SubID == 0) {
+				return true;
+			}
+		}
+	}
+
+	//Loop through items
+	if (!_vItems.empty() && !isBlock(ID)) {
+		for (x=0;x<=_vItems.size()-1;x++) {
+			if (_vItems[x].ID == ID && _vItems[x].SubID == 0) {
+				return true;
+			}
+		}
+	}
+
 	return false;
 }
 
 ItemID ItemInfoStorage::getIDbyName(string Name) {
 	ItemID id;
-	return id;
+	int x;
+
+	//Loop through blocks
+	if (!_vBlocks.empty()) {
+		for (x=0;x<=_vBlocks.size()-1;x++) {
+			if (Poco::icompare(_vBlocks[x].Name,Name) == 0) {
+				id.first = _vBlocks[x].ID;
+				id.second = _vBlocks[x].SubID;
+				return id;
+			}
+		}
+	}
+
+	//Loop through items
+	if (!_vItems.empty()) {
+		for (x=0;x<=_vItems.size()-1;x++) {
+			if (Poco::icompare(_vItems[x].Name,Name) == 0) {
+				id.first = _vItems[x].ID;
+				id.second = _vItems[x].SubID;
+				return id;
+			}
+		}
+	}
+	
+	throw Poco::RuntimeException("Not found!");
 }
 
 bool ItemInfoStorage::isBlock(ItemID ID) {
-	return false;
+	if (ID.first >= 0 && ID.first <= 255) {
+		return true;
+	}else{
+		return false;
+	}
 }
 
 bool ItemInfoStorage::isBlock(short iID) {
@@ -281,6 +388,7 @@ char ItemInfoStorage::getMaxStackSize(ItemID ID) {
 		}catch(Poco::RuntimeException& ex) {
 			ex.rethrow();
 		}
+		break;
 	case false:
 		try {
 			i =  getItem(ID).MaxStackSize;
@@ -300,13 +408,13 @@ char ItemInfoStorage::getMaxStackSize(short ID) {
 		}catch(Poco::RuntimeException& ex) {
 			ex.rethrow();
 		}
+		break;
 	case false:
 		try {
 			i =  getItem(ID).MaxStackSize;
 		}catch(Poco::RuntimeException& ex) {
 			ex.rethrow();
 		}
-
 	}
 	return i;
 }
