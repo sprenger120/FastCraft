@@ -141,21 +141,6 @@ public:
 	*/
 	bool isAssigned(); 
 
-
-	/*
-	* Kicks a player without reason
-	* The thread will be freed after call
-	*/
-	void Kick(); 
-
-
-	/*
-	* Kicks a player with reason
-	* The thread will be free after call
-	*/
-	void Kick(string);
-
-
 	/*
 	* Update health and food from client
 	* This function will send informations to client
@@ -222,10 +207,11 @@ public:
 	* Closes connection and clears object
 
 	Parameter:
-	@1 : Disconnect Reason - look in Constants.h  (FC_LEAVE_)
+	@1 : Kick message
+	@1 : Disconnect reason code (FC_LEAVE_ in Constants.h)
 	*/
+	void Disconnect(string);
 	void Disconnect(char);
-
 
 	/*
 	* Spawns a player
@@ -355,9 +341,6 @@ private:
 	void sendClientPosition();
 	void CheckPosition(bool=true); //checks players position and correct it. Will synchronize with player if bool is true
 	void sendEmptyBlock(BlockCoordinates);
-
-	//Returns true if client is still connected and successful spawned but ignore fSpawned
-	bool isStillConnected(); 
 
 	//Ticks
 	long long getTicks(); 

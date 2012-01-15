@@ -140,7 +140,7 @@ void PlayerThread::run() {
 
 
 			if (!_fSpawned && _iThreadTicks >= FC_MAXLOGINTIME) {
-				Kick("Login timed out");
+				Disconnect("Login timed out");
 				continue;
 			}
 
@@ -160,14 +160,14 @@ void PlayerThread::run() {
 				break;
 			case 0x1:
 				if (isSpawned()) {
-					Kick("Login already done!");
+					Disconnect("Login already done!");
 					continue;
 				}
 				Packet1_Login();
 				break;
 			case 0x2:
 				if (isSpawned()) {
-					Kick("Login already done!");
+					Disconnect("Login already done!");
 					continue;
 				}
 				Packet2_Handshake();
@@ -212,7 +212,7 @@ void PlayerThread::run() {
 				Packet255_Disconnect();
 				break;
 			default: 
-				Kick("Unknown packet!");
+				Disconnect("Unknown packet!");
 				cout<<"Unknown packet received! 0x"<<std::hex<<int(iPacket)<<endl;
 				break;
 			}
@@ -223,16 +223,45 @@ void PlayerThread::run() {
 	}
 }
 
+void PlayerThread::Disconnect(string sReason) {
+	if(isSpawned()) {
+		_fSpawned=false;
+		_NetworkWriter.clearQueues();
+
+		stringstream strStrm;
+		strStrm<<_sName<<" was kicked for: "<<sReason; 
+		cout<<strStrm.str()<<"\n"; //Writer kick message to chat
+
+		NetworkOut Out = _NetworkOutRoot.New();
+		Out.addByte(0xFF);
+		Out.addString(sReason);
+		Out.Finalize(FC_QUEUE_HIGH);
+
+		ProcessQueue();
+		Disconnect(FC_LEAVE_KICK);
+
+		PlayerPoolEvent Event(_Coordinates,"§6" + strStrm.str(),this);
+		_pPoolMaster->Event(Event); //Write to players chat
+	}else{
+		NetworkOut Out = _NetworkOutRoot.New();
+		Out.addByte(0xFF);
+		Out.addString(sReason);
+		Out.Finalize(FC_QUEUE_HIGH);
+		ProcessQueue();
+		Disconnect(FC_LEAVE_QUIT);
+	}
+}
 
 void PlayerThread::Disconnect(char iLeaveMode) {
 	if (!_fAssigned) { return; }
-	if (isStillConnected()) { 
+
+	if (isSpawned() || iLeaveMode==FC_LEAVE_KICK) {
 		_ChunkProvider.HandleDisconnect();
 		_Inventory.HandleDisconnect();
 		_PlayerCount--;
 
 
-		PlayerPoolEvent Event(false, (iLeaveMode==FC_LEAVE_KICK? true:false),_sName,this);
+		PlayerPoolEvent Event(false,_sName,this);
 		switch (iLeaveMode) {
 		case FC_LEAVE_KICK:
 			_pPoolMaster->Event(Event);
@@ -256,7 +285,7 @@ void PlayerThread::Disconnect(char iLeaveMode) {
 	_fAssigned = false;
 	_sName.clear();
 	_sIP.clear();
-	_NetworkWriter.clearQueues();
+	if (iLeaveMode!=FC_LEAVE_KICK) {_NetworkWriter.clearQueues();}
 
 	_TimeJobs.LastKeepAliveSend = 0L;
 	_TimeJobs.LastTimeSend = 0L;
@@ -287,81 +316,6 @@ void PlayerThread::Connect(Poco::Net::StreamSocket& Sock) {
 	_sIP.assign(_Connection.peerAddress().toString());
 	_iThreadTicks = 0;
 }
-
-void PlayerThread::Kick(string sReason) {
-	_NetworkWriter.clearQueues();
-	_fSpawned=false;
-
-	_sTemp.clear();
-	_sTemp.append<unsigned char>(1,0xFF);
-	NetworkOut::addString(_sTemp,sReason);
-
-	try {
-		_Connection.sendBytes(_sTemp.c_str(),_sTemp.length());
-	}catch(Poco::Net::ConnectionAbortedException) {
-		Disconnect(FC_LEAVE_OTHER);
-		return;
-	}catch(Poco::Net::InvalidSocketException) {
-		Disconnect(FC_LEAVE_OTHER);
-		return;
-	}catch(Poco::TimeoutException) {
-		Disconnect(FC_LEAVE_OTHER);
-		return;
-	}catch(Poco::Net::ConnectionResetException) {
-		Disconnect(FC_LEAVE_OTHER);
-		return;
-	}catch(Poco::IOException) {
-		Disconnect(FC_LEAVE_OTHER);
-		return;
-	}
-
-
-	if (isStillConnected()) {
-		cout<<_sName<<" was kicked for: "<<sReason<<"\n"; 
-	}
-
-	Thread::sleep(10);
-
-	Disconnect(FC_LEAVE_KICK);
-}
-
-void PlayerThread::Kick() {
-	_NetworkWriter.clearQueues();
-	_fSpawned=false;
-
-	_sTemp.clear();
-	_sTemp.append<unsigned char>(1,0xFF);
-	_sTemp.append<char>(2,0x0);
-
-	try {
-		_Connection.sendBytes(_sTemp.c_str(),_sTemp.length());
-	}catch(Poco::Net::ConnectionAbortedException) {
-		Disconnect(FC_LEAVE_OTHER);
-		return;
-	}catch(Poco::Net::InvalidSocketException) {
-		Disconnect(FC_LEAVE_OTHER);
-		return;
-	}catch(Poco::TimeoutException) {
-		Disconnect(FC_LEAVE_OTHER);
-		return;
-	}catch(Poco::Net::ConnectionResetException) {
-		Disconnect(FC_LEAVE_OTHER);
-		return;
-	}catch(Poco::IOException) {
-		Disconnect(FC_LEAVE_OTHER);
-		return;
-	}
-
-
-	if (isStillConnected()) { // If names is known
-		cout<<_sName<<" was kicked"<<"\n"; 
-	}
-
-	Thread::sleep(10);
-
-	Disconnect(FC_LEAVE_KICK);
-}
-
 
 string PlayerThread::generateConnectionHash() {
 	std::stringstream StringStream;
@@ -548,12 +502,12 @@ void PlayerThread::Packet1_Login() {
 		
 
 		if (iProtocolVersion > SettingsHandler::getSupportedProtocolVersion()) {
-			Kick("Outdated server! Needed Version: " + SettingsHandler::getSupportedMCVersion());
+			Disconnect("Outdated server! Needed Version: " + SettingsHandler::getSupportedMCVersion());
 			return;
 		}
 
 		if (iProtocolVersion <  SettingsHandler::getSupportedProtocolVersion()) {
-			Kick("Outdated client! Needed Version: " + SettingsHandler::getSupportedMCVersion());
+			Disconnect("Outdated client! Needed Version: " + SettingsHandler::getSupportedMCVersion());
 			return;
 		}
 
@@ -581,7 +535,7 @@ void PlayerThread::Packet1_Login() {
 			is>>sErg;
 
 			if (sErg.compare("YES") != 0) {
-				Kick("Failed to verify username!");
+				Disconnect("Failed to verify username!");
 				return;
 			}
 		}
@@ -589,7 +543,7 @@ void PlayerThread::Packet1_Login() {
 		//Check if there is a player with same name
 		PlayerThread* pPlayer = _pPoolMaster->getPlayerByName(_sName,this);
 		if (pPlayer != NULL) {
-			pPlayer->Kick("Logged in from another location.");
+			pPlayer->Disconnect("Logged in from another location.");
 		}
 
 
@@ -662,7 +616,7 @@ void PlayerThread::Packet1_Login() {
 		insertChat("§dWelcome to FastCraft 0.0.2 Alpha server.");
 		ProcessQueue(); //Send login packages
 
-		PlayerPoolEvent Event(true,false,_sName,this);//Push PlayerPool Join event
+		PlayerPoolEvent Event(true,_sName,this);//Push PlayerPool Join event
 		_pPoolMaster->Event(Event);
 		_fSpawned = true;	
 
@@ -694,7 +648,7 @@ void PlayerThread::Packet2_Handshake() {
 	}
 
 	if (_sName.length() > 16) {
-		Kick("Username too long");
+		Disconnect("Username too long");
 		return;
 	}
 
@@ -718,7 +672,7 @@ void PlayerThread::Packet3_Chat() {
 	try {
 		Message = _NetworkInRoot.readString();
 		if (Message.length() > 100) {
-			Kick("Received string too long");
+			Disconnect("Received string too long");
 			return;
 		}
 	} catch(Poco::RuntimeException) {
@@ -823,7 +777,7 @@ void PlayerThread::Packet254_ServerListPing() {
 	_sTemp.append("§");
 	Poco::NumberFormatter::append(_sTemp,SettingsHandler::getPlayerSlotCount()); //player slots
 
-	Kick(_sTemp);
+	Disconnect(_sTemp);
 }
 
 void PlayerThread::Packet255_Disconnect() {
@@ -861,7 +815,7 @@ void PlayerThread::Packet16_HoldingChange() {
 	try{
 		iSlot = _NetworkInRoot.readShort();
 		if (iSlot < 0 || iSlot > 8) {
-			Kick("Illegal holding slotID");
+			Disconnect("Illegal holding slotID");
 			return;
 		}
 		_Inventory.HandleSelectionChange(iSlot);
@@ -1112,7 +1066,7 @@ void PlayerThread::Packet18_Animation() {
 		char iAnimID = _NetworkInRoot.readByte();
 
 		if (iEID != _iEntityID){
-			Kick("You can't use other EntityID's as yours"); 
+			Disconnect("You can't use other EntityID's as yours"); 
 		}
 
 		PlayerPoolEvent Event(iAnimID,this);
@@ -1128,7 +1082,7 @@ void PlayerThread::Packet19_EntityAction() {
 		char iActionID = _NetworkInRoot.readByte();
 
 		if (iEID != _iEntityID){
-			Kick("You can't use other EntityID's as yours"); 
+			Disconnect("You can't use other EntityID's as yours"); 
 		}
 
 		switch(iActionID) {
@@ -1145,7 +1099,7 @@ void PlayerThread::Packet19_EntityAction() {
 			_Flags.setSprinting(false);
 			break;
 		default:
-			Kick("Unsupported action.");
+			Disconnect("Unsupported action.");
 			break;
 		}
 
@@ -1206,7 +1160,7 @@ void PlayerThread::Interval_CalculateSpeed() {
 
 		double iSpeed = (_dRunnedMeters * 60.0 * 60.0) / (iTime*3.6);
 		if (iSpeed > 7.5) {
-			//Kick("Speedhack");
+			//Disconnect("Speedhack");
 		}
 		_dRunnedMeters=0.0;
 	}
@@ -1293,11 +1247,11 @@ void PlayerThread::Packet15_PlayerBlockPlacement() {
 				sendEmptyBlock(blockCoordinates);
 				return;
 			}
-			Kick("Not supported yet");
+			Disconnect("Not supported yet");
 			return; 
 		}else{ //Client wants to place a block
 			if (! ItemInfoStorage::isBlock(_Inventory.getSelectedSlot().getItemID())) { //But it's a item...
-				Kick("You tried to place a item");
+				Disconnect("You tried to place a item");
 				return;
 			}
 		}
@@ -1322,7 +1276,7 @@ void PlayerThread::Packet15_PlayerBlockPlacement() {
 			blockCoordinates.X++;
 			break;
 		default:
-			Kick("Illegal block direction: " + int(Direction));
+			Disconnect("Illegal block direction: " + int(Direction));
 			return;
 		}
 
@@ -1354,7 +1308,7 @@ void PlayerThread::Packet15_PlayerBlockPlacement() {
 		}
 
 		if (InHand.getStackSize()+1 < Slot.getStackSize()) {
-			Kick("Inventory hack!");
+			Disconnect("Inventory hack!");
 			return;
 		}else{
 			InHand.setStackSize(Slot.getStackSize());
@@ -1422,12 +1376,4 @@ void PlayerThread::sendEmptyBlock(BlockCoordinates coords) {
 	Out.addByte(0);
 	Out.addByte(0);		
 	Out.Finalize(FC_QUEUE_HIGH);
-}
-
-bool PlayerThread::isStillConnected() {
-	if (_Spawned_PlayerInfoList > 0) {
-		return true;
-	}else{
-		return false;
-	}
 }
