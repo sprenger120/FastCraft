@@ -66,29 +66,8 @@ int main(int argc, char *argv[]) {
 	/*
 	* Read item databases
 	*/
-	cout<<"Loading item databases... "<<"\n";
-	vector<string> vList;
-	itemDatabasesDirectory.list(vList);
-	int iAddedEntrys=0;
-
-	if (vList.size() > 0) {
-		for (int x=0;x<=vList.size()-1;x++) {
-			FCPath.setFileName(vList[x]);
-			Poco::File file(FCPath.toString());
-
-			if (!file.exists() || !file.canRead() || FCPath.getExtension().compare("db") != 0) {continue;}
-
-			cout<<"Loading: "<<vList[x]<<"\n";
-			ItemInfoStorage::loadDatabase(FCPath.toString());
-			iAddedEntrys++;
-		}
-		if (iAddedEntrys==0) {
-			cout<<"No databases found!"<<"\n";
-		}
-	}else{
-		cout<<"No databases found!"<<"\n";
-	}
-	cout<<"Done. (Loaded Entries:"<<ItemInfoStorage::getItemsInCache() + ItemInfoStorage::getBlocksInCache()<<")"<<"\n\n";
+	ItemInfoStorage::loadDatabases(FCPath);
+	cout<<"\n";
 
 
 	/*

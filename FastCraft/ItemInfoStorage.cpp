@@ -16,7 +16,8 @@ GNU General Public License for more details.
 #include "ItemInfoStorage.h"
 #include <Poco/Exception.h>
 #include <Poco/String.h>
-#include <Poco/Data/Common.h>
+#include <Poco/Path.h>
+#include <Poco/File.h>
 using Poco::RuntimeException;
 using std::cout;
 using std::string;
@@ -32,25 +33,79 @@ ItemInfoStorage::~ItemInfoStorage() {
 
 vector<ItemEntry> ItemInfoStorage::_vItems(0);
 vector<BlockEntry>ItemInfoStorage::_vBlocks(0);
+Poco::Path ItemInfoStorage::_workingDirectory;
+bool ItemInfoStorage::_fDatabasesLoaded(false);
 
-void ItemInfoStorage::loadDatabase(string Path) {
-	Poco::Data::Session DB("SQLite", Path);
+void ItemInfoStorage::loadDatabases(Poco::Path Path) {
+	if (_fDatabasesLoaded) {
+		cout<<"You cannot call ItemInfoStorage::loadDatabases more than one"<<"\n";
+		refreshCache();
+		return;
+	}
 
-	/*
-	* Load items
-	*/
+	_workingDirectory = Path;
+	_fDatabasesLoaded = true;
 
 
+	refreshCache();
+}
+
+void ItemInfoStorage::refreshCache() {
+	if (!_fDatabasesLoaded) {
+		cout<<"ItemInfoStorage::refreshCache no path specified"<<"\n";
+		throw Poco::RuntimeException("no path specified");
+	}
+	Poco::File workDir(_workingDirectory.toString());
+	vector<string> vFiles;
+	int iLoadedDatabases=0;
+
+	cout<<"Loading item databases... "<<"\n";
+
+	//Clear vectors
+	_vItems.clear();
+	_vBlocks.clear();
+
+	//List files
+	workDir.list(vFiles);
+	
+	if (!vFiles.empty()) {
+		for (int x=0;x<=vFiles.size()-1;x++) {
+			{
+				_workingDirectory.setFileName(vFiles[x]);
+
+				Poco::File tempFile(_workingDirectory.toString());
+				if (!tempFile.exists() || !tempFile.canRead() || _workingDirectory.getExtension().compare("db") != 0) {
+					cout<<"Skipping: "<<_workingDirectory.getFileName()<<"\n";
+					continue;
+				}
+
+				Poco::Data::Session DB("SQLite", _workingDirectory.toString());
+				cout<<"Loading: "<<vFiles[x]<<"\n";
+				loadSingleDatabase(DB);
+				
+				DB.close();
+
+				iLoadedDatabases++;
+			}
+		}
+	}
+	if (iLoadedDatabases==0) {
+		cout<<"No databases found!"<<"\n";
+	}
+	cout<<"Done. (Loaded Entries:"<<ItemInfoStorage::getItemsInCache() + ItemInfoStorage::getBlocksInCache()<<")"<<"\n";
+}
+
+void ItemInfoStorage::loadSingleDatabase(Poco::Data::Session& rDB) {
 	int iItemCount = 0,iBlockCount=0,x;
 	ItemEntry IEntry;
 	BlockEntry BEntry;
 
-	DB<<"SELECT count(`ID`) FROM `Items`",into(iItemCount),now; //Fetch item count
-	DB<<"SELECT count(`ID`) FROM `Blocks`",into(iBlockCount),now; //Fetch block count
+	rDB<<"SELECT count(`ID`) FROM `Items`",into(iItemCount),now; //Fetch item count
+	rDB<<"SELECT count(`ID`) FROM `Blocks`",into(iBlockCount),now; //Fetch block count
 
 	if (iItemCount>0) {
 		for (x=0;x<=iItemCount-1;x++) {
-			DB<<"SELECT ID,SubID,Name,Damageable,Enchantable,Durability,MaxStackSize,Eatable FROM Items LIMIT :x,1;",
+			rDB<<"SELECT ID,SubID,Name,Damageable,Enchantable,Durability,MaxStackSize,Eatable FROM Items LIMIT :x,1;",
 				into(IEntry.ID),
 				into(IEntry.SubID),
 				into(IEntry.Name),
@@ -74,7 +129,7 @@ void ItemInfoStorage::loadDatabase(string Path) {
 
 	if (iBlockCount>0) {
 		for (x=0;x<=iBlockCount-1;x++) {
-			DB<<"SELECT ID,SubID,Name,MaxStackSize,SelfLightLevel,Flammable,Solid,NeededTool,ToolLevel,Thickness,Height FROM Blocks LIMIT :x,1;",
+			rDB<<"SELECT ID,SubID,Name,MaxStackSize,SelfLightLevel,Flammable,Solid,NeededTool,ToolLevel,Thickness,Height FROM Blocks LIMIT :x,1;",
 				into(BEntry.ID),
 				into(BEntry.SubID),
 				into(BEntry.Name),
@@ -221,7 +276,7 @@ ItemID ItemInfoStorage::getIDbyName(string Name) {
 			}
 		}
 	}
-	
+
 	throw Poco::RuntimeException("Not found!");
 }
 

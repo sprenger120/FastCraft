@@ -18,6 +18,8 @@ GNU General Public License for more details.
 #include <vector>
 #include <string>
 #include <utility>
+#include <Poco/Path.h>
+#include <Poco/Data/Common.h>
 
 using std::vector;
 using std::string;
@@ -57,6 +59,9 @@ private:
 	static vector<BlockEntry> _vBlocks;
 	static vector<string> _vDatabases;
 
+	static bool _fDatabasesLoaded;
+	static Poco::Path _workingDirectory;
+
 	ItemInfoStorage();
 	~ItemInfoStorage();
 public:
@@ -64,13 +69,15 @@ public:
 	* Loads iteminfo database
 	
 	Parameter:
-	@1 : Path to database
+	@1 : Path to FastCrafts item database directory
 	*/
-	static void loadDatabase(string);
+	static void loadDatabases(Poco::Path);
 
 
 	/*
 	* Refreshes item/block cache
+	* It use the path, passed to loadDatabases
+	* Will throw Poco::RuntimeException if no path is specified
 	*/
 	static void refreshCache();
 
@@ -276,5 +283,7 @@ public:
 private:
 	static void isValid(ItemEntry);
 	static void isValid(BlockEntry);
+
+	static void loadSingleDatabase(Poco::Data::Session&);
 };
 #endif
