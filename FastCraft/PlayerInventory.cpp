@@ -131,11 +131,11 @@ void PlayerInventory::HandleWindowClick(PlayerThread* pPlayer) {
 
 		//Check data
 		if (iWindowID != 0) {
-			pPlayer->Kick("Unsupported window type");
+			pPlayer->Disconnect("Unsupported window type");
 			return;
 		}
 		if (iSlot < 0 || iSlot > 45) { //Invalid slot id, caused by clicking out of inventory field
-			pPlayer->Kick("Invalid slot ID");
+			pPlayer->Disconnect("Invalid slot ID");
 			return;
 		}
 
