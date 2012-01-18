@@ -208,9 +208,10 @@ public:
 
 	Parameter:
 	@1 : Kick message
-	@1 : Disconnect reason code (FC_LEAVE_ in Constants.h)
+	@2 : Disconnect reason code (FC_LEAVE_ in Constants.h)
+	@3 : Set to true to show the kick message into chat 
 	*/
-	void Disconnect(string);
+	void Disconnect(string,bool = true);
 	void Disconnect(char);
 
 	/*

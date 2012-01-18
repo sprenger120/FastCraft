@@ -223,13 +223,13 @@ void PlayerThread::run() {
 	}
 }
 
-void PlayerThread::Disconnect(string sReason) {
+void PlayerThread::Disconnect(string sReason,bool fShow) {
 	if(isSpawned()) {
 		_fSpawned=false;
 		_NetworkWriter.clearQueues();
 
 		stringstream strStrm;
-		strStrm<<_sName<<" was kicked for: "<<sReason; 
+		strStrm<<_sName<<" was kicked"<< (sReason.compare("")==0 ? "." : " for:")<<sReason; 
 		cout<<strStrm.str()<<"\n"; //Writer kick message to chat
 
 		NetworkOut Out = _NetworkOutRoot.New();
@@ -240,8 +240,10 @@ void PlayerThread::Disconnect(string sReason) {
 		ProcessQueue();
 		Disconnect(FC_LEAVE_KICK);
 
-		PlayerPoolEvent Event(_Coordinates,"§6" + strStrm.str(),this);
-		_pPoolMaster->Event(Event); //Write to players chat
+		if (fShow) { //Write kick message
+			PlayerPoolEvent Event(_Coordinates,"§6" + strStrm.str(),this);
+			_pPoolMaster->Event(Event);
+		}
 	}else{
 		NetworkOut Out = _NetworkOutRoot.New();
 		Out.addByte(0xFF);
@@ -543,7 +545,7 @@ void PlayerThread::Packet1_Login() {
 		//Check if there is a player with same name
 		PlayerThread* pPlayer = _pPoolMaster->getPlayerByName(_sName,this);
 		if (pPlayer != NULL) {
-			pPlayer->Disconnect("Logged in from another location.");
+			pPlayer->Disconnect("Logged in from another location.",false);
 		}
 
 
@@ -628,7 +630,7 @@ void PlayerThread::Packet1_Login() {
 		vector<string> vNames;
 		vNames = _pPoolMaster->ListPlayers(59);
 
-		if (vNames.size() > 0) {
+		if (!vNames.empty()) {
 			for ( int x = 0;x<= vNames.size()-1;x++) {
 				if(vNames[x].compare(_sName)==0) {continue;}//No double spawning of own name
 				PlayerInfoList(true,vNames[x]);
