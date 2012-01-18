@@ -1,6 +1,5 @@
 #Visual C++ files
 /ipch
-/Debug
 /Release
 /FastCraft/Debug
 /FastCraft/Release
@@ -14,5 +13,14 @@
 *.vcxproj.filters
 *.vcxproj.user
 
+#Build output
+*.exe
+*.dll
+*.ilk
+*.pdb
+
+
+#Other stuff
 /Docs
 /Mindmaps
+fastcraft.properties
