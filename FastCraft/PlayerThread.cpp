@@ -552,7 +552,6 @@ void PlayerThread::Packet1_Login() {
 		//YES DUDE, you got it !
 		_PlayerCount++; //There is an new spawned player
 		_iEntityID = EntityID::New(); //Fetch a new ID
-		_ChunkProvider.HandleNewPlayer();
 
 		//Set start coordinates
 		_Coordinates.X = 0.0;
@@ -1238,8 +1237,7 @@ void PlayerThread::Packet15_PlayerBlockPlacement() {
 		Slot.readFromNetwork(_NetworkInRoot);
 
 		ItemSlot & InHand = _Inventory.getSelectedSlot();
-
-		if (Slot.isEmpty()) {
+		if (InHand.isEmpty()) {
 			InHand.clear();
 			return;
 		}
@@ -1253,7 +1251,7 @@ void PlayerThread::Packet15_PlayerBlockPlacement() {
 			return; 
 		}else{ //Client wants to place a block
 			if (! ItemInfoStorage::isBlock(_Inventory.getSelectedSlot().getItemID())) { //But it's a item...
-				Disconnect("You tried to place a item");
+				//Do nothing
 				return;
 			}
 		}
@@ -1286,16 +1284,18 @@ void PlayerThread::Packet15_PlayerBlockPlacement() {
 			Check blockCoordinates
 		*/
 
-		//Prevent: set a block into your body
-		if ((ClientCoordinats.X == blockCoordinates.X && ClientCoordinats.Z == blockCoordinates.Z)  &&
-			(ClientCoordinats.Y == blockCoordinates.Y || ClientCoordinats.Y+1==blockCoordinates.Y)) { 
-			return;
-		}
+		if(ItemInfoStorage::isSolid(InHand.getItemID())) {
+			//Prevent: set a block into your body
+			if ((ClientCoordinats.X == blockCoordinates.X && ClientCoordinats.Z == blockCoordinates.Z)  &&
+				(ClientCoordinats.Y == blockCoordinates.Y || ClientCoordinats.Y+1==blockCoordinates.Y)) { 
+				return;
+			}
 
-		//Prevent: set a block into other body
-		if (_pPoolMaster->willHurtOther(blockCoordinates,this)) { 
-			sendEmptyBlock(blockCoordinates);
-			return;
+			//Prevent: set a block into other body
+			if (_pPoolMaster->willHurtOther(blockCoordinates,this)) { 
+				sendEmptyBlock(blockCoordinates);
+				return;
+			}
 		}
 
 		//Prevent: set a block into other block 
@@ -1309,19 +1309,16 @@ void PlayerThread::Packet15_PlayerBlockPlacement() {
 			return;
 		}
 
-		if (InHand.getStackSize()+1 < Slot.getStackSize()) {
-			Disconnect("Inventory hack!");
-			return;
-		}else{
-			InHand.setStackSize(Slot.getStackSize());
-			if (Slot.getStackSize() == 0) {
-				InHand.clear();
-			}
+		InHand.setStackSize(InHand.getStackSize()-1);
+		if (InHand.getStackSize() == 0) {
+			InHand.clear();
 		}
-
+		
 		/*
 		* All test done. 
 		*/
+
+		//Send block acception
 		NetworkOut Out = _NetworkOutRoot.New();
 		Out.addByte(0x35);
 		Out.addInt(blockCoordinates.X);
@@ -1330,6 +1327,15 @@ void PlayerThread::Packet15_PlayerBlockPlacement() {
 		Out.addByte((char)Slot.getItemID());
 		Out.addByte(0);	
 		Out.Finalize(FC_QUEUE_HIGH);
+
+		
+		//Send inventory update to player
+		Out.addByte(0x67);
+		Out.addByte(0);
+		Out.addShort(36 + _Inventory.getSlotSelection());
+		InHand.writeToNetwork(Out);
+		Out.Finalize(FC_QUEUE_HIGH);
+
 
 		//Append to map
 		_rWorld.setBlock(blockCoordinates.X,blockCoordinates.Y,blockCoordinates.Z,(char)Slot.getItemID());
