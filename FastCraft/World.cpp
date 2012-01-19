@@ -228,7 +228,7 @@ char World::getFreeSpace(int X,int Z) {
 
 	//Get height
 	for (y=SettingsHandler::getWorldHeight()-1;y>0;y--) { //For from 128 -> 1
-		if (pChunk->Blocks[iOffset+y] != 0) {
+		if (ItemInfoStorage::isSolid(pChunk->Blocks[iOffset+y])) {
 			return y+1;
 		}
 	}
@@ -260,11 +260,7 @@ bool World::isSuffocating(EntityCoordinates Coords) {
 		ChunkMath::toChunkInternal((int)floor(Coords.Z))
 		);
 
-	if (pChunk->Blocks[iOffset] == 0) {
-		return false;
-	}else{
-		return true;
-	}
+	return ItemInfoStorage::isSolid((short)pChunk->Blocks[iOffset]);
 }
 
 void World::setBlock(int X,short Y,int Z,char Block) {
