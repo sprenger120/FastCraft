@@ -63,7 +63,7 @@ template <typename T>
 inline void ThreadSafeQueue<T>::multiPush(vector<T> v) {
 	Poco::Mutex::ScopedLock SLock(_Mutex);
 	
-	if (v.size()>0) {
+	if (!v.empty()) {
 		for (int x=0;x<=v.size()-1;x++) {
 			_q.push(v[x]);
 		}
@@ -74,7 +74,6 @@ template <typename T>
 inline void ThreadSafeQueue<T>::push(T& t) {
 	Poco::Mutex::ScopedLock SLock(_Mutex);
 	
-	//std::cout<<"push"<<std::endl;
 	_q.push(t);
 }
 
