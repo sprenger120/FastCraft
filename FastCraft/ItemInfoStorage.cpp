@@ -136,6 +136,7 @@ void ItemInfoStorage::loadSingleDatabase(Poco::Data::Session& rDB) {
 				into(BEntry.MaxStackSize),
 				into(BEntry.SelfLightLevel),
 				into(BEntry.Flammable),
+				into(BEntry.Solid),
 				into(BEntry.NeededTool),
 				into(BEntry.ToolLevel),
 				into(BEntry.Thickness),
