@@ -601,7 +601,7 @@ void PlayerThread::Packet1_Login() {
 		//Inventory
 		ItemSlot Item1(1,64);
 		ItemSlot Item2(5,64);
-		ItemSlot Item3(55,64);
+		ItemSlot Item3(331,64);
 		ItemSlot Item4(360,64);
 
 		_Inventory.setSlot(38,Item1);
@@ -1237,9 +1237,14 @@ void PlayerThread::Packet15_PlayerBlockPlacement() {
 		Slot.readFromNetwork(_NetworkInRoot);
 
 		ItemSlot & InHand = _Inventory.getSelectedSlot();
+		char iBlock = 0;
 		if (InHand.isEmpty()) {
 			InHand.clear();
 			return;
+		}
+
+		if (ItemInfoStorage::isBlock(InHand.getItemID())) {
+			iBlock = (char)InHand.getItemID();
 		}
 
 		if (blockCoordinates.X==-1 && blockCoordinates.Y == -1 && blockCoordinates.Z == -1 && Direction == -1) { //Special action
@@ -1251,8 +1256,12 @@ void PlayerThread::Packet15_PlayerBlockPlacement() {
 			return; 
 		}else{ //Client wants to place a block
 			if (! ItemInfoStorage::isBlock(_Inventory.getSelectedSlot().getItemID())) { //But it's a item...
-				//Do nothing
-				return;
+				if (InHand.getItemID()==331) {//Convert redstone dust to redstone wire block
+					iBlock = 55;
+				}else{
+					//Do nothing
+					return;
+				}
 			}
 		}
 
@@ -1309,10 +1318,26 @@ void PlayerThread::Packet15_PlayerBlockPlacement() {
 			return;
 		}
 
+		//Prevent: set a block under the map
+		if(blockCoordinates.Y < 0) {
+			return;
+		}
+
+		//Prevent: redstone stackup
+		if (blockCoordinates.Y>0) {
+			BlockCoordinates temp = blockCoordinates;
+			temp.Y--;
+			if (_rWorld.getBlock(temp) == 55) {
+				sendEmptyBlock(blockCoordinates);
+				return;
+			}
+		}
+
 		InHand.setStackSize(InHand.getStackSize()-1);
 		if (InHand.getStackSize() == 0) {
 			InHand.clear();
 		}
+
 		
 		/*
 		* All test done. 
@@ -1324,7 +1349,7 @@ void PlayerThread::Packet15_PlayerBlockPlacement() {
 		Out.addInt(blockCoordinates.X);
 		Out.addByte(blockCoordinates.Y);
 		Out.addInt(blockCoordinates.Z);
-		Out.addByte((char)Slot.getItemID());
+		Out.addByte(iBlock);
 		Out.addByte(0);	
 		Out.Finalize(FC_QUEUE_HIGH);
 
@@ -1338,10 +1363,10 @@ void PlayerThread::Packet15_PlayerBlockPlacement() {
 
 
 		//Append to map
-		_rWorld.setBlock(blockCoordinates.X,blockCoordinates.Y,blockCoordinates.Z,(char)Slot.getItemID());
+		_rWorld.setBlock(blockCoordinates.X,blockCoordinates.Y,blockCoordinates.Z,iBlock);
 		
 		//Event to player pool
-		PlayerPoolEvent Event(blockCoordinates,(char)Slot.getItemID(),this);
+		PlayerPoolEvent Event(blockCoordinates,iBlock,this);
 		_pPoolMaster->Event(Event);
 	} catch(Poco::RuntimeException& ex ) {
 		cout<<"Exception cateched: "<<ex.message()<<"\n";
