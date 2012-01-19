@@ -34,7 +34,6 @@ private:
 	ChunkCoordinates _PlayerCoordinates;
 	ChunkCoordinates _oldPlayerCoordinates;
 
-	bool _fNewPlayer;
 	World& _rWorld;
 	NetworkOutRoot& _rNetwork;
 	PackingThread& _rPackingThread;

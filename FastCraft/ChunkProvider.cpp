@@ -47,14 +47,9 @@ ChunkProvider::~ChunkProvider() {
 	_vToBeSendChunks.clear();
 }
 
-void ChunkProvider::HandleNewPlayer() {
-	_fNewPlayer = true;
-}
-
 void ChunkProvider::HandleDisconnect() {
 	_vSpawnedChunks.clear();
 	_vToBeSendChunks.clear();
-	_fNewPlayer = false;
 }
 
 void ChunkProvider::HandleMovement(const EntityCoordinates& PlayerCoordinates) {
@@ -82,7 +77,7 @@ void ChunkProvider::HandleMovement(const EntityCoordinates& PlayerCoordinates) {
 }
 
 bool ChunkProvider::isChunkListEmpty() {
-	return (_vSpawnedChunks.size() == 0);
+	return _vSpawnedChunks.empty();
 }
 
 
@@ -110,7 +105,7 @@ void ChunkProvider::sendDespawn(int X,int Z){
 
 
 bool ChunkProvider::isSpawned(ChunkCoordinates coord) {
-	if(_vSpawnedChunks.size() == 0 ) {return false;}
+	if(_vSpawnedChunks.empty()) {return false;}
 	for ( int x=0;x<=_vSpawnedChunks.size()-1;x++) {
 		if (_vSpawnedChunks[x].X == coord.X && _vSpawnedChunks[x].Z == coord.Z) {
 			return true;
@@ -131,7 +126,7 @@ bool ChunkProvider::CheckChunkCircle() {
 	/*
 	Check already queued chunks
 	*/
-	if ( _vToBeSendChunks.size() > 0) {
+	if (!_vToBeSendChunks.empty()) {
 		bool fDespawn=false; 
 
 		for (int x=_vToBeSendChunks.size()-1;x>=0;x--) {
@@ -237,7 +232,7 @@ bool ChunkProvider::CheckChunkCircle() {
 
 
 void ChunkProvider::CheckSpawnedChunkList() {
-	if (_vSpawnedChunks.size() == 0) { return; }
+	if (_vSpawnedChunks.empty()) { return; }
 
 	bool fDespawn=false; 
 	int iViewDistance = SettingsHandler::getViewDistance(),x;
@@ -266,7 +261,7 @@ void ChunkProvider::AddChunkToList(int X,int Z) {
 }
 
 void ChunkProvider::NextChunk() {
-	if (_vToBeSendChunks.size()==0) {
+	if (_vToBeSendChunks.empty()) {
 		return;
 	}
 	if(_pPlayer->getChunksInQueue() > 20) { return; }
