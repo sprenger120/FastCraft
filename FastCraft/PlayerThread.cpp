@@ -602,7 +602,7 @@ void PlayerThread::Packet1_Login() {
 		ItemSlot Item1(1,64);
 		ItemSlot Item2(5,64);
 		ItemSlot Item3(331,64);
-		ItemSlot Item4(360,64);
+		ItemSlot Item4(338,64);
 
 		_Inventory.setSlot(38,Item1);
 		_Inventory.setSlot(37,Item2);
@@ -1256,10 +1256,14 @@ void PlayerThread::Packet15_PlayerBlockPlacement() {
 			return; 
 		}else{ //Client wants to place a block
 			if (! ItemInfoStorage::isBlock(_Inventory.getSelectedSlot().getItemID())) { //But it's a item...
-				if (InHand.getItemID()==331) {//Convert redstone dust to redstone wire block
+				switch(InHand.getItemID()) {
+				case 331: //Redstone dust
 					iBlock = 55;
-				}else{
-					//Do nothing
+					break;
+				case 338: //Sugarcane
+					iBlock = 83;
+					break;
+				default:
 					return;
 				}
 			}
@@ -1323,18 +1327,25 @@ void PlayerThread::Packet15_PlayerBlockPlacement() {
 			return;
 		}
 
-		//Prevent: redstone stackup
-		if (blockCoordinates.Y>0) {
+		//Prevent: set non solid blocks ontop of non solid blocks
+		if (blockCoordinates.Y>0 && !ItemInfoStorage::isSolid(iBlock)) {
 			BlockCoordinates temp = blockCoordinates;
 			temp.Y--;
-			if (_rWorld.getBlock(temp) == 55) {
-				sendEmptyBlock(blockCoordinates);
-				return;
+
+			char iRequestedBlock = _rWorld.getBlock(temp);
+			
+			if (!ItemInfoStorage::isSolid((short)iRequestedBlock)) {
+				if (!(iBlock == 83 && iRequestedBlock == 83)) {
+					sendEmptyBlock(blockCoordinates);
+					return;
+				}
 			}
+
+
 		}
 
 		InHand.setStackSize(InHand.getStackSize()-1);
-		if (InHand.getStackSize() == 0) {
+		if (InHand.isEmpty()) {
 			InHand.clear();
 		}
 
