@@ -67,7 +67,7 @@ void ItemInfoStorage::refreshCache() {
 
 	//List files
 	workDir.list(vFiles);
-	
+
 	if (!vFiles.empty()) {
 		for (int x=0;x<=vFiles.size()-1;x++) {
 			{
@@ -82,7 +82,7 @@ void ItemInfoStorage::refreshCache() {
 				Poco::Data::Session DB("SQLite", _workingDirectory.toString());
 				cout<<"Loading: "<<vFiles[x]<<"\n";
 				loadSingleDatabase(DB);
-				
+
 				DB.close();
 
 				iLoadedDatabases++;
@@ -103,33 +103,9 @@ void ItemInfoStorage::loadSingleDatabase(Poco::Data::Session& rDB) {
 	rDB<<"SELECT count(`ID`) FROM `Items`",into(iItemCount),now; //Fetch item count
 	rDB<<"SELECT count(`ID`) FROM `Blocks`",into(iBlockCount),now; //Fetch block count
 
-	if (iItemCount>0) {
-		for (x=0;x<=iItemCount-1;x++) {
-			rDB<<"SELECT ID,SubID,Name,Damageable,Enchantable,Durability,MaxStackSize,Eatable FROM Items LIMIT :x,1;",
-				into(IEntry.ID),
-				into(IEntry.SubID),
-				into(IEntry.Name),
-				into(IEntry.Damageable),
-				into(IEntry.Enchantable),
-				into(IEntry.Durability),
-				into(IEntry.MaxStackSize),
-				into(IEntry.Eatable),
-				use(x),
-				now;
-
-			try {
-				isValid(IEntry);
-			}catch(Poco::RuntimeException& ex) {
-				cout<<"Item #"<<IEntry.ID<<":"<<int(IEntry.SubID)<<" is invalid ("<<ex.message()<<")"<<"\n";
-				continue;
-			}
-			_vItems.push_back(IEntry);
-		}
-	}
-
 	if (iBlockCount>0) {
 		for (x=0;x<=iBlockCount-1;x++) {
-			rDB<<"SELECT ID,SubID,Name,MaxStackSize,SelfLightLevel,Flammable,Solid,NeededTool,ToolLevel,Thickness,Height FROM Blocks LIMIT :x,1;",
+			rDB<<"SELECT ID,SubID,Name,MaxStackSize,SelfLightLevel,Flammable,Solid,NeededTool,ToolLevel,Thickness,Height,Stackable,NeedWallOrFloorConnection FROM Blocks LIMIT :x,1;",
 				into(BEntry.ID),
 				into(BEntry.SubID),
 				into(BEntry.Name),
@@ -141,6 +117,8 @@ void ItemInfoStorage::loadSingleDatabase(Poco::Data::Session& rDB) {
 				into(BEntry.ToolLevel),
 				into(BEntry.Thickness),
 				into(BEntry.Height),
+				into(BEntry.Stackable),
+				into(BEntry.NeedWallOrFloorConnection),
 				use(x),
 				now;
 
@@ -151,6 +129,31 @@ void ItemInfoStorage::loadSingleDatabase(Poco::Data::Session& rDB) {
 				continue;
 			}
 			_vBlocks.push_back(BEntry);
+		}
+	}
+
+	if (iItemCount>0) {
+		for (x=0;x<=iItemCount-1;x++) {
+			rDB<<"SELECT ID,SubID,Name,Damageable,Enchantable,Durability,MaxStackSize,Eatable,ConnectedBlock FROM Items LIMIT :x,1;",
+				into(IEntry.ID),
+				into(IEntry.SubID),
+				into(IEntry.Name),
+				into(IEntry.Damageable),
+				into(IEntry.Enchantable),
+				into(IEntry.Durability),
+				into(IEntry.MaxStackSize),
+				into(IEntry.Eatable),
+				into(IEntry.ConnectedBlock),
+				use(x),
+				now;
+
+			try {
+				isValid(IEntry);
+			}catch(Poco::RuntimeException& ex) {
+				cout<<"Item #"<<IEntry.ID<<":"<<int(IEntry.SubID)<<" is invalid ("<<ex.message()<<")"<<"\n";
+				continue;
+			}
+			_vItems.push_back(IEntry);
 		}
 	}
 }
@@ -542,9 +545,28 @@ void ItemInfoStorage::isValid(ItemEntry Entry) {
 		throw Poco::RuntimeException("Name is empty");
 	}
 
-	//Check ID & name availability
+
 	int x,i;
 	if (!_vItems.empty()) {
+		bool found = false;
+
+		//Check ConnectedBlock existance
+		if (Entry.ConnectedBlock != 0) {
+			if (!_vBlocks.empty()) {
+				for (x=0;x<=_vBlocks.size()-1;x++) {
+					if (_vBlocks[x].ID == Entry.ConnectedBlock) {
+						found=true;
+						break;
+					}
+				}
+			}
+			if (!found){
+				throw Poco::RuntimeException("Connected Block doesn't exist");
+			}
+		}
+	
+
+		//Check ID & name availability
 		for (x=0;x<=_vItems.size()-1;x++) {
 			if (_vItems[x].ID == Entry.ID) { //ID is already taken.. lets check SubID
 				for (i=0;i<=_vItems.size()-1;i++) {
@@ -607,73 +629,4 @@ void ItemInfoStorage::isValid(BlockEntry Entry) {
 			}
 		}
 	}
-}
-
-void ItemInfoStorage::addBlock(
-	unsigned char id,
-	char subid,
-	string name,
-	float blastres,
-	char stacksize,
-	char lightlevel,
-	bool flammable,
-	bool solid,
-	char neededtool,
-	char toollevel,
-	float thickness,
-	float height
-	) 
-{
-	BlockEntry Entry;
-
-	Entry.ID = id;
-	Entry.SubID = subid;
-	Entry.Name.assign(name);
-	Entry.BlastResistance = blastres;
-	Entry.MaxStackSize = stacksize;
-	Entry.SelfLightLevel = lightlevel;
-	Entry.Flammable = flammable;
-	Entry.Solid = solid;
-	Entry.NeededTool = neededtool;
-	Entry.ToolLevel = toollevel;
-	Entry.Thickness = thickness;
-	Entry.Height = height;
-
-	try {
-		isValid(Entry);
-	}catch(Poco::RuntimeException& ex) {
-		ex.rethrow();
-	}
-
-	_vBlocks.push_back(Entry);
-}
-
-void ItemInfoStorage::addItem(
-	short id,
-	char subid,
-	string name,
-	bool damageable,
-	bool enchantable,
-	short durability,
-	char stacksize,
-	bool eatable
-	) 
-{
-	ItemEntry Entry;
-	Entry.ID = id;
-	Entry.SubID = subid;
-	Entry.Name.assign(name);
-	Entry.Damageable = damageable;
-	Entry.Enchantable = enchantable;
-	Entry.Durability = durability;
-	Entry.MaxStackSize = stacksize;
-	Entry.Eatable = eatable;
-
-	try {
-		isValid(Entry);
-	}catch(Poco::RuntimeException& ex) {
-		ex.rethrow();
-	}
-
-	_vItems.push_back(Entry);
 }
