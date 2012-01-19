@@ -26,7 +26,6 @@ void ChunkTerraEditor::setPlate(MapChunk* pChunk,short y,Block& Block) {
 			index = ChunkMath::toIndex(x,y,z);
 			if (index==-1) {
 				throw Poco::RuntimeException("Chunk index out of bound");
-				return;
 			}
 			pBlockArray[index] = Block.BlockID;
 		}
