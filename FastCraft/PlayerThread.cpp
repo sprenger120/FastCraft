@@ -229,7 +229,7 @@ void PlayerThread::Disconnect(string sReason,bool fShow) {
 		_NetworkWriter.clearQueues();
 
 		stringstream strStrm;
-		strStrm<<_sName<<" was kicked"<< (sReason.compare("")==0 ? "." : " for:")<<sReason; 
+		strStrm<<_sName<<" was kicked"<< (sReason.compare("")==0 ? "." : " for: ")<<sReason; 
 		cout<<strStrm.str()<<"\n"; //Writer kick message to chat
 
 		NetworkOut Out = _NetworkOutRoot.New();
@@ -680,9 +680,9 @@ void PlayerThread::Packet3_Chat() {
 		Disconnect(FC_LEAVE_OTHER);
 	}
 
-	_sTemp.assign("<");
+	_sTemp.assign("<§c");
 	_sTemp.append(_sName);
-	_sTemp.append("> ");
+	_sTemp.append("§f> ");
 	_sTemp.append(Message); 
 
 	pushChatEvent(_sTemp);
@@ -1340,8 +1340,6 @@ void PlayerThread::Packet15_PlayerBlockPlacement() {
 					return;
 				}
 			}
-
-
 		}
 
 		InHand.setStackSize(InHand.getStackSize()-1);
