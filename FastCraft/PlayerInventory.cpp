@@ -285,3 +285,21 @@ void PlayerInventory::HandleSelectionChange(short iSel) {
 ItemSlot& PlayerInventory::getSelectedSlot() {
 	return _vItemStack[36 + _iSlotSelection];
 }
+
+void PlayerInventory::DecreaseInHandStack() {
+	ItemSlot& rItem = getSelectedSlot();
+
+
+	rItem.setStackSize(rItem.getStackSize()-1);
+	if (rItem.isEmpty()) {
+		rItem.clear();
+	}
+
+	NetworkOut Out = _rNetwork.New();
+
+	Out.addByte(0x67);
+	Out.addByte(0);
+	Out.addShort(36+getSlotSelection());
+	rItem.writeToNetwork(Out);
+	Out.Finalize(FC_QUEUE_HIGH);
+}

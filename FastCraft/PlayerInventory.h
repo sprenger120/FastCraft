@@ -139,6 +139,12 @@ public:
 	* Returns ItemSlot object of actual selected slot
 	*/
 	ItemSlot& getSelectedSlot();
+
+	
+	/*
+	* Increases stacksize in hand and sync with client
+	*/
+	void DecreaseInHandStack();
 };
 
 #endif

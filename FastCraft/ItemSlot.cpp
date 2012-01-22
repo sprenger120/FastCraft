@@ -310,16 +310,3 @@ bool ItemSlot::operator != (ItemSlot& other) {
 		return true;
 	}
 }
-
-void ItemSlot::DecreaseInHandStack(NetworkOut& rOut,short iSlot) {
-	setStackSize(getStackSize()-1);
-	if (isEmpty()) {
-		clear();
-	}
-
-	rOut.addByte(0x67);
-	rOut.addByte(0);
-	rOut.addShort(iSlot);
-	writeToNetwork(rOut);
-	rOut.Finalize(FC_QUEUE_HIGH);
-}
