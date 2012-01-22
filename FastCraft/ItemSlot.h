@@ -195,6 +195,16 @@ public:
 	void writeToNetwork(NetworkOut&);
 
 	
+	/*
+	* Increases stacksize in hand and sync with client
+
+	Parameter:
+	@1 : A NetworkOut instance reference
+	@2 : Target Slot
+	*/
+	void DecreaseInHandStack(NetworkOut&,short);
+
+
 	/* 
 	* Operators
 	*/
