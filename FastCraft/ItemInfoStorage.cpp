@@ -134,7 +134,7 @@ void ItemInfoStorage::loadSingleDatabase(Poco::Data::Session& rDB) {
 
 	if (iItemCount>0) {
 		for (x=0;x<=iItemCount-1;x++) {
-			rDB<<"SELECT ID,SubID,Name,Damageable,Enchantable,Durability,MaxStackSize,Eatable,ConnectedBlock FROM Items LIMIT :x,1;",
+			rDB<<"SELECT ID,SubID,Name,Damageable,Enchantable,Durability,MaxStackSize,Eatable,ConnectedBlock,Weapon FROM Items LIMIT :x,1;",
 				into(IEntry.ID),
 				into(IEntry.SubID),
 				into(IEntry.Name),
@@ -144,6 +144,7 @@ void ItemInfoStorage::loadSingleDatabase(Poco::Data::Session& rDB) {
 				into(IEntry.MaxStackSize),
 				into(IEntry.Eatable),
 				into(IEntry.ConnectedBlock),
+				into(IEntry.Weapon),
 				use(x),
 				now;
 
@@ -531,6 +532,10 @@ void ItemInfoStorage::isValid(ItemEntry Entry) {
 
 	if (Entry.Damageable && Entry.Eatable) {
 		throw Poco::RuntimeException("Cou can't make tools eatable");
+	}
+
+	if (Entry.Weapon && !Entry.Damageable) {
+		throw Poco::RuntimeException("Indestructible weapon");
 	}
 
 	if (Entry.SubID > 17 || Entry.SubID < 0) {

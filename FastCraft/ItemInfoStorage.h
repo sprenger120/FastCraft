@@ -37,6 +37,7 @@ struct ItemEntry {
 	char MaxStackSize;
 	bool Eatable;
 	char ConnectedBlock;
+	bool Weapon;
 };
 
 struct BlockEntry {
