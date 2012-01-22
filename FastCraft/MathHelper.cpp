@@ -49,3 +49,11 @@ double MathHelper::distance3D(EntityCoordinates s,EntityCoordinates t) {
 						(s.Y-t.Y) * (s.Y-t.Y)  
 				     );
 }
+
+double MathHelper::distance3D(BlockCoordinates s,BlockCoordinates t) {
+	return sqrt( double((s.X-t.X) * (s.X-t.X) + 
+						(s.Z-t.Z) * (s.Z-t.Z) + 
+						(s.Y-t.Y) * (s.Y-t.Y)
+					   )
+			   );
+}

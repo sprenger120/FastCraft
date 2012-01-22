@@ -16,6 +16,7 @@ GNU General Public License for more details.
 #ifndef _FASTCRAFTHEADER_MATHHELPER
 #define _FASTCRAFTHEADER_MATHHELPER
 #include "EntityCoordinates.h"
+#include "Structs.h"
 
 class MathHelper {
 private:
@@ -39,7 +40,7 @@ public:
 	*/
 	static double distance2D(double,double,double,double);
 	static double distance2D(EntityCoordinates,EntityCoordinates);
-
+	
 	/*
 	* Calculates distance between two points
 	* 1 = source, 2=target
@@ -56,8 +57,13 @@ public:
 	Parameter:
 	@1 : EntityCoordinates1
 	@2 : EntityCoordinates2
+
+	Parameter:
+	@1 : BlockCoordinates1
+	@2 : BlockCoordinates2
 	*/
 	static double distance3D(double,double,double, double,double,double);
 	static double distance3D(EntityCoordinates,EntityCoordinates);
+	static double distance3D(BlockCoordinates,BlockCoordinates);
 };
 #endif
