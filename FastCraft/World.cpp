@@ -295,3 +295,48 @@ char World::getBlock(int X,short Y,int Z) {
 char World::getBlock(BlockCoordinates Coords) {
 	return getBlock(Coords.X,(short)Coords.Y,Coords.Z);
 } 
+
+bool World::isSurroundedByAir(BlockCoordinates TargetBlock) {
+	BlockCoordinates Temp = TargetBlock;
+
+	try {
+	
+	//X--
+	if (getBlock(Temp.X-1,Temp.Y,Temp.Z) != 0) {
+		return false;
+	}
+
+	//X++
+	if (getBlock(Temp.X+1,Temp.Y,Temp.Z) != 0) {
+		return false;
+	}
+
+	//Z--
+	if (getBlock(Temp.X,Temp.Y,Temp.Z-1) != 0) {
+		return false;
+	}
+
+	//Z++
+	if (getBlock(Temp.X,Temp.Y,Temp.Z+1) != 0) {
+		return false;
+	}
+
+	//Y--
+	if (TargetBlock.Y >= 1) {
+		if (getBlock(Temp.X,Temp.Y-1,Temp.Z) != 0) {
+			return false;
+		}
+	}
+
+	//Y++
+	if (TargetBlock.Y <= SettingsHandler::getWorldHeight()-1) {
+		if (getBlock(Temp.X,Temp.Y+1,Temp.Z) != 0) {
+			return false;
+		}
+	}
+	
+	}catch(Poco::RuntimeException& ex) {
+		cout<<"Exception World::isSurroundedByAir: "<<ex.message()<<"\n";
+	}
+	return true;
+}

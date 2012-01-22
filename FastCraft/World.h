@@ -133,6 +133,15 @@ public:
 	*/
 	char getBlock(int,short,int);
 	char getBlock(BlockCoordinates);
+
+
+	/*
+	* Returns true if block at given coordinates is fully surrounded by air
+
+	Parameters:
+	@1 : BlockCoordinates of target block
+	*/
+	bool isSurroundedByAir(BlockCoordinates);
 private:
 	void generateChunks(int,int,int,int);
 	MapChunk* generateChunk(int,int);
