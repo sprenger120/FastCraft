@@ -27,7 +27,7 @@ void EntityFlags::clear() {
 	_Crouched = false;
 	_Riding = false;
 	_Sprinting = false;
-	_Eating = false;
+	_RClick = false;
 }
 
 bool EntityFlags::isOnFire() {
@@ -49,8 +49,8 @@ bool EntityFlags::isSprinting() {
 	return _Sprinting;
 }
 
-bool EntityFlags::isEating() {
-	return _Eating;
+bool EntityFlags::isRightClicking() {
+	return _RClick;
 }
 
 void EntityFlags::setOnFire(bool f) {
@@ -69,6 +69,6 @@ void EntityFlags::setSprinting(bool f) {
 	_Sprinting = f;
 }
 
-void EntityFlags::setEating(bool f) {
-	_Eating = f;
+void EntityFlags::setRightClicking(bool f) {
+	_RClick = f;
 }

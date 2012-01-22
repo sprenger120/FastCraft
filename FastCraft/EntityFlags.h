@@ -22,7 +22,7 @@ private:
 	bool _Crouched;
 	bool _Riding;
 	bool _Sprinting;
-	bool _Eating;
+	bool _RClick;
 public:
 	EntityFlags();
 	~EntityFlags();
@@ -33,12 +33,12 @@ public:
 	bool isCrouched();
 	bool isRiding();
 	bool isSprinting();
-	bool isEating();
+	bool isRightClicking();
 
 	void setOnFire(bool);
 	void setCrouched(bool);
 	void setRiding(bool);
 	void setSprinting(bool);
-	void setEating(bool);
+	void setRightClicking(bool);
 };
 #endif
