@@ -56,6 +56,8 @@ struct TimeJobs {
 	long long LastMovementSend;
 	long long LastSpeedCalculation;
 	long long LastPositionCheck;
+	long long LastBlockPlace;
+	long long StartedEating;
 };
 
 struct EntityListEntry {
@@ -82,7 +84,6 @@ private:
 	int _Spawned_PlayerInfoList;
 	PlayerInventory _Inventory;
 	double _dRunnedMeters;
-
 
 	//TCP stuff
 	string _sTemp;
@@ -287,7 +288,6 @@ public:
 	*/
 	void updateEntityMetadata(int,EntityFlags);
 
-
 	/*
 	* Returns a reference to player's inventory
 	*/
@@ -338,7 +338,8 @@ private:
 	void Interval_CheckPosition();
 
 	void sendTime();
-	void pushChatEvent(string&);
+	void ChatToAll(string&);
+	void syncFlagsWithPP();
 	void sendClientPosition();
 	void CheckPosition(bool=true); //checks players position and correct it. Will synchronize with player if bool is true
 	void sendEmptyBlock(BlockCoordinates);
@@ -359,6 +360,7 @@ private:
 	void Packet11_Position();
 	void Packet12_Look();
 	void Packet13_PosAndLook();
+	void Packet14_Digging();
 	void Packet15_PlayerBlockPlacement();
 	void Packet16_HoldingChange();
 	void Packet18_Animation();
