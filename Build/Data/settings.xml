@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<settings>
+  <Network>
+    <Port>25565</Port>
+    <Slots>16</Slots>
+  </Network>
+
+  <Server>
+    <Description>
+      <![CDATA[
+      FastCraft Minecraft server
+      ]]>
+    </Description>
+
+    <motd>
+      <![CDATA[
+      §dWelcome to FastCraft 0.0.2 Alpha server.
+      ]]>
+    </motd>
+    <OnlineMode>1</OnlineMode>
+    <Whitelist>0</Whitelist>
+    <Difficulty>1</Difficulty>
+  </Server>
+
+
+  <Map>
+    <Height>128</Height>
+    <AllowNeather>1</AllowNeather>
+    <ViewDistance>10</ViewDistance>
+    <RootMap>
+      <![CDATA[
+      world
+      ]]>
+    </RootMap>
+  </Map>
+
+  <Spawning>
+    <Peaceful>1</Peaceful>
+    <Hostile>1</Hostile>
+  </Spawning>
+
+  <Player>
+    <AllowPVP>1</AllowPVP>
+    <FlyMod>
+      <Allow>0</Allow>
+      <!-- Value in km/h.. DO NOT SET TO LOWER THAN 7.5 (vanilla maximal run speed) -->
+      <MaxSpeed>10</MaxSpeed>
+    </FlyMod>
+  </Player>
+</settings>
