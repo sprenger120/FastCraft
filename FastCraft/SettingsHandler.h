@@ -22,6 +22,9 @@ GNU General Public License for more details.
 #ifndef _FASTCRAFTHEADER_SETTINGSNHANDLER
 #define _FASTCRAFTHEADER_SETTINGSNHANDLER
 #include <iostream>
+#include <Poco/Path.h>
+#include <Poco/AutoPtr.h>
+#include <Poco/DOM/Document.h>
 
 using std::string;
 
@@ -33,6 +36,7 @@ private:
 	
 	//Server Info
 	static string _sServerDescription;
+	static string _sMOTD;
 	static int _iServerMode;
 	static char _iDifficulty;
 	static bool _fOnlineMode;
@@ -44,16 +48,20 @@ private:
 	static string _sMainMapName;
 
 	//Spawning
-	static bool _fSpawnPeacefulAnimals;
-	static bool _fSpawnHostileAnimals;
+	static bool _fSpawnPeacefulMobs;
+	static bool _fSpawnHostileMobs;
 
 	//Player
 	static int _iViewDistance;
 	static bool _fPVP;
+	static bool _fAllowFlyMod;
+	static double _dMaxSpeed;
 public:
-	//De- / constructor 
-	SettingsHandler(); //Read configuration
-	~SettingsHandler(); //Save configuration
+	/*
+	* Loads configuration
+	*/
+	static void readConfiguration(Poco::Path);
+
 
 	//Property Accessors
 		//Network
@@ -67,13 +75,13 @@ public:
 
 		//Server Info
 		static string getServerDescription();
+		static string getServerMOTD();
 		static int getServerMode(); //false for survival, true for creative
 		static char getDifficulty();
 		static bool isOnlineModeActivated(); //returns true if name verification is required
 		static bool isWhitelistActivated();
 
 		//Map Info
-		static long long getMapSeed();
 		static unsigned char getWorldHeight();
 		static bool isNeatherAllowed(); 
 		static string getMainWorldName();
@@ -85,6 +93,14 @@ public:
 		//Player
 		static int getViewDistance();
 		static bool isPVPActivated();
+		static bool isFlyModAllowed();
+		static int getMaxMovementSpeed();
+private:
+	SettingsHandler();
+	~SettingsHandler();
+	static int parseNodeInt(Poco::AutoPtr<Poco::XML::Document>,string);
+	static double parseNodeDouble(Poco::AutoPtr<Poco::XML::Document>,string);
+	static void parseNodeString(Poco::AutoPtr<Poco::XML::Document>,string,string&,string);
 };
 
 #endif

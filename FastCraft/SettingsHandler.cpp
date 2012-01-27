@@ -17,23 +17,26 @@ GNU General Public License for more details.
 #include "Constants.h"
 #include <string>
 #include <Poco/Path.h>
-#include <Poco/Util/PropertyFileConfiguration.h>
+#include <fstream>
 #include <Poco/AutoPtr.h>
-#include <Poco/Foundation.h>
-#include <Poco/File.h>
 #include <Poco/Exception.h>
+#include <Poco/DOM/DOMParser.h>
+#include <Poco/SAX/InputSource.h>
+#include <Poco/XML/XMLException.h>
+#include <Poco/SAX/SAXException.h>
+#include <Poco/NumberParser.h>
 
 using std::cout;
 using std::endl;
 using Poco::Path;
 using Poco::AutoPtr;
-using Poco::Util::PropertyFileConfiguration;
 
 //Init static variables
 int SettingsHandler::_iPort						= 25565;
 int SettingsHandler::_iPlayerSlots				= 16;
 
 string SettingsHandler::_sServerDescription		("FastCraft Minecraft server");
+string SettingsHandler::_sMOTD					("§dWelcome to FastCraft 0.0.2 Alpha server.");
 int SettingsHandler::_iServerMode				= FC_SERVMODE_SURVIVAL;
 char SettingsHandler::_iDifficulty				= FC_DIFFICULTY_EASY;	
 bool SettingsHandler:: _fOnlineMode				= true;
@@ -43,155 +46,108 @@ int SettingsHandler::_iWorldHeight				= 128;
 bool SettingsHandler::_fAllowNeather			= false;
 string SettingsHandler::_sMainMapName			("main");
 
-bool SettingsHandler::_fSpawnPeacefulAnimals	= true;
-bool SettingsHandler::_fSpawnHostileAnimals		= true;
+bool SettingsHandler::_fSpawnPeacefulMobs		= true;
+bool SettingsHandler::_fSpawnHostileMobs		= true;
 
 
 int SettingsHandler::_iViewDistance				= 10;
 bool SettingsHandler::_fPVP						= true;
+bool SettingsHandler::_fAllowFlyMod				= false;
+double SettingsHandler::_dMaxSpeed				= 7.5;
 
 
 SettingsHandler::SettingsHandler(){
-	//Build path
-	Poco::Path ConfPath(true);
-	ConfPath.assign(Path::current());
-	ConfPath.setFileName("fastcraft.properties");
-
-	//Already existing? 
-	Poco::File File(ConfPath);
-	if (! File.exists()) { //New Configuration file
-		cout<<"***Config WARNING: File not found. Generating new one."<<std::endl;
-
-		try {
-			File.createFile();
-		} catch (Poco::FileAccessDeniedException) {
-			cout<<"Access denied!"<<std::endl;
-			throw Poco::RuntimeException("Access denied");
-			return;
-		}
-
-		AutoPtr<PropertyFileConfiguration> pConf;
-		pConf = new PropertyFileConfiguration(ConfPath.toString());
-
-		//Network
-		pConf->setInt("ServerPort",_iPort);
-		pConf->setInt("Slots",_iPlayerSlots);
-
-		//ServerInfo
-		pConf->setString("Description",_sServerDescription);
-		pConf->setInt("ServerMode",_iServerMode);
-		pConf->setInt("Difficulty",_iDifficulty);
-		pConf->setBool("OnlineMode",_fOnlineMode);
-		pConf->setBool("Whitelist",_fWhitelist);
-
-		//MapInfo
-		pConf->setBool("AllowNeather",_fAllowNeather);
-		pConf->setString("MainMapName",_sMainMapName);
-
-		//Spawning
-		pConf->setBool("SpawnPeacefulMobs",_fSpawnPeacefulAnimals);
-		pConf->setBool("SpawnHostileMobs",_fSpawnHostileAnimals);
-
-		//Player
-		pConf->setInt("ViewDistance",_iViewDistance);
-		pConf->setBool("PVP",_fPVP);
-
-		pConf->save(ConfPath.toString());
-		return;
-	}else{ //Load configuration
-		AutoPtr<PropertyFileConfiguration> pConf;
-		pConf = new PropertyFileConfiguration(ConfPath.toString());
-
-		//Read Configuration
-		try {
-			//Network
-			_iPort					= pConf->getInt("ServerPort");
-			_iPlayerSlots			= pConf->getInt("Slots");
-
-			//ServerInfo
-			_sServerDescription		= pConf->getString("Description");
-			_iServerMode			= pConf->getInt("ServerMode");
-			_iDifficulty			= pConf->getInt("Difficulty");
-			_fOnlineMode			= pConf->getBool("OnlineMode");
-			_fWhitelist				= pConf->getBool("Whitelist");
-
-			//MapInfo
-			_fAllowNeather			= pConf->getBool("AllowNeather");
-			_sMainMapName			= pConf->getString("MainMapName");
-			
-			//Spawning
-			_fSpawnPeacefulAnimals	= pConf->getBool("SpawnPeacefulMobs");
-			_fSpawnHostileAnimals	= pConf->getBool("SpawnHostileMobs");
-
-			//Player
-			_iViewDistance			= pConf->getInt("ViewDistance");
-			_fPVP					= pConf->getBool("PVP");
-
-		} catch(Poco::NotFoundException& err) {
-			cout<<"***Config ERROR: Key \'"<<err.message()<<"\' not found!"<<"\n"; 
-			throw Poco::RuntimeException("Key not found");
-
-		} catch (Poco::SyntaxException& err) {
-			cout<<"***Config ERROR: Syntax error \'"<<err.message()<<"\'"<<"\n"; 
-			throw Poco::RuntimeException("Syntax error");
-
-		}
-
-		//Check
-		//port
-		if (_iPort < 1024 || _iPort > 65535) {
-			cout<<"***Config ERROR: Invalid port, falling back to 25565!"<<endl;
-			_iPort = 25565;
-		}
-
-		//slots
-		if (_iPlayerSlots < 2 || _iPlayerSlots > 255) {
-			cout<<"***Config ERROR: Invalid slot count, falling back to 16!"<<endl;
-			_iPlayerSlots = 16;
-		}
-
-		
-		//server desc
-		if (_sServerDescription.length() > 34) {
-			cout<<"***Config WARNING: Server description too long. Shorten it to 34 letters."<<endl;
-			_sServerDescription.resize(34);
-		}
-
-
-		//Server mode
-		if (_iServerMode != FC_SERVMODE_SURVIVAL && _iServerMode != FC_SERVMODE_CREATIVE) {
-			cout<<"***Config ERROR: Invalid server mode, falling back to survival!"<<endl;
-			_iServerMode = FC_SERVMODE_SURVIVAL;
-		}
-
-		//difficulty
-		if (_iDifficulty < FC_DIFFICULTY_EASY || _iDifficulty > FC_DIFFICULTY_HARD) {
-			cout<<"***Config ERROR: Invalid difficulty, falling back to easy!"<<endl;
-			_iDifficulty = FC_DIFFICULTY_EASY;
-		}
-
-
-		if (_iWorldHeight < 10 || _iWorldHeight > 255) {
-			cout<<"***Config ERROR: Invalid world height, falling back to 128!"<<endl;
-			_iWorldHeight = 128;
-		}
-
-		//ToDo: check map existence
-
-		//View distance
-		if (_iViewDistance < 4 || _iViewDistance > 16) {
-			cout<<"***Config ERROR: Illegal view distance. Falling back to 10!"<<endl;
-			_iViewDistance = 10;
-		}
-
-		if (!_fOnlineMode) {
-			cout<<"***Config WARNING: Server runs in unsafe mode. Hackers can connect without verification!"<<"\n";
-			cout<<"***Solution: Set OnlineMode in your fastcraft.properties to true."<<"\n";
-		}
-	}
 }
 
 SettingsHandler::~SettingsHandler() {
+}
+
+void SettingsHandler::readConfiguration(Poco::Path path) {
+	std::ifstream Input(path.toString());
+
+	if (!Input.good()) {
+		cout<<"***Error: Configuration path invalid!"<<"\n";
+		cout<<"Starting with standart configuration!"<<std::endl;
+		return;
+	}
+
+
+	Poco::XML::InputSource ISource(Input);
+	Poco::XML::DOMParser parser;
+	Poco::AutoPtr<Poco::XML::Document> pDoc;
+	int iData;
+
+	try {
+		pDoc = parser.parse(&ISource);
+	}catch(Poco::XML::XMLException& ex) {
+		cout<<"***Error while parsing settings: "<<ex.message()<<"\n";
+		cout<<"Starting with standart configuration!"<<std::endl;
+		return;
+	}
+
+
+	/*
+	* Parsing settings
+	*/
+
+	//Network
+	iData = parseNodeInt(pDoc,"/settings/Network/Port");
+	_iPort = (iData == -1 || (iData<0 || iData > 65535) ? _iPort : iData);
+
+	iData = parseNodeInt(pDoc,"/settings/Network/Slots");
+	_iPlayerSlots = (iData == -1 || (iData < 0 || iData > 255) ? _iPlayerSlots : iData);
+
+
+	//Server
+	parseNodeString(pDoc,"/settings/Server/Description",_sServerDescription,"Server description not found!");
+	parseNodeString(pDoc,"/settings/Server/motd",_sMOTD,"MOTD not defined!");
+	
+	iData = parseNodeInt(pDoc,"/settings/Server/OnlineMode");
+	_fOnlineMode = (iData == -1 || iData != 0 ? true : false); //Activate if node doesnt exists
+
+	iData = parseNodeInt(pDoc,"/settings/Server/Whitelist"); 
+	_fWhitelist = (iData == -1 || iData == 0 ? false : true); //Deactivate if node doesnt exists
+
+	iData = parseNodeInt(pDoc,"/settings/Server/ServerMode");
+	_iServerMode = (iData == -1 || iData == 0 ? FC_SERVMODE_SURVIVAL : FC_SERVMODE_CREATIVE);
+
+	iData = parseNodeInt(pDoc,"/settings/Server/Difficulty");
+	_iDifficulty = (iData == -1 || (iData < FC_DIFFICULTY_PEACEFUL || iData > FC_DIFFICULTY_HARD) ? FC_DIFFICULTY_EASY : iData);
+
+
+	//Map
+	iData = parseNodeInt(pDoc,"/settings/Map/Height");
+	_iWorldHeight = (iData == -1 || (iData < 10 || iData > 255) ? _iWorldHeight : iData);
+
+	iData = parseNodeInt(pDoc,"/settings/Map/AllowNeather");
+	_fAllowNeather = (iData == -1 || iData != 0 ? true : false);
+
+	iData = parseNodeInt(pDoc,"/settings/Map/ViewDistance");
+	_iViewDistance = (iData == -1 || (iData < 5 || iData > 25) ? 10 : iData);
+
+	parseNodeString(pDoc,"/settings/Map/RootMap",_sMainMapName,"world");
+
+
+	//Spawning
+	iData = parseNodeInt(pDoc,"/settings/Spawning/Peaceful");
+	_fSpawnPeacefulMobs = (iData == -1 || iData != 0 ? true : false);
+
+	iData = parseNodeInt(pDoc,"/settings/Spawning/Hostile");
+	_fSpawnHostileMobs = (iData == -1 || iData != 0 ? true : false);
+
+
+	//Player
+	iData = parseNodeInt(pDoc,"/settings/Player/AllowPVP");
+	_fPVP = (iData == -1 || iData != 0 ? true : false);
+
+	iData = parseNodeInt(pDoc,"/settings/Player/FlyMod/Allow");
+	_fAllowFlyMod = (iData == -1 || iData == 0 ? false : true);
+
+	double dData;
+	dData = parseNodeDouble(pDoc,"/settings/Player/FlyMod/MaxSpeed");
+	_dMaxSpeed = (dData == -1.0 || dData < 7.5 ? 7.5 : dData);
+
+	return;
 }
 
 
@@ -235,8 +191,16 @@ bool SettingsHandler::isWhitelistActivated() {
 	return _fWhitelist;
 }
 
-long long SettingsHandler::getMapSeed() {
-	return -135L;
+string SettingsHandler::getServerMOTD() {
+	return _sMOTD;
+}
+
+bool SettingsHandler::isFlyModAllowed() {
+	return _fAllowFlyMod;
+}
+
+double SettingsHandler::getMaxMovementSpeed() {
+	return _dMaxSpeed;
 }
 
 unsigned char SettingsHandler::getWorldHeight() {
@@ -252,11 +216,11 @@ string SettingsHandler::getMainWorldName() {
 }
 
 bool SettingsHandler::isPeacefulAnimalSpawningActivated() {
-	return _fSpawnPeacefulAnimals;
+	return _fSpawnPeacefulMobs;
 }
 
 bool SettingsHandler::isHostileAnimalSpawningActivated() {
-	return _fSpawnHostileAnimals;
+	return _fSpawnHostileMobs;
 }
 
 int SettingsHandler::getViewDistance() {
@@ -265,4 +229,62 @@ int SettingsHandler::getViewDistance() {
 
 bool SettingsHandler::isPVPActivated() {
 	return _fPVP;
+}
+
+int SettingsHandler::parseNodeInt(Poco::AutoPtr<Poco::XML::Document> pDoc,string sPath) { 
+	Poco::XML::Node* pNode;
+
+	pNode = pDoc->getNodeByPath(sPath);
+
+	if(pNode==NULL) {
+		cout<<"***Error: Node "<<sPath<<" was not found!"<<"\n";
+		return -1;
+	}else{
+		string sData("");
+		int iData;
+
+		sData = pNode->innerText();
+		try {
+			iData = Poco::NumberParser::parseUnsigned(sData);
+		}catch(Poco::SyntaxException) {
+			cout<<"***Error: Unable to parse data from node "<<sPath<<"\n";
+			return -1;
+		}
+		return iData;
+	}
+}
+
+double SettingsHandler::parseNodeDouble(Poco::AutoPtr<Poco::XML::Document> pDoc,string sPath) { 
+	Poco::XML::Node* pNode;
+
+	pNode = pDoc->getNodeByPath(sPath);
+
+	if(pNode==NULL) {
+		cout<<"***Error: Node "<<sPath<<" was not found!"<<"\n";
+		return -1.0;
+	}else{
+		string sData("");
+		double dData;
+
+		sData = pNode->innerText();
+		try {
+			dData = Poco::NumberParser::parseFloat(sData);
+		}catch(Poco::SyntaxException) {
+			cout<<"***Error: Unable to parse data from node "<<sPath<<"\n";
+			return -1.0;
+		}
+		return dData;
+	}
+}
+
+void  SettingsHandler::parseNodeString(Poco::AutoPtr<Poco::XML::Document> pDoc,string sPath,string& rTarget,string sFailString) { 
+	Poco::XML::Node* pNode;
+	pNode = pDoc->getNodeByPath(sPath);
+
+	if (pNode == NULL) {
+		cout<<"***Error: Node "<<sPath<<" was not found!"<<"\n";
+		rTarget.assign(sFailString);
+	}else{
+		rTarget.assign(pNode->innerText());
+	}
 }
