@@ -7,19 +7,11 @@
   </Network>
 
   <Server>
-    <Description>
-      <![CDATA[
-      FastCraft Minecraft server
-      ]]>
-    </Description>
-
-    <motd>
-      <![CDATA[
-      §dWelcome to FastCraft 0.0.2 Alpha server.
-      ]]>
-    </motd>
+    <Description><![CDATA[FastCraft Minecraft server]]></Description>
+    <motd><![CDATA[§dWelcome to FastCraft 0.0.2 Alpha server.]]></motd>
     <OnlineMode>1</OnlineMode>
     <Whitelist>0</Whitelist>
+    <ServerMode>0</ServerMode>
     <Difficulty>1</Difficulty>
   </Server>
 
@@ -28,11 +20,7 @@
     <Height>128</Height>
     <AllowNeather>1</AllowNeather>
     <ViewDistance>10</ViewDistance>
-    <RootMap>
-      <![CDATA[
-      world
-      ]]>
-    </RootMap>
+    <RootMap><![CDATA[world]]></RootMap>
   </Map>
 
   <Spawning>
@@ -44,8 +32,8 @@
     <AllowPVP>1</AllowPVP>
     <FlyMod>
       <Allow>0</Allow>
-      <!-- Value in km/h.. DO NOT SET TO LOWER THAN 7.5 (vanilla maximal run speed) -->
-      <MaxSpeed>10</MaxSpeed>
+      <!-- Value in km/h.. DO NOT SET TO A VALUE LOWER THAN 7.5 (vanilla maximal run speed) -->
+      <MaxSpeed>7.5</MaxSpeed>
     </FlyMod>
   </Player>
 </settings>
