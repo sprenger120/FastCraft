@@ -120,7 +120,7 @@ public:
 	/*
 	* De- / constructor
 	*/
-	PlayerThread(PlayerPool*,string,PackingThread&);
+	PlayerThread(PlayerPool*,PackingThread&);
 	~PlayerThread();
 
 

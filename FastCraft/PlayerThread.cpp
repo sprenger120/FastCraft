@@ -39,7 +39,6 @@ using std::endl;
 using std::dec;
 
 PlayerThread::PlayerThread(PlayerPool* pPoolMaster,
-	string sWorldName,
 	PackingThread& rPackingThread
 	) : 
 	_sName(""),
@@ -48,7 +47,7 @@ PlayerThread::PlayerThread(PlayerPool* pPoolMaster,
 	_Connection(),
 	_sTemp(""),
 	_sConnectionHash(""),
-	_WorldWhoIn(sWorldName),
+	_WorldWhoIn(""),
 
 	_NetworkOutRoot(),
 	_NetworkInRoot(_Connection),
@@ -84,7 +83,6 @@ PlayerThread::PlayerThread(PlayerPool* pPoolMaster,
 	_iEntityID=0;
 	_Spawned_PlayerInfoList = 0;
 	_pPoolMaster = pPoolMaster;
-	_pWorld = WorldStorage::getWorldByName(sWorldName);
 
 	_fSpawned = false;
 	_fAssigned = false;
@@ -563,6 +561,9 @@ void PlayerThread::Packet1_Login() {
 		_PlayerCount++; //There is an new spawned player
 		_iEntityID = EntityID::New(); //Fetch a new ID
 
+		_pWorld = WorldStorage::getWorldByName(SettingsHandler::getMainWorldName()); //Pointer to map who actual in
+		_WorldWhoIn.assign(SettingsHandler::getMainWorldName());
+
 		//Set start coordinates
 		_Coordinates.X = 10.0;
 		_Coordinates.Y = 0.0;
@@ -602,7 +603,8 @@ void PlayerThread::Packet1_Login() {
 
 		//Time
 		sendTime();
-
+		
+		
 		_ChunkProvider.HandleNewPlayer();
 		_ChunkProvider.HandleMovement(_Coordinates); //Pre Chunks
 

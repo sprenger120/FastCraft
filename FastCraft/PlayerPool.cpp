@@ -62,7 +62,7 @@ void PlayerPool::run() {
 
 	//Create Player Threads
 	for (int x=0;x<=_vPlayerThreads.size()-1;x++) {
-		_vPlayerThreads[x] = new PlayerThread(this,SettingsHandler::getMainWorldName(),_PackingThread);
+		_vPlayerThreads[x] = new PlayerThread(this,_PackingThread);
 
 		_ThreadPool.defaultPool().start(*_vPlayerThreads[x]);
 	}
