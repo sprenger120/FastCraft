@@ -1,8 +1,6 @@
 #Visual C++ files
 /ipch
 /Release
-/FastCraft/Debug
-/FastCraft/Release
 /FastCraft/LineCounter.au3
 *.sdf
 *.suo
@@ -18,7 +16,14 @@
 *.dll
 *.ilk
 *.pdb
-
+*.tlog
+*.obj
+*.manifest
+*.log
+*.rc
+*.lastbuildstate
+*.idb
+*.res
 
 #Other stuff
 /Docs
