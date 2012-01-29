@@ -39,7 +39,7 @@ PlayerInventory::~PlayerInventory() {
 }
 
 void PlayerInventory::synchronizeInventory() {
-	NetworkOut Out = _rNetwork.New();
+	NetworkOut Out(&_rNetwork);
 
 	Out.addByte(0x68);
 	Out.addByte(0);
@@ -295,7 +295,7 @@ void PlayerInventory::DecreaseInHandStack() {
 		rItem.clear();
 	}
 
-	NetworkOut Out = _rNetwork.New();
+	NetworkOut Out(&_rNetwork);
 
 	Out.addByte(0x67);
 	Out.addByte(0);

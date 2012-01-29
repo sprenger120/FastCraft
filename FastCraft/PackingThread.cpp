@@ -56,7 +56,7 @@ void PackingThread::ProcessJob(PackJob& rJob) {
 	std::stringstream _stringStrm;
 	Poco::DeflatingOutputStream _deflatingStrm(_stringStrm,Poco::DeflatingStreamBuf::STREAM_ZLIB,-1);
 
-	NetworkOut Out = rJob.pNetwork->New();
+	NetworkOut Out(rJob.pNetwork);
 
 	Out.addByte(0x33);
 	Out.addInt((rJob.X)<<4);
