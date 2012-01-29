@@ -25,6 +25,7 @@ GNU General Public License for more details.
 #include "World.h"
 #include "SettingsHandler.h"
 #include "Constants.h"
+#include "WorldStorage.h"
 
 using std::cout;
 using std::endl;
@@ -33,18 +34,22 @@ using std::stringstream;
 using Poco::DeflatingOutputStream;
 
 
-ChunkProvider::ChunkProvider(World& rWorld,NetworkOutRoot& rNetwork,PackingThread& rPackingThread,PlayerThread* pPlayer) :
-_rWorld(rWorld),
+ChunkProvider::ChunkProvider(NetworkOutRoot& rNetwork,PackingThread& rPackingThread,PlayerThread* pPlayer) :
 	_rNetwork(rNetwork),
 	_rPackingThread(rPackingThread),
 	_vSpawnedChunks(0)
 {
 	_pPlayer = pPlayer;
+	_pWorld = NULL;
 }
 
 ChunkProvider::~ChunkProvider() {
 	_vSpawnedChunks.clear();
 	_vToBeSendChunks.clear();
+}
+
+void ChunkProvider::HandleNewPlayer() {
+	_pWorld = WorldStorage::getWorldByName(_pPlayer->getWorldWhoIn());
 }
 
 void ChunkProvider::HandleDisconnect() {
@@ -82,7 +87,7 @@ bool ChunkProvider::isChunkListEmpty() {
 
 
 void ChunkProvider::sendSpawn(int X,int Z) {
-	NetworkOut Out = _rNetwork.New();
+	NetworkOut Out(&_rNetwork);
 
 	Out.addByte(0x32);
 	Out.addInt(X);
@@ -93,7 +98,7 @@ void ChunkProvider::sendSpawn(int X,int Z) {
 }
 
 void ChunkProvider::sendDespawn(int X,int Z){
-	NetworkOut Out = _rNetwork.New();
+	NetworkOut Out(&_rNetwork);
 
 	Out.addByte(0x32);
 	Out.addInt(X);
@@ -146,7 +151,7 @@ bool ChunkProvider::CheckChunkCircle() {
 
 	try {
 		if (!isSpawned(_PlayerCoordinates)) { //Check chunk who player stands on
-			pChunk = _rWorld.getChunkByChunkCoordinates(_PlayerCoordinates.X,_PlayerCoordinates.Z);
+			pChunk = _pWorld->getChunkByChunkCoordinates(_PlayerCoordinates.X,_PlayerCoordinates.Z);
 
 			Job.X = _PlayerCoordinates.X;
 			Job.Z = _PlayerCoordinates.Z;
@@ -171,7 +176,7 @@ bool ChunkProvider::CheckChunkCircle() {
 				Temp.Z = Z;
 
 				if ( ! isSpawned(Temp)) {
-					pChunk = _rWorld.getChunkByChunkCoordinates(X,Z);
+					pChunk = _pWorld->getChunkByChunkCoordinates(X,Z);
 					
 					Job.X = X;
 					Job.Z = Z;

@@ -34,12 +34,12 @@ private:
 	ChunkCoordinates _PlayerCoordinates;
 	ChunkCoordinates _oldPlayerCoordinates;
 
-	World& _rWorld;
+	World* _pWorld;
 	NetworkOutRoot& _rNetwork;
 	PackingThread& _rPackingThread;
 	PlayerThread* _pPlayer;
 public:
-	ChunkProvider(World&,NetworkOutRoot&,PackingThread&,PlayerThread*);
+	ChunkProvider(NetworkOutRoot&,PackingThread&,PlayerThread*);
 	~ChunkProvider();
 
 	void HandleNewPlayer();
