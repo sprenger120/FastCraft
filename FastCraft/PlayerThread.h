@@ -84,6 +84,7 @@ private:
 	int _Spawned_PlayerInfoList;
 	PlayerInventory _Inventory;
 	double _dRunnedMeters;
+	string _WorldWhoIn;
 
 	//TCP stuff
 	string _sTemp;
@@ -97,7 +98,7 @@ private:
 	//Needed Classes
 	PlayerPool* _pPoolMaster;
 	ChunkProvider _ChunkProvider;
-	World& _rWorld;
+	World* _pWorld;
 
 	//Thread specific
 	bool _fAssigned;
@@ -119,7 +120,7 @@ public:
 	/*
 	* De- / constructor
 	*/
-	PlayerThread(PlayerPool*,World&,PackingThread&);
+	PlayerThread(PlayerPool*,string,PackingThread&);
 	~PlayerThread();
 
 
@@ -326,6 +327,12 @@ public:
 	@2 : BlockID
 	*/
 	void spawnBlock(BlockCoordinates,char);
+
+
+	/*
+	* Returns Worldname who player is actual in
+	*/
+	string getWorldWhoIn();
 private:
 	void ProcessQueue();
 	 

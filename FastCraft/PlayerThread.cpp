@@ -31,6 +31,7 @@ GNU General Public License for more details.
 #include <math.h>
 #include "Structs.h"
 #include "ChunkMath.h"
+#include "WorldStorage.h"
 
 using Poco::Thread;
 using std::cout;
@@ -38,16 +39,16 @@ using std::endl;
 using std::dec;
 
 PlayerThread::PlayerThread(PlayerPool* pPoolMaster,
-	World& rWorld,
+	string sWorldName,
 	PackingThread& rPackingThread
 	) : 
-_sName(""),
+	_sName(""),
 	_sIP(""),
 	_sLeaveMessage(""),
 	_Connection(),
 	_sTemp(""),
 	_sConnectionHash(""),
-	_rWorld(rWorld),
+	_WorldWhoIn(sWorldName),
 
 	_NetworkOutRoot(),
 	_NetworkInRoot(_Connection),
@@ -57,7 +58,7 @@ _sName(""),
 	_Web_Response(),
 	_Flags(),
 	_Rand(),
-	_ChunkProvider(rWorld,_NetworkOutRoot,rPackingThread,this),
+	_ChunkProvider(_NetworkOutRoot,rPackingThread,this),
 	_threadNetworkWriter("NetworkWriter"),
 	_Inventory(_NetworkOutRoot,_NetworkInRoot),
 	_vSpawnedEntities(0)
@@ -83,6 +84,7 @@ _sName(""),
 	_iEntityID=0;
 	_Spawned_PlayerInfoList = 0;
 	_pPoolMaster = pPoolMaster;
+	_pWorld = WorldStorage::getWorldByName(sWorldName);
 
 	_fSpawned = false;
 	_fAssigned = false;
@@ -238,7 +240,7 @@ void PlayerThread::Disconnect(string sReason,bool fShow) {
 		strStrm<<_sName<<" was kicked"<< (sReason.compare("")==0 ? "." : " for: ")<<sReason; 
 		cout<<strStrm.str()<<"\n"; //Writer kick message to chat
 
-		NetworkOut Out = _NetworkOutRoot.New();
+		NetworkOut Out(&_NetworkOutRoot);
 		Out.addByte(0xFF);
 		Out.addString(sReason);
 		Out.Finalize(FC_QUEUE_HIGH);
@@ -251,7 +253,7 @@ void PlayerThread::Disconnect(string sReason,bool fShow) {
 			_pPoolMaster->Event(Event);
 		}
 	}else{
-		NetworkOut Out = _NetworkOutRoot.New();
+		NetworkOut Out(&_NetworkOutRoot);
 		Out.addByte(0xFF);
 		Out.addString(sReason);
 		Out.Finalize(FC_QUEUE_HIGH);
@@ -289,8 +291,6 @@ void PlayerThread::Disconnect(char iLeaveMode) {
 
 	_Flags.clear();
 
-	_fSpawned = false;
-	_fAssigned = false;
 	_sName.clear();
 	_sIP.clear();
 	if (iLeaveMode!=FC_LEAVE_KICK) {_NetworkWriter.clearQueues();}
@@ -308,6 +308,8 @@ void PlayerThread::Disconnect(char iLeaveMode) {
 
 	_Connection.close();
 	_vSpawnedEntities.clear();
+	_fSpawned = false;
+	_fAssigned = false;
 }
 
 
@@ -381,7 +383,7 @@ void PlayerThread::Interval_HandleMovement() {
 }
 
 void PlayerThread::sendTime() {
-	NetworkOut Out = _NetworkOutRoot.New();
+	NetworkOut Out(&_NetworkOutRoot);
 	Out.addByte(0x4);
 	Out.addInt64(ServerTime::getTime());
 	Out.Finalize(FC_QUEUE_HIGH);
@@ -393,7 +395,7 @@ long long PlayerThread::getTicks() {
 
 
 void PlayerThread::sendClientPosition() {
-	NetworkOut Out = _NetworkOutRoot.New();
+	NetworkOut Out(&_NetworkOutRoot);
 
 	Out.addByte(0x0D);
 	Out.addDouble(_Coordinates.X);
@@ -421,7 +423,7 @@ void PlayerThread::Interval_KeepAlive() {
 	if (_TimeJobs.LastKeepAliveSend + FC_INTERVAL_KEEPACTIVE <= getTicks()) { //Send new keep alive
 		_TimeJobs.LastKeepAliveSend = getTicks();
 
-		NetworkOut Out = _NetworkOutRoot.New();
+		NetworkOut Out(&_NetworkOutRoot);
 		Out.addByte(0x0);
 		Out.addInt(_Rand.next());
 		Out.Finalize(FC_QUEUE_HIGH);
@@ -434,7 +436,7 @@ void PlayerThread::UpdateHealth(short iHealth,short iFood,float nSaturation) {
 	_iFood = fixRange<short>(iFood,0,20);
 	_nSaturation = fixRange<float>(iFood,0.0F,5.0F);
 
-	NetworkOut Out = _NetworkOutRoot.New();
+	NetworkOut Out(&_NetworkOutRoot);
 	Out.addByte(0x8);
 	Out.addShort(_iHealth);
 	Out.addShort(_iFood);
@@ -463,7 +465,7 @@ bool PlayerThread::isSpawned() {
 
 
 void PlayerThread::insertChat(string rString) {
-	NetworkOut Out = _NetworkOutRoot.New();
+	NetworkOut Out(&_NetworkOutRoot);
 	Out.addByte(0x3);
 	Out.addString(rString);
 	Out.Finalize(FC_QUEUE_HIGH);
@@ -576,12 +578,12 @@ void PlayerThread::Packet1_Login() {
 		* Response
 		*/
 		//Login response
-		NetworkOut Out = _NetworkOutRoot.New();
+		NetworkOut Out(&_NetworkOutRoot);
 
 		Out.addByte(0x1);
 		Out.addInt(_iEntityID);
 		Out.addString("");
-		Out.addInt64(SettingsHandler::getMapSeed());
+		Out.addInt64(-345L);
 		Out.addString("SUPERFLAT");
 		Out.addInt(SettingsHandler::getServerMode());
 		Out.addByte(0);
@@ -601,6 +603,7 @@ void PlayerThread::Packet1_Login() {
 		//Time
 		sendTime();
 
+		_ChunkProvider.HandleNewPlayer();
 		_ChunkProvider.HandleMovement(_Coordinates); //Pre Chunks
 
 		//Health
@@ -658,7 +661,7 @@ void PlayerThread::Packet2_Handshake() {
 	}
 
 	//Send response (Connection Hash)
-	NetworkOut Out = _NetworkOutRoot.New();
+	NetworkOut Out(&_NetworkOutRoot);
 	Out.addByte(0x02);
 
 	if (SettingsHandler::isOnlineModeActivated()) {
@@ -807,7 +810,7 @@ void PlayerThread::PlayerInfoList(bool fSpawn,string Name) {
 		_Spawned_PlayerInfoList--;
 	}
 
-	NetworkOut Out = _NetworkOutRoot.New();
+	NetworkOut Out(&_NetworkOutRoot);
 	Out.addByte(0xc9);
 	Out.addString(Name);
 	Out.addBool(fSpawn);
@@ -906,7 +909,7 @@ void PlayerThread::spawnPlayer(int ID,EntityPlayer& rPlayer) {
 
 	_vSpawnedEntities.push_back(Entry);
 
-	NetworkOut Out = _NetworkOutRoot.New();
+	NetworkOut Out(&_NetworkOutRoot);
 	//Spawn player
 	Out.addByte(0x14);
 	Out.addInt(ID);
@@ -971,7 +974,7 @@ void PlayerThread::updateEntityPosition(int ID,EntityCoordinates Coordinates) {
 		return; //Coordinates are equal -> no update
 	}
 
-	NetworkOut Out = _NetworkOutRoot.New();
+	NetworkOut Out(&_NetworkOutRoot);
 
 	double dX =  Coordinates.X - _vSpawnedEntities[id].oldPosition.X;
 	double dY =  Coordinates.Y - _vSpawnedEntities[id].oldPosition.Y;
@@ -1055,7 +1058,7 @@ void PlayerThread::despawnEntity(int ID) {
 
 	_vSpawnedEntities.erase(_vSpawnedEntities.begin()+id);
 
-	NetworkOut Out = _NetworkOutRoot.New();
+	NetworkOut Out(&_NetworkOutRoot);
 	Out.addByte(0x1D);
 	Out.addInt(ID);
 	Out.Finalize(FC_QUEUE_HIGH);
@@ -1123,7 +1126,7 @@ void PlayerThread::playAnimationOnEntity(int ID,char AnimID) {
 		throw Poco::RuntimeException("Not spawned!");
 	}
 
-	NetworkOut Out = _NetworkOutRoot.New();
+	NetworkOut Out(&_NetworkOutRoot);
 	Out.addByte(0x12);
 	Out.addInt(ID);
 	Out.addByte(AnimID);
@@ -1136,7 +1139,7 @@ void PlayerThread::updateEntityMetadata(int ID,EntityFlags Flags) {
 	if (!isEntitySpawned(ID)) {
 		throw Poco::RuntimeException("Not spawned!");
 	}
-	NetworkOut Out = _NetworkOutRoot.New();
+	NetworkOut Out(&_NetworkOutRoot);
 
 	Out.addByte(0x28);
 	Out.addInt(ID);
@@ -1190,7 +1193,7 @@ void PlayerThread::updateEntityEquipment(int ID,short Slot,ItemSlot Item) {
 		throw Poco::RuntimeException("Invalid slot");
 	}
 
-	NetworkOut Out = _NetworkOutRoot.New();
+	NetworkOut Out(&_NetworkOutRoot);
 	Out.addByte(0x05);
 	Out.addInt(ID);
 	Out.addShort(Slot);
@@ -1204,11 +1207,11 @@ void PlayerThread::updateEntityEquipment(int ID,short Slot,ItemSlot Item) {
 }
 
 void PlayerThread::CheckPosition(bool fSynchronize) {
-	if (_rWorld.isSuffocating(_Coordinates)) {
+	if (_pWorld->isSuffocating(_Coordinates)) {
 		char iHeight = -1;
 		BlockCoordinates blockCoords = ChunkMath::toBlockCoords(_Coordinates);
 		while(iHeight == -1) {
-			iHeight = _rWorld.getFreeSpace(blockCoords.X,blockCoords.Z);
+			iHeight = _pWorld->getFreeSpace(blockCoords.X,blockCoords.Z);
 			if (iHeight == -1) {
 				_Coordinates.X += 1.0;
 				_Coordinates.Z += 1.0;
@@ -1273,7 +1276,7 @@ void PlayerThread::Packet15_PlayerBlockPlacement() {
 				if (_Flags.isRightClicking()) {
 					if (_iFood==20) {return;}
 
-					NetworkOut Out = _NetworkOutRoot.New();
+					NetworkOut Out(&_NetworkOutRoot);
 
 					Out.addByte(0x26);
 					Out.addInt(_iEntityID);
@@ -1347,7 +1350,7 @@ void PlayerThread::Packet15_PlayerBlockPlacement() {
 
 		//Prevent: set a block into other block 
 		//ToDo: Exception for liquids
-		if (_rWorld.getBlock(blockCoordinates) != 0) { 
+		if (_pWorld->getBlock(blockCoordinates) != 0) { 
 			return;
 		}
 
@@ -1363,7 +1366,7 @@ void PlayerThread::Packet15_PlayerBlockPlacement() {
 		}
 
 		//Prevent: set blocks in air (without a block in near)
-		if (_rWorld.isSurroundedByAir(blockCoordinates)) {
+		if (_pWorld->isSurroundedByAir(blockCoordinates)) {
 			Disconnect("You are not able to set blocks into air!");
 			return;
 		}
@@ -1379,7 +1382,7 @@ void PlayerThread::Packet15_PlayerBlockPlacement() {
 		if (blockCoordinates.Y>0 && !ItemInfoStorage::isSolid(iBlock)) {
 			BlockCoordinates temp = blockCoordinates;
 			temp.Y--;
-			char iBlockBelow = _rWorld.getBlock(temp);
+			char iBlockBelow = _pWorld->getBlock(temp);
 
 			switch(ItemInfoStorage::getBlock(iBlock).Stackable) {
 			case true:
@@ -1405,7 +1408,7 @@ void PlayerThread::Packet15_PlayerBlockPlacement() {
 		* All test done. 
 		*/
 		//Send block acception
-		NetworkOut Out = _NetworkOutRoot.New();
+		NetworkOut Out(&_NetworkOutRoot);
 		Out.addByte(0x35);
 		Out.addInt(blockCoordinates.X);
 		Out.addByte(blockCoordinates.Y);
@@ -1420,7 +1423,7 @@ void PlayerThread::Packet15_PlayerBlockPlacement() {
 
 
 		//Append to map
-		_rWorld.setBlock(blockCoordinates.X,blockCoordinates.Y,blockCoordinates.Z,iBlock);
+		_pWorld->setBlock(blockCoordinates.X,blockCoordinates.Y,blockCoordinates.Z,iBlock);
 
 		//Event to player pool
 		PlayerPoolEvent Event(blockCoordinates,iBlock,this);
@@ -1447,7 +1450,7 @@ void PlayerThread::spawnBlock(BlockCoordinates blockCoords,char Block) {
 		return;
 	}
 
-	NetworkOut Out = _NetworkOutRoot.New();
+	NetworkOut Out(&_NetworkOutRoot);
 	Out.addByte(0x35);
 	Out.addInt(blockCoords.X);
 	Out.addByte((char)blockCoords.Y);
@@ -1458,7 +1461,7 @@ void PlayerThread::spawnBlock(BlockCoordinates blockCoords,char Block) {
 }
 
 void PlayerThread::sendEmptyBlock(BlockCoordinates coords) {
-	NetworkOut Out = _NetworkOutRoot.New();
+	NetworkOut Out(&_NetworkOutRoot);
 	Out.addByte(0x35);
 	Out.addInt(coords.X);
 	Out.addByte((char)coords.Y);
@@ -1486,4 +1489,8 @@ void PlayerThread::Packet14_Digging() {
 		cout<<"Exception cateched: "<<ex.message()<<"\n";
 		Disconnect(FC_LEAVE_OTHER);
 	}
+}
+
+string PlayerThread::getWorldWhoIn() {
+	return _WorldWhoIn;
 }
