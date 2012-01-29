@@ -22,10 +22,12 @@ GNU General Public License for more details.
 #include <Poco/Mutex.h>
 #include "Structs.h"
 #include "EntityCoordinates.h"
+#include <Poco/Path.h>
 
 using std::vector;
 using std::string;
 using std::pair;
+class PlayerPool;
 
 struct ChunkInternal {
 	int X;
@@ -35,9 +37,13 @@ struct ChunkInternal {
 
 class World {
 private:
+	string _WorldName;
+	char _iDimension;
+	PlayerPool& _rPlayerPool;
+	
 	vector<vector<ChunkInternal>> _vChunks; //[x][z]
 	int _iLoadedChunks;
-	string _WorldName;
+	
 	Poco::Mutex _Mutex;
 public:
 	/*
@@ -46,8 +52,10 @@ public:
 
 	Parameter:
 	@1 : World name
+	@2 : Dimension ( 0=Overworld	1=End	-1=Neather )
 	*/
-	World(string);
+	World(string,char,PlayerPool&);
+
 
 	/*
 	* Destruct world object
@@ -142,6 +150,27 @@ public:
 	@1 : BlockCoordinates of target block
 	*/
 	bool isSurroundedByAir(BlockCoordinates);
+
+
+	/*
+	* Loads world data from given path
+
+	Parameter:
+	@1 : Path to folder that contains chunk data
+	*/
+	void Load(Poco::Path);
+
+
+	/*
+	* Returns worldname
+	*/
+	string getName();
+
+
+	/*
+	* Returns dimension
+	*/
+	char getDimension();
 private:
 	void generateChunks(int,int,int,int);
 	MapChunk* generateChunk(int,int);

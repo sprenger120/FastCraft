@@ -23,18 +23,23 @@ GNU General Public License for more details.
 #include <cmath>
 #include <math.h>
 #include <Poco/Exception.h>
+#include <Poco/ScopedLock.h>
 using std::cout;
 
 
-World::World(string Name) :
-_WorldName(Name)
+World::World(string Name,char iDimension,PlayerPool& rPP) :
+_WorldName(Name),
+_iDimension(iDimension),
+_rPlayerPool(rPP),
+_vChunks(0)
 {
-	_iLoadedChunks=0;
+	_iLoadedChunks = 0;
 	generateChunks(-10,-10,10,10);
 }
 
 
 World::~World() {
+	cout<<"destruct!"<<"\n";
 	//Free chunks
 	for (int x=0;x<=_vChunks.size()-1;x++) {
 		for(int z=0;z<=_vChunks[x].size()-1;z++) {
@@ -61,7 +66,7 @@ MapChunk* World::generateChunk(int X,int Z) {
 	int XRow,ZRow; //Index of chunk in list
 	MapChunk* pAffectedChunk=NULL;
 
-	_Mutex.lock();
+	Poco::Mutex::ScopedLock ScopedLock(_Mutex);
 
 	/*
 	Reserve a new place for chunk
@@ -71,7 +76,7 @@ MapChunk* World::generateChunk(int X,int Z) {
 		for (int x=0;x<=_vChunks.size()-1;x++) {
 			if (_vChunks[x][0].X == X) {
 				//There is a existing row		
-				//Add a new one
+				//Add a new chunk
 				ChunkInternal Chk;
 
 				Chk.X=X;
@@ -80,7 +85,6 @@ MapChunk* World::generateChunk(int X,int Z) {
 
 				if (Chk.Chunk == NULL) {
 					std::cout<<"World::generateChunk unable to allocate memory"<<"\n";
-					_Mutex.unlock();
 					throw Poco::RuntimeException("Generation failed!");
 				}
 
@@ -103,7 +107,6 @@ MapChunk* World::generateChunk(int X,int Z) {
 
 		if (vZRow[0].Chunk == NULL) {
 			std::cout<<"World::generateChunk unable to allocate memory"<<"\n";
-			_Mutex.unlock();
 			throw Poco::RuntimeException("Generation failed!");
 		}
 
@@ -137,7 +140,6 @@ MapChunk* World::generateChunk(int X,int Z) {
 			_vChunks.erase(_vChunks.begin() + XRow);
 		}
 
-		_Mutex.unlock();
 		throw Poco::RuntimeException("Generation failed!");
 	}
 
@@ -145,17 +147,25 @@ MapChunk* World::generateChunk(int X,int Z) {
 	std::memset(pAffectedChunk->Metadata,0,FC_CHUNK_NIBBLECOUNT);
 	std::memset(pAffectedChunk->BlockLight,0xff,FC_CHUNK_NIBBLECOUNT);
 	std::memset(pAffectedChunk->SkyLight,0xff,FC_CHUNK_NIBBLECOUNT);
+	_iLoadedChunks++;
 
-	_Mutex.unlock();
 	return pAffectedChunk;
 }
 
 
 MapChunk* World::getChunkByChunkCoordinates(int X,int Z) {
+	if (_vChunks.empty()) {
+		cout<<"***No chunks generated!"<<"\n";
+		return NULL;
+	}
 	for (int x=0;x<=_vChunks.size()-1;x++) { //Search in X rows
+		if (_vChunks[x].empty()) {continue;}
 		if (_vChunks[x][0].X == X) { //Row found
 			for (int z=0;z<=_vChunks[x].size()-1;z++) { //Search z entry
 				if (_vChunks[x][z].Z ==Z) { //found
+					if (_vChunks[x][z].Chunk == NULL) {
+						cout<<"World::getChunkByChunkCoordinates invalid ptr!"<<"\n";
+					}
 					return _vChunks[x][z].Chunk;
 				}
 			}
@@ -339,4 +349,16 @@ bool World::isSurroundedByAir(BlockCoordinates TargetBlock) {
 		cout<<"Exception World::isSurroundedByAir: "<<ex.message()<<"\n";
 	}
 	return true;
+}
+
+void World::Load(Poco::Path worldPath) {
+	cout<<"Loading: "<<worldPath[worldPath.depth()-1]<<"\n";
+}
+
+string World::getName() {
+	return _WorldName;
+}
+
+char World::getDimension() {
+	return _iDimension;
 }
