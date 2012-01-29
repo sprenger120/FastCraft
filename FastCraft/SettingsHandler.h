@@ -94,7 +94,7 @@ public:
 		static int getViewDistance();
 		static bool isPVPActivated();
 		static bool isFlyModAllowed();
-		static int getMaxMovementSpeed();
+		static double getMaxMovementSpeed();
 private:
 	SettingsHandler();
 	~SettingsHandler();
