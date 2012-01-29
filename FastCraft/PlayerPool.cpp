@@ -27,6 +27,7 @@ GNU General Public License for more details.
 #include <cmath>
 #include <Poco/String.h>
 #include "ChunkMath.h"
+#include "WorldStorage.h"
 
 using Poco::Thread;
 using std::cout;
@@ -35,18 +36,13 @@ PlayerPool::PlayerPool(PackingThread& rPackingThread):
 _vPlayerThreads(0),
 	_ThreadPool("PlayerThreads",1,SettingsHandler::getPlayerSlotCount()),
 	_qEventQueue(),
-	_World("world"),
 	_PackingThread(rPackingThread) 
 {	
 	int iSlotCount = SettingsHandler::getPlayerSlotCount();
 
 	_vPlayerThreads.resize(iSlotCount); //Resize to slot count
-
-	//Create Threads
 	for (int x=0;x<=_vPlayerThreads.size()-1;x++) {
-		_vPlayerThreads[x] = new PlayerThread(this,_World,_PackingThread);
-
-		_ThreadPool.defaultPool().start(*_vPlayerThreads[x]);
+		_vPlayerThreads[x] = NULL;
 	}
 }
 
@@ -54,7 +50,9 @@ PlayerPool::~PlayerPool() {
 	_ThreadPool.stopAll(); //Stop all threads
 
 	for (int x=0;x<=_vPlayerThreads.size()-1;x++) { //Release objects
-		delete _vPlayerThreads[x];
+		if (_vPlayerThreads[x] != NULL) {
+			delete _vPlayerThreads[x];
+		}
 	}
 }
 
@@ -62,6 +60,12 @@ PlayerPool::~PlayerPool() {
 void PlayerPool::run() {
 	std::string sData;
 
+	//Create Player Threads
+	for (int x=0;x<=_vPlayerThreads.size()-1;x++) {
+		_vPlayerThreads[x] = new PlayerThread(this,SettingsHandler::getMainWorldName(),_PackingThread);
+
+		_ThreadPool.defaultPool().start(*_vPlayerThreads[x]);
+	}
 
 	while (1) {
 		if (_qEventQueue.empty()) {
