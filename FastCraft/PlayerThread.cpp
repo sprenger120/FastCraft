@@ -1172,8 +1172,9 @@ void PlayerThread::Interval_CalculateSpeed() {
 
 
 		double iSpeed = (_dRunnedMeters * 60.0 * 60.0) / (iTime*3.6);
-		if (iSpeed > 7.5) {
-			//Disconnect("Speedhack");
+		if (iSpeed > SettingsHandler::getMaxMovementSpeed()) {
+			cout<<_sName<<" moved too fast ("<<int(iSpeed)<<" km/h)"<<"\n";
+			Disconnect("You moved too fast!");
 		}
 		_dRunnedMeters=0.0;
 	}
