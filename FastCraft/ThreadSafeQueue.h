@@ -54,7 +54,6 @@ _q()
 
 template <typename T>
 inline ThreadSafeQueue<T>::~ThreadSafeQueue() {
-	std::cout<<"destroying queue container"<<"\n";
 	clear();
 }
 
@@ -87,7 +86,6 @@ inline void ThreadSafeQueue<T>::pop() {
 		throw Poco::RuntimeException("Queue is empty");
 	}
 
-	//std::cout<<"pop"<<std::endl;
 	_q.pop();
 }
 
@@ -98,8 +96,6 @@ inline void ThreadSafeQueue<T>::clear() {
 	while (!_q.empty()) {
 		_q.pop();
 	}
-
-	//std::cout<<"clear"<<std::endl;
 }
 
 template <typename T> 
