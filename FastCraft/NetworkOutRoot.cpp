@@ -25,9 +25,6 @@ _highQueue()
 unsigned long long NetworkOutRoot::_iWriteTraffic = 0;
 
 NetworkOutRoot::~NetworkOutRoot() {
-	std::cout<<"Destroying NetworkOutRoot";
-	_lowQueue.clear();
-	_highQueue.clear();
 }
 
 
