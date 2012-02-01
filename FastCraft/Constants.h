@@ -46,16 +46,6 @@ GNU General Public License for more details.
 #define FC_LEAVE_QUIT					2
 #define FC_LEAVE_OTHER					3
 
-//PlayerPool Events
-#define FC_PPEVENT_CHAT					1
-#define FC_PPEVENT_MOVE					2
-#define FC_PPEVENT_JOIN					3
-#define FC_PPEVENT_DISCONNECT			4
-#define FC_PPEVENT_ANIMATION			5
-#define FC_PPEVENT_METADATA				6
-#define FC_PPEVENT_CHANGEHELD			7
-#define FC_PPEVENT_SETBLOCK				8
-
 //Animation ID's 
 #define FC_ANIM_NOANIM					0	//Send to remove all animations 
 #define FC_ANIM_SWINGARM				1   
