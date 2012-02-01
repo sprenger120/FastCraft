@@ -38,6 +38,7 @@ using std::queue;
 class PackingThread : public Poco::Runnable{
 private:
 	ThreadSafeQueue<PackJob> _vPackJobs;
+	bool _fRunning;
 public:
 	PackingThread();
 	~PackingThread();
@@ -46,6 +47,7 @@ public:
 
 	void AddJobs(std::vector<PackJob>&);
 	void AddJob(PackJob&);
+	void shutdown();
 private:
 	void ProcessJob(PackJob&);
 };

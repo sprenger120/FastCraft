@@ -32,6 +32,7 @@ private:
 
 	void waitTillDisconnected(); //Waits till fSpawned is false
 	bool _fClear;
+	bool _fRunning;
 public:
 	/*
 	* Con/Destructor
@@ -47,8 +48,14 @@ public:
 
 
 	/*
-	* Exception prevention method for clearing the write queues
+	* Exception preventing method for clearing the write queues
 	*/
 	void clearQueues();
+
+
+	/*
+	* Forces thread to shutdown
+	*/
+	void shutdown();
 };
 #endif

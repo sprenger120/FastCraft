@@ -31,10 +31,18 @@ _rlowQ(lowQ),
 }
 
 NetworkWriter::~NetworkWriter() {
+	if (_fRunning) {shutdown();}
+	if (!_rhighQ.empty()) {
+		_rhighQ.clear();
+	}
+	if(!_rlowQ.empty()) {
+		_rlowQ.clear();
+	}
 }
 
 void NetworkWriter::run() {
-	while (1) {
+	_fRunning=true;
+	while (_fRunning) {
 		if (_fClear) {
 			_fClear=false;
 			if (!_rhighQ.empty()) {
@@ -118,6 +126,7 @@ void NetworkWriter::run() {
 			continue; //Queue exception
 		}
 	}
+	_fRunning=true;
 }
 
 void NetworkWriter::waitTillDisconnected() {
@@ -128,4 +137,11 @@ void NetworkWriter::waitTillDisconnected() {
 
 void NetworkWriter::clearQueues() {
 	_fClear=true;
+}
+
+void NetworkWriter::shutdown() {
+	_fRunning=false;
+	while(!_fRunning){ //Wait till _fRunning turns true
+	}
+	_fRunning=false;
 }

@@ -32,7 +32,8 @@ PackingThread::~PackingThread() {
 }
 
 void PackingThread::run() {
-	while (1) { 
+	_fRunning=true;
+	while (_fRunning) { 
 		if (_vPackJobs.size() == 0) {
 			Thread::sleep(10);
 			continue;
@@ -42,6 +43,7 @@ void PackingThread::run() {
 			_vPackJobs.pop();
 		}
 	}
+	_fRunning=true;
 }
 
 void PackingThread::ProcessJob(PackJob& rJob) {	
@@ -90,4 +92,11 @@ void PackingThread::AddJobs(std::vector<PackJob> & rvJob) {
 
 void PackingThread::AddJob(PackJob& rJob) {
 	_vPackJobs.push(rJob);
+}
+
+void PackingThread::shutdown() {
+	_fRunning=false;
+	while(!_fRunning){ //Wait till _fRunning turns true
+	}
+	_fRunning=false;
 }

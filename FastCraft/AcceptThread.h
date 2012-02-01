@@ -18,6 +18,7 @@ GNU General Public License for more details.
 
 #include <iostream>
 #include <Poco/Runnable.h>
+#include <Poco/Net/ServerSocket.h>
 #include <string>
 
 using std::string;
@@ -27,14 +28,16 @@ class AcceptThread : public Poco::Runnable {
 private:
 	string _sIP;
 	string _ServerFullMsg;
-	
+	Poco::Net::ServerSocket _ServerSock;
 	PlayerPool& _rPlayerPool;
+	bool _fRunning;
 public:
 	//De- /constructor
 	AcceptThread(PlayerPool&);
 	~AcceptThread();
 
 	virtual void run(); //Thread Main
+	void shutdown();
 };
 
 #endif
