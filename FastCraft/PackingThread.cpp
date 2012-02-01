@@ -19,6 +19,7 @@ GNU General Public License for more details.
 #include "NetworkOut.h"
 #include "PlayerThread.h"
 #include "Constants.h"
+#include "SettingsHandler.h"
 #include <iostream>
 using Poco::Thread;
 
@@ -65,7 +66,7 @@ void PackingThread::ProcessJob(PackJob& rJob) {
 	Out.addShort(0);
 	Out.addInt((rJob.Z)<<4);
 	Out.addByte(15);
-	Out.addByte(127);
+	Out.addByte(SettingsHandler::getWorldHeight()-1);
 	Out.addByte(15);
 
 	//deflate
