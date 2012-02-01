@@ -34,7 +34,7 @@ PackingThread::~PackingThread() {
 void PackingThread::run() {
 	_fRunning=true;
 	while (_fRunning) { 
-		if (_vPackJobs.size() == 0) {
+		if (_vPackJobs.empty()){
 			Thread::sleep(10);
 			continue;
 		}
