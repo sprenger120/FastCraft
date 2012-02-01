@@ -117,6 +117,20 @@ int main(int argc, char *argv[]) {
 		ServerTime::tick();
 	}
 
+	cout<<"Shutting down server!\n\n";
+
+	cout<<"Stopping Accept thread...\n";
+	Acceptor.shutdown();
+	cout<<"Done.\n";
+
+	cout<<"Stopping ChunkPacking thread...\n";
+	Packer.shutdown();
+	cout<<"Done.\n";
+
+	cout<<"Stopping PlayerPool thread...\n";
+	PPool.shutdown();
+	cout<<"Done.\n";
+
 	Poco::Data::SQLite::Connector::unregisterConnector();
 	return 1;
 }
