@@ -102,6 +102,7 @@ private:
 
 	//Thread specific
 	bool _fAssigned;
+	bool _fRunning;
 	long long _iThreadTicks;
 	static int _PlayerCount;
 
@@ -333,6 +334,12 @@ public:
 	* Returns Worldname who player is actual in
 	*/
 	string getWorldWhoIn();
+
+
+	/*
+	* Forces the thread to exit
+	*/
+	void shutdown();
 private:
 	void ProcessQueue();
 	 

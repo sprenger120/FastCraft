@@ -21,7 +21,7 @@ GNU General Public License for more details.
 #include "Constants.h"
 #include "World.h"
 #include "ItemInfoStorage.h"
-#include "PlayerPoolEvent.h"
+#include "PlayerEvents.h"
 #include "MathHelper.h"
 #include <sstream>
 #include <istream>
@@ -57,8 +57,8 @@ PlayerThread::PlayerThread(PlayerPool* pPoolMaster,
 	_Web_Response(),
 	_Flags(),
 	_Rand(),
-	_ChunkProvider(_NetworkOutRoot,rPackingThread,this),
 	_threadNetworkWriter("NetworkWriter"),
+	_ChunkProvider(_NetworkOutRoot,rPackingThread,this),
 	_Inventory(_NetworkOutRoot,_NetworkInRoot),
 	_vSpawnedEntities(0)
 {
@@ -95,7 +95,8 @@ PlayerThread::PlayerThread(PlayerPool* pPoolMaster,
 int PlayerThread::_PlayerCount = 0;
 
 PlayerThread::~PlayerThread() {
-	_NetworkWriter.clearQueues();
+	_NetworkWriter.shutdown();
+	_vSpawnedEntities.clear();
 }
 
 
@@ -123,12 +124,16 @@ void PlayerThread::run() {
 	unsigned char iPacket;
 	Poco::Stopwatch Timer;
 
+	_fRunning=true;
+
 	Timer.start();
-	while (1) {
+	while (_fRunning) {
 		if (!isAssigned()) {
 			while(!isAssigned()) {
+				if (_fRunning==false) { break; }
 				Thread::sleep(50);
 			}
+			if (_fRunning==false) { continue; }
 			Timer.reset();
 		} 
 
@@ -225,11 +230,13 @@ void PlayerThread::run() {
 		} catch (Poco::RuntimeException) {
 			Disconnect(FC_LEAVE_OTHER);
 		}
-
 	}
+	if(_fAssigned){Disconnect(FC_LEAVE_OTHER);}
+	_fRunning=true;
 }
 
 void PlayerThread::Disconnect(string sReason,bool fShow) {
+	if (!isAssigned()) {return;}
 	if(isSpawned()) {
 		_fSpawned=false;
 		_NetworkWriter.clearQueues();
@@ -247,8 +254,8 @@ void PlayerThread::Disconnect(string sReason,bool fShow) {
 		Disconnect(FC_LEAVE_KICK);
 
 		if (fShow) { //Write kick message
-			PlayerPoolEvent Event(_Coordinates,"§6" + strStrm.str(),this);
-			_pPoolMaster->Event(Event);
+			PlayerChatEvent Event(this,"§6" + strStrm.str(),_Coordinates);
+			_pPoolMaster->addEvent(&Event);
 		}
 	}else{
 		NetworkOut Out(&_NetworkOutRoot);
@@ -268,23 +275,18 @@ void PlayerThread::Disconnect(char iLeaveMode) {
 		_Inventory.HandleDisconnect();
 		_PlayerCount--;
 
+		PlayerDisconnectEvent Event(this,_iEntityID,_sName);
 
-		PlayerPoolEvent Event(false,_sName,this);
 		switch (iLeaveMode) {
-		case FC_LEAVE_KICK:
-			_pPoolMaster->Event(Event);
-			break;
 		case FC_LEAVE_QUIT:		
 			cout<<_sName<<" quit ("<<_sLeaveMessage<<")"<<"\n";
-			_pPoolMaster->Event(Event);
 			break;
 		case FC_LEAVE_OTHER:
 			cout<<_sName<<" quit (unknown reason)"<<"\n";
-			_pPoolMaster->Event(Event);
 			break;
-		default:
-			cout<<"***INTERNAL SERVER WARNING: Unknown disconnect mode"<<"\n";
 		}
+
+		_pPoolMaster->addEvent(&Event);
 	}
 
 	_Flags.clear();
@@ -352,31 +354,6 @@ void PlayerThread::Interval_HandleMovement() {
 	if (_TimeJobs.LastHandleMovement + FC_INTERVAL_HANDLEMOVEMENT <= getTicks()) {
 		_TimeJobs.LastHandleMovement = getTicks();
 		_ChunkProvider.HandleMovement(_Coordinates);
-
-		/* - Looks like a cristmas tree, uncomment to have a look at it
-		_highNetwork.Lock();
-		for (int z=0;z<=3;z++) {
-		for (int x=0;x<=3;x++) {
-		for (char y=33;y<=50;y++) {
-
-		_highNetwork.addByte(0x3D);
-
-		_highNetwork.addInt(2000);
-		_highNetwork.addInt(x);
-		_highNetwork.addByte(y);
-		_highNetwork.addInt(z);
-
-		_highNetwork.addInt(0);
-
-		_highNetwork.Flush();
-		}
-
-
-		}
-
-		}
-		_highNetwork.UnLock();
-		*/
 	}
 }
 
@@ -626,8 +603,8 @@ void PlayerThread::Packet1_Login() {
 		insertChat("§dWelcome to FastCraft 0.0.2 Alpha server.");
 		ProcessQueue(); //Send login packages
 
-		PlayerPoolEvent Event(true,_sName,this);//Push PlayerPool Join event
-		_pPoolMaster->Event(Event);
+		PlayerJoinEvent Event(this);//Push PlayerPool Join event
+		_pPoolMaster->addEvent(&Event);
 		_fSpawned = true;	
 
 
@@ -800,8 +777,8 @@ void PlayerThread::Packet255_Disconnect() {
 }
 
 void PlayerThread::ChatToAll(string& rString) {
-	PlayerPoolEvent Event(_Coordinates,rString,this);
-	_pPoolMaster->Event(Event);
+	PlayerChatEvent Event(this,rString,_Coordinates);
+	_pPoolMaster->addEvent(&Event);
 }
 
 void PlayerThread::PlayerInfoList(bool fSpawn,string Name) {
@@ -830,8 +807,12 @@ void PlayerThread::Packet16_HoldingChange() {
 		}
 		_Inventory.HandleSelectionChange(iSlot);
 
-		PlayerPoolEvent Event(0,_Inventory.getSlot(36+iSlot),this);
-		_pPoolMaster->Event(Event);
+		ItemID Item;
+		Item.first = _Inventory.getSlot(36+iSlot).getItemID();
+		Item.second=0;
+
+		PlayerChangeHeldEvent Event(this,Item,0);
+		_pPoolMaster->addEvent(&Event);
 	} catch(Poco::RuntimeException) {
 		Disconnect(FC_LEAVE_OTHER);
 	}
@@ -850,6 +831,8 @@ void PlayerThread::Packet101_CloseWindow() {
 
 void PlayerThread::Packet102_WindowClick() {
 	ItemSlot aHeld[5];
+	ItemID Item;
+	Item.second=0;
 
 	aHeld[0] = _Inventory.getSlot(36 + _Inventory.getSlotSelection());
 	aHeld[1] = _Inventory.getSlot(8);
@@ -862,15 +845,19 @@ void PlayerThread::Packet102_WindowClick() {
 
 
 	if (aHeld[0].getItemID() != _Inventory.getSlot(36 + _Inventory.getSlotSelection()).getItemID()) { //Check if held item were changed
-		PlayerPoolEvent Event(0,_Inventory.getSlot(36 + _Inventory.getSlotSelection()),this);
-		_pPoolMaster->Event(Event);
+		Item.first = _Inventory.getSlot(36+_Inventory.getSlotSelection()).getItemID();
+	
+		PlayerChangeHeldEvent Event(this,Item,0);
+		_pPoolMaster->addEvent(&Event);
 	}
 
 	int s=8;
 	for (int x=1;x<=4;x++) {
 		if (aHeld[x].getItemID() != _Inventory.getSlot(s).getItemID()) {//Check if boots were changed
-			PlayerPoolEvent Event(x,_Inventory.getSlot(s),this);
-			_pPoolMaster->Event(Event);
+		Item.first = _Inventory.getSlot(s).getItemID();
+	
+		PlayerChangeHeldEvent Event(this,Item,x);
+		_pPoolMaster->addEvent(&Event);
 		}
 		s--;
 	}
@@ -880,15 +867,16 @@ void PlayerThread::Interval_Movement() {
 	if (!isSpawned()) {return;}
 	if (_TimeJobs.LastMovementSend + FC_INTERVAL_MOVEMENT <= getTicks()) { //Send new keep alive
 		if (!(_Coordinates == _lastCoordinates)) {
-			PlayerPoolEvent Event(_Coordinates,this);
-			_pPoolMaster->Event(Event);
+			PlayerMoveEvent Event(this,_Coordinates);
+			_pPoolMaster->addEvent(&Event);
+
 			_lastCoordinates = _Coordinates;
 			_TimeJobs.LastMovementSend = getTicks();
 		}else{
 			if (_TimeJobs.LastMovementSend + 1000 <= getTicks()) {  //Workaound for the invisable player bug
 				//Send a "still alive" event
-				PlayerPoolEvent Event(_Coordinates,this); 
-				_pPoolMaster->Event(Event);
+				PlayerMoveEvent Event(this,_Coordinates);
+				_pPoolMaster->addEvent(&Event);
 				_TimeJobs.LastMovementSend = getTicks();
 			}
 		}
@@ -1079,8 +1067,8 @@ void PlayerThread::Packet18_Animation() {
 			Disconnect("You can't use other EntityID's as yours"); 
 		}
 
-		PlayerPoolEvent Event(iAnimID,this);
-		_pPoolMaster->Event(Event);
+		PlayerAnimationEvent Event(this,iAnimID);
+		_pPoolMaster->addEvent(&Event);
 	}catch(Poco::RuntimeException) {
 		Disconnect(FC_LEAVE_OTHER);
 	}
@@ -1429,8 +1417,11 @@ void PlayerThread::Packet15_PlayerBlockPlacement() {
 		_pWorld->setBlock(blockCoordinates.X,blockCoordinates.Y,blockCoordinates.Z,iBlock);
 
 		//Event to player pool
-		PlayerPoolEvent Event(blockCoordinates,iBlock,this);
-		_pPoolMaster->Event(Event);
+		ItemID Item;
+		Item.first = (short)iBlock;
+		Item.second=0;
+		PlayerSetBlockEvent Event(this,blockCoordinates,Item);
+		_pPoolMaster->addEvent(&Event);
 	} catch(Poco::RuntimeException& ex ) {
 		cout<<"Exception cateched: "<<ex.message()<<"\n";
 		Disconnect(FC_LEAVE_OTHER);
@@ -1475,8 +1466,8 @@ void PlayerThread::sendEmptyBlock(BlockCoordinates coords) {
 }
 
 void PlayerThread::syncFlagsWithPP() {
-	PlayerPoolEvent Event(_Flags,this);
-	_pPoolMaster->Event(Event);
+	PlayerUpdateFlagsEvent Event(this,_Flags);
+	_pPoolMaster->addEvent(&Event);
 }
 
 void PlayerThread::Packet14_Digging() {
@@ -1496,4 +1487,11 @@ void PlayerThread::Packet14_Digging() {
 
 string PlayerThread::getWorldWhoIn() {
 	return _WorldWhoIn;
+}
+
+void PlayerThread::shutdown() {
+	_fRunning=false;
+	while(!_fRunning){ //Wait till _fRunning turns true
+	}
+	_fRunning=false;
 }

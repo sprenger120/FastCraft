@@ -35,7 +35,7 @@ using std::cout;
 PlayerPool::PlayerPool(PackingThread& rPackingThread):
 _vPlayerThreads(0),
 	_ThreadPool("PlayerThreads",1,SettingsHandler::getPlayerSlotCount()),
-	_qEventQueue(),
+	_qEvents(),
 	_PackingThread(rPackingThread) 
 {	
 	int iSlotCount = SettingsHandler::getPlayerSlotCount();
@@ -47,13 +47,7 @@ _vPlayerThreads(0),
 }
 
 PlayerPool::~PlayerPool() {
-	_ThreadPool.stopAll(); //Stop all threads
-
-	for (int x=0;x<=_vPlayerThreads.size()-1;x++) { //Release objects
-		if (_vPlayerThreads[x] != NULL) {
-			delete _vPlayerThreads[x];
-		}
-	}
+	if (_fRunning) {shutdown();}
 }
 
 
@@ -66,15 +60,14 @@ void PlayerPool::run() {
 
 		_ThreadPool.defaultPool().start(*_vPlayerThreads[x]);
 	}
-
-	while (1) {
-		if (_qEventQueue.empty()) {
+	_fRunning=true;
+	while (_fRunning) {
+		while(_qEvents.empty()) {
 			Thread::sleep(50);
-			continue;
 		}
 		try {
 
-			PlayerPoolEvent& Event = _qEventQueue.front();
+			/*PlayerPoolEvent& Event = _qEventQueue.front();
 
 
 			switch (Event.getJobID()) {
@@ -207,11 +200,11 @@ void PlayerPool::run() {
 				}
 				break;
 			}
-
-			_qEventQueue.pop();
+			*/
+			_qEvents.pop();
 		} catch(Poco::RuntimeException& ex) {
 			cout<<"PlayerPool::run exception:"<<ex.message()<<"\n";
-			_qEventQueue.pop();
+			_qEvents.pop();
 		}
 	}
 }
@@ -244,8 +237,8 @@ int PlayerPool::getFreeSlot() {
 	return -1;
 }
 
-void PlayerPool::Event(PlayerPoolEvent& rEvent) {
-	_qEventQueue.push(rEvent);
+void PlayerPool::addEvent(PlayerEventBase* pEvent) {
+	_qEvents.push(pEvent);
 }
 
 void PlayerPool::sendMessageToAll(string str) {
@@ -323,4 +316,25 @@ bool PlayerPool::willHurtOther(BlockCoordinates blockCoord,PlayerThread* pPlayer
 		}
 	}
 	return false;
+}
+
+void PlayerPool::shutdown() {
+	_fRunning=false;
+	while(!_fRunning){ //Wait till _fRunning turns true
+	}
+	_fRunning=false;
+
+	cout<<"\tShutting down PlayerThreads\n";
+	
+	for (int x=0;x<=_vPlayerThreads.size()-1;x++) { //Release objects
+		if (_vPlayerThreads[x] != NULL) {
+			
+			cout<<"\t\t#:"<<x<<"...";
+			_vPlayerThreads[x]->shutdown();
+			delete _vPlayerThreads[x];;
+			cout<<"Done"<<"\n";
+		}
+	}
+
+	cout<<"\tDone\n"<<std::flush;
 }

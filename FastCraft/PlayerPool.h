@@ -25,12 +25,12 @@ GNU General Public License for more details.
 #include <Poco/Runnable.h>
 #include "Structs.h"
 #include "EntityCoordinates.h"
-#include "PlayerPoolEvent.h"
 #include "ThreadSafeQueue.h"
 #include "EntityPlayer.h"
 
 class PlayerThread;
 class PackingThread;
+class PlayerEventBase;
 
 using std::vector;
 using std::string;
@@ -39,9 +39,10 @@ class PlayerPool : public Poco::Runnable {
 private:
 	Poco::ThreadPool _ThreadPool;
 	vector<PlayerThread*> _vPlayerThreads;
-	ThreadSafeQueue<PlayerPoolEvent> _qEventQueue;
+	ThreadSafeQueue<PlayerEventBase*> _qEvents;
 	
 	PackingThread& _PackingThread;
+	bool _fRunning;
 public:
 	/*
 	* De/constructor
@@ -79,7 +80,7 @@ public:
 	Parameter:
 	@1 : Reference to a PlayerPoolEvent struct
 	*/
-	void Event(PlayerPoolEvent&);
+	void addEvent(PlayerEventBase*);
 
 
 	/*
@@ -122,6 +123,12 @@ public:
 	@2 : this pointer of class that calls this function
 	*/
 	bool willHurtOther(BlockCoordinates,PlayerThread*);
+
+
+	/*
+	* Forces PlayerPool thread to stop
+	*/
+	void shutdown();
 private:
 	int getFreeSlot(); //Returns -1 if there is no free slot
 	void sendMessageToAll(string);
