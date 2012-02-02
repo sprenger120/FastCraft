@@ -20,6 +20,7 @@ GNU General Public License for more details.
 #include <utility>
 #include <Poco/Path.h>
 #include <Poco/Data/Common.h>
+#include <iostream>
 
 using std::vector;
 using std::string;
