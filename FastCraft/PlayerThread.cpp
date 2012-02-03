@@ -254,8 +254,8 @@ void PlayerThread::Disconnect(string sReason,bool fShow) {
 		Disconnect(FC_LEAVE_KICK);
 
 		if (fShow) { //Write kick message
-			PlayerChatEvent Event(this,"§6" + strStrm.str(),_Coordinates);
-			_pPoolMaster->addEvent(&Event);
+			PlayerEventBase* p = new PlayerChatEvent(this,"§6" + strStrm.str(),_Coordinates);
+			_pPoolMaster->addEvent(p);
 		}
 	}else{
 		NetworkOut Out(&_NetworkOutRoot);
@@ -275,7 +275,7 @@ void PlayerThread::Disconnect(char iLeaveMode) {
 		_Inventory.HandleDisconnect();
 		_PlayerCount--;
 
-		PlayerDisconnectEvent Event(this,_iEntityID,_sName);
+		PlayerEventBase* p = new PlayerDisconnectEvent(this,_iEntityID,_sName);
 
 		switch (iLeaveMode) {
 		case FC_LEAVE_QUIT:		
@@ -286,7 +286,7 @@ void PlayerThread::Disconnect(char iLeaveMode) {
 			break;
 		}
 
-		_pPoolMaster->addEvent(&Event);
+		_pPoolMaster->addEvent(p);
 	}
 
 	_Flags.clear();
@@ -603,8 +603,8 @@ void PlayerThread::Packet1_Login() {
 		insertChat("§dWelcome to FastCraft 0.0.2 Alpha server.");
 		ProcessQueue(); //Send login packages
 
-		PlayerJoinEvent Event(this);//Push PlayerPool Join event
-		_pPoolMaster->addEvent(&Event);
+		PlayerEventBase* p = new PlayerJoinEvent(this);//Push PlayerPool Join event
+		_pPoolMaster->addEvent(p);
 		_fSpawned = true;	
 
 
@@ -777,8 +777,8 @@ void PlayerThread::Packet255_Disconnect() {
 }
 
 void PlayerThread::ChatToAll(string& rString) {
-	PlayerChatEvent Event(this,rString,_Coordinates);
-	_pPoolMaster->addEvent(&Event);
+	PlayerEventBase* p = new PlayerChatEvent(this,rString,_Coordinates);
+	_pPoolMaster->addEvent(p);
 }
 
 void PlayerThread::PlayerInfoList(bool fSpawn,string Name) {
@@ -811,8 +811,8 @@ void PlayerThread::Packet16_HoldingChange() {
 		Item.first = _Inventory.getSlot(36+iSlot).getItemID();
 		Item.second=0;
 
-		PlayerChangeHeldEvent Event(this,Item,0);
-		_pPoolMaster->addEvent(&Event);
+		PlayerEventBase* p = new PlayerChangeHeldEvent(this,Item,0);
+		_pPoolMaster->addEvent(p);
 	} catch(Poco::RuntimeException) {
 		Disconnect(FC_LEAVE_OTHER);
 	}
@@ -847,8 +847,8 @@ void PlayerThread::Packet102_WindowClick() {
 	if (aHeld[0].getItemID() != _Inventory.getSlot(36 + _Inventory.getSlotSelection()).getItemID()) { //Check if held item were changed
 		Item.first = _Inventory.getSlot(36+_Inventory.getSlotSelection()).getItemID();
 	
-		PlayerChangeHeldEvent Event(this,Item,0);
-		_pPoolMaster->addEvent(&Event);
+		PlayerEventBase* p = new PlayerChangeHeldEvent(this,Item,0);
+		_pPoolMaster->addEvent(p);
 	}
 
 	int s=8;
@@ -856,8 +856,8 @@ void PlayerThread::Packet102_WindowClick() {
 		if (aHeld[x].getItemID() != _Inventory.getSlot(s).getItemID()) {//Check if boots were changed
 		Item.first = _Inventory.getSlot(s).getItemID();
 	
-		PlayerChangeHeldEvent Event(this,Item,x);
-		_pPoolMaster->addEvent(&Event);
+		PlayerEventBase* p = new PlayerChangeHeldEvent(this,Item,x);
+		_pPoolMaster->addEvent(p);
 		}
 		s--;
 	}
@@ -867,16 +867,16 @@ void PlayerThread::Interval_Movement() {
 	if (!isSpawned()) {return;}
 	if (_TimeJobs.LastMovementSend + FC_INTERVAL_MOVEMENT <= getTicks()) { //Send new keep alive
 		if (!(_Coordinates == _lastCoordinates)) {
-			PlayerMoveEvent Event(this,_Coordinates);
-			_pPoolMaster->addEvent(&Event);
+			PlayerEventBase* p = new PlayerMoveEvent(this,_Coordinates);
+			_pPoolMaster->addEvent(p);
 
 			_lastCoordinates = _Coordinates;
 			_TimeJobs.LastMovementSend = getTicks();
 		}else{
 			if (_TimeJobs.LastMovementSend + 1000 <= getTicks()) {  //Workaound for the invisable player bug
 				//Send a "still alive" event
-				PlayerMoveEvent Event(this,_Coordinates);
-				_pPoolMaster->addEvent(&Event);
+				PlayerEventBase* p = new PlayerMoveEvent(this,_Coordinates);
+				_pPoolMaster->addEvent(p);
 				_TimeJobs.LastMovementSend = getTicks();
 			}
 		}
@@ -1067,8 +1067,8 @@ void PlayerThread::Packet18_Animation() {
 			Disconnect("You can't use other EntityID's as yours"); 
 		}
 
-		PlayerAnimationEvent Event(this,iAnimID);
-		_pPoolMaster->addEvent(&Event);
+		PlayerEventBase* p = new PlayerAnimationEvent(this,iAnimID);
+		_pPoolMaster->addEvent(p);
 	}catch(Poco::RuntimeException) {
 		Disconnect(FC_LEAVE_OTHER);
 	}
@@ -1420,8 +1420,8 @@ void PlayerThread::Packet15_PlayerBlockPlacement() {
 		ItemID Item;
 		Item.first = (short)iBlock;
 		Item.second=0;
-		PlayerSetBlockEvent Event(this,blockCoordinates,Item);
-		_pPoolMaster->addEvent(&Event);
+		PlayerEventBase* p = new PlayerSetBlockEvent(this,blockCoordinates,Item);
+		_pPoolMaster->addEvent(p);
 	} catch(Poco::RuntimeException& ex ) {
 		cout<<"Exception cateched: "<<ex.message()<<"\n";
 		Disconnect(FC_LEAVE_OTHER);
@@ -1466,8 +1466,8 @@ void PlayerThread::sendEmptyBlock(BlockCoordinates coords) {
 }
 
 void PlayerThread::syncFlagsWithPP() {
-	PlayerUpdateFlagsEvent Event(this,_Flags);
-	_pPoolMaster->addEvent(&Event);
+	PlayerEventBase* p = new PlayerUpdateFlagsEvent(this,_Flags);
+	_pPoolMaster->addEvent(p);
 }
 
 void PlayerThread::Packet14_Digging() {
