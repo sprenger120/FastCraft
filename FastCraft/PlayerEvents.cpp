@@ -16,6 +16,8 @@ GNU General Public License for more details.
 #include "Constants.h"
 #include <Poco/Exception.h>
 #include <iostream>
+#include "PlayerThread.h"
+#include "PlayerPool.h"
 
 /*
 * Con/Destructors
@@ -159,6 +161,12 @@ PlayerSetBlockEvent::~PlayerSetBlockEvent(){
 */
 
 void PlayerChatEvent::Execute(vector<PlayerThread*>& rvPlayers,PlayerPool* pPlayerPool) {
+	if (rvPlayers.empty()) {return;}
+	for (int x=0;x<=rvPlayers.size()-1;x++) {
+		if (rvPlayers[x]->isAssigned() && rvPlayers[x]->isSpawned()) {
+			rvPlayers[x]->insertChat(_sMessage);
+		}
+	}
 }
 
 void ChatEvent::Execute(vector<PlayerThread*>& rvPlayers,PlayerPool* pPlayerPool) {
