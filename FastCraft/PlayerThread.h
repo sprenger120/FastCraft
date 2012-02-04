@@ -38,6 +38,7 @@ GNU General Public License for more details.
 #include "EntityCoordinates.h"
 #include "EntityPlayer.h"
 #include <utility>
+#include "ItemInfoStorage.h"
 
 class EntityProvider;
 class PlayerPool;
@@ -308,8 +309,9 @@ public:
 	Parameter:
 	@1 : EntityID
 	@2 : SlotID (0=held, 4=helmet,3=chestplate,2=pants,1=boots)
+	@3 : Item informations
 	*/
-	void updateEntityEquipment(int,short,ItemSlot);
+	void updateEntityEquipment(int,short,ItemID);
 
 
 	/*
@@ -325,9 +327,9 @@ public:
 
 	Parameter:
 	@1 : Coordiantes of block
-	@2 : BlockID
+	@2 : Block information
 	*/
-	void spawnBlock(BlockCoordinates,char);
+	void spawnBlock(BlockCoordinates,ItemID);
 
 
 	/*

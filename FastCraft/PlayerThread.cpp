@@ -1176,7 +1176,7 @@ EntityFlags PlayerThread::getFlags() {
 	return _Flags;
 }
 
-void PlayerThread::updateEntityEquipment(int ID,short Slot,ItemSlot Item) {
+void PlayerThread::updateEntityEquipment(int ID,short Slot,ItemID Item) {
 	if (!isEntitySpawned(ID)) {
 		throw Poco::RuntimeException("Not spawned!");
 	}
@@ -1188,12 +1188,12 @@ void PlayerThread::updateEntityEquipment(int ID,short Slot,ItemSlot Item) {
 	Out.addByte(0x05);
 	Out.addInt(ID);
 	Out.addShort(Slot);
-	if (Item.getItemID() == 0) {
+	if (Item.first == 0) {
 		Out.addShort(-1);
 	}else{
-		Out.addShort(Item.getItemID());
+		Out.addShort(Item.first);
 	}
-	Out.addShort(0); //Damage/Metadata
+	Out.addShort(Item.second); //Damage/Metadata
 	Out.Finalize(FC_QUEUE_HIGH);
 }
 
@@ -1432,8 +1432,8 @@ int PlayerThread::getChunksInQueue() {
 	return _NetworkOutRoot.getLowQueue().size();
 }
 
-void PlayerThread::spawnBlock(BlockCoordinates blockCoords,char Block) {
-	if (!ItemInfoStorage::isRegistered(Block)) {
+void PlayerThread::spawnBlock(BlockCoordinates blockCoords,ItemID Item) {
+	if (!ItemInfoStorage::isRegistered(Item)) {
 		throw Poco::RuntimeException("Block not registered");
 	}
 
@@ -1449,8 +1449,8 @@ void PlayerThread::spawnBlock(BlockCoordinates blockCoords,char Block) {
 	Out.addInt(blockCoords.X);
 	Out.addByte((char)blockCoords.Y);
 	Out.addInt(blockCoords.Z);
-	Out.addByte(Block);
-	Out.addByte(0);	
+	Out.addByte((unsigned char)Item.first);
+	Out.addByte(Item.second);	
 	Out.Finalize(FC_QUEUE_HIGH);
 }
 
