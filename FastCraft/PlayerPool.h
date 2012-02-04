@@ -129,8 +129,13 @@ public:
 	* Forces PlayerPool thread to stop
 	*/
 	void shutdown();
+
+
+	/*
+	* Sends a message to all connected and spawned players
+	*/
+	void sendMessageToAll(string);
 private:
 	int getFreeSlot(); //Returns -1 if there is no free slot
-	void sendMessageToAll(string);
 };
 #endif

@@ -161,12 +161,15 @@ EntityPlayer PlayerPool::buildEntityPlayerFromPlayerPtr(PlayerThread* pPlayer) {
 
 
 PlayerThread* PlayerPool::getPlayerByName(string Name,PlayerThread* pCaller) {
+	if (_vPlayerThreads.empty()) { return NULL; }
+	
 	for (int x=0;x<=_vPlayerThreads.size()-1;x++) {
 		if (_vPlayerThreads[x] == pCaller) { continue; }
 		if (Poco::icompare(_vPlayerThreads[x]->getUsername(),Name) == 0) {
 			return _vPlayerThreads[x];
 		}
 	}
+
 	return NULL;
 }
 
