@@ -277,7 +277,6 @@ void PlayerInventory::HandleWindowClose(PlayerPool* pPool) {
 void PlayerInventory::HandleSelectionChange(short iSel) {
 	if (iSel < 0 || iSel > 8) {
 		throw Poco::RuntimeException("Illegal holding slotID");
-		return;
 	}
 	_iSlotSelection = iSel;
 }
