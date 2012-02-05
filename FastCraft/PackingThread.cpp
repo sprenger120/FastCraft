@@ -26,6 +26,7 @@ using Poco::Thread;
 PackingThread::PackingThread() : 
 	_vPackJobs()
 {
+	_fRunning=false;
 }
 
 
@@ -96,6 +97,7 @@ void PackingThread::AddJob(PackJob& rJob) {
 }
 
 void PackingThread::shutdown() {
+	if (!_fRunning) {return;}
 	_fRunning=false;
 	while(!_fRunning){ //Wait till _fRunning turns true
 	}

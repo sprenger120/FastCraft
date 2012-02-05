@@ -93,6 +93,7 @@ _sName(""),
 	_fSpawned = false;
 	_fAssigned = false;
 	_fHandshakeSent=false;
+	_fRunning=false;
 
 	//Start NetworkWriter Thread
 	_threadNetworkWriter.start(_NetworkWriter);
@@ -1095,8 +1096,8 @@ void PlayerThread::Packet18_Animation() {
 			PlayerEventBase* p = new PlayerAnimationEvent(this,iAnimID);
 			_pPoolMaster->addEvent(p);
 		}else{
-			cout<<_timerLastAnimationSent.getGoneTime()<<" ms"<<"\n";
 			Disconnect("You send animation packets too fast!");
+			cout<<"Time:"<<_timerLastAnimationSent.getGoneTime()<<" ms"<<"\n";
 		}
 	}catch(Poco::RuntimeException) {
 		Disconnect(FC_LEAVE_OTHER);
@@ -1515,6 +1516,7 @@ string PlayerThread::getWorldWhoIn() {
 }
 
 void PlayerThread::shutdown() {
+	if (!_fRunning) {return;}
 	_fRunning=false;
 	while(!_fRunning){ //Wait till _fRunning turns true
 	}

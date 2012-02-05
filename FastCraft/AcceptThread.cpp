@@ -64,6 +64,7 @@ void AcceptThread::run() {
 }
 
 void AcceptThread::shutdown() {
+	if (!_fRunning) {return;}
 	_ServerSock.close();
 	_fRunning=false;
 	while(!_fRunning){ //Wait till _fRunning turns true

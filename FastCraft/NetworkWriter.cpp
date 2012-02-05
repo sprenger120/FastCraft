@@ -28,6 +28,7 @@ _rlowQ(lowQ),
 	_pPlayer(p),
 	_fClear(false)
 {
+	_fRunning=false;
 }
 
 NetworkWriter::~NetworkWriter() {
@@ -140,6 +141,7 @@ void NetworkWriter::clearQueues() {
 }
 
 void NetworkWriter::shutdown() {
+	if (!_fRunning) {return;}
 	_fRunning=false;
 	while(!_fRunning){ //Wait till _fRunning turns true
 	}
