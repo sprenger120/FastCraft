@@ -32,6 +32,7 @@ _rPlayerPool(rPlayerPool),
 	NetworkOut::addString(_ServerFullMsg,"Server full!");
 
 	_ServerSock.setBlocking(true);
+	_fRunning=false;
 }
 
 AcceptThread::~AcceptThread() {
