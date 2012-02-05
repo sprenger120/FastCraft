@@ -46,6 +46,7 @@ _vPlayerThreads(0),
 	for (int x=0;x<=_vPlayerThreads.size()-1;x++) {
 		_vPlayerThreads[x] = NULL;
 	}
+	_fRunning=false;
 }
 
 PlayerPool::~PlayerPool() {
@@ -175,7 +176,7 @@ PlayerThread* PlayerPool::getPlayerByName(string Name,PlayerThread* pCaller) {
 
 
 bool PlayerPool::willHurtOther(BlockCoordinates blockCoord,PlayerThread* pPlayer) {
-	if (_vPlayerThreads.size() == 0) {return false;}
+	if (_vPlayerThreads.empty()) {return false;}
 
 	BlockCoordinates playerCoord;
 
@@ -194,6 +195,7 @@ bool PlayerPool::willHurtOther(BlockCoordinates blockCoord,PlayerThread* pPlayer
 }
 
 void PlayerPool::shutdown() {
+	if (!_fRunning) {return;}
 	_fRunning=false;
 	while(!_fRunning){ //Wait till _fRunning turns true
 	}
