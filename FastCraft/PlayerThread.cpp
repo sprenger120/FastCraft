@@ -89,6 +89,7 @@ _sName(""),
 	_iEntityID=0;
 	_Spawned_PlayerInfoList = 0;
 	_pPoolMaster = pPoolMaster;
+	_pWorld=NULL;
 
 	_fSpawned = false;
 	_fAssigned = false;
@@ -970,7 +971,7 @@ void PlayerThread::updateEntityPosition(int ID,EntityCoordinates Coordinates) {
 	int id = -1;
 
 	//search element
-	if (_vSpawnedEntities.size()>0) {
+	if (!_vSpawnedEntities.empty()) {
 		for (int x=0;x<=_vSpawnedEntities.size()-1;x++){
 			if (_vSpawnedEntities[x].EntityID == ID){
 				id = x;
