@@ -266,7 +266,12 @@ void PlayerMoveEvent::Execute(vector<PlayerThread*>& rvPlayers,PlayerPool* pPlay
 	for (int x=0;x<=rvPlayers.size()-1;x++) {
 		if (!(rvPlayers[x]->isAssigned() && rvPlayers[x]->isSpawned())) {continue;}
 		if (rvPlayers[x] == _pSourcePlayer) {continue;}
-		if (MathHelper::distance2D(rvPlayers[x]->getCoordinates(),_newCoordinates) > 100.0) {continue;}//Too distant->dont update
+		if (MathHelper::distance2D(rvPlayers[x]->getCoordinates(),_newCoordinates) > 100.0) {//Too distant->dont update
+			if (rvPlayers[x]->isEntitySpawned(iEID)) {
+				rvPlayers[x]->despawnEntity(iEID);
+			}
+			continue; 
+		}
 
 		if (!rvPlayers[x]->isEntitySpawned(iEID)) { //Spawn into players view circle
 			rvPlayers[x]->spawnPlayer(iEID,SourcePlayer);
