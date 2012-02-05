@@ -73,8 +73,7 @@ _sName(""),
 
 	_timerLastBlockPlace(&_iThreadTicks,0),
 	_timerStartedEating(&_iThreadTicks,0),
-	_timerLastAnimationSent(&_iThreadTicks,FC_MINTIMESPAN_ANIMATION),
-	_timerLastActionSent(&_iThreadTicks,FC_MINTIMESPAN_ACTION)
+	_timerLastAnimationSent(&_iThreadTicks,FC_MINTIMESPAN_ANIMATION)
 {
 	_Coordinates.OnGround = false;
 	_Coordinates.Pitch = 0.0F;
@@ -343,7 +342,6 @@ void PlayerThread::Connect(Poco::Net::StreamSocket& Sock) {
 	_timerLastBlockPlace.reset();
 	_timerStartedEating.reset();
 	_timerLastAnimationSent.reset();
-	_timerLastActionSent.reset();
 
 	_fHandshakeSent=false;
 }
@@ -1092,11 +1090,12 @@ void PlayerThread::Packet18_Animation() {
 			Disconnect("You can't use other EntityID's as yours"); 
 		}
 		
-		if (_timerLastAnimationSent.isGone()) {
+		if (_timerLastAnimationSent.isGone() || _timerLastAnimationSent.getGoneTime() < 10)  {
 			_timerLastAnimationSent.reset();
 			PlayerEventBase* p = new PlayerAnimationEvent(this,iAnimID);
 			_pPoolMaster->addEvent(p);
 		}else{
+			cout<<_timerLastAnimationSent.getGoneTime()<<" ms"<<"\n";
 			Disconnect("You send animation packets too fast!");
 		}
 	}catch(Poco::RuntimeException) {
@@ -1137,13 +1136,6 @@ void PlayerThread::Packet19_EntityAction() {
 		default:
 			Disconnect("Unsupported action.");
 			break;
-		}
-
-		if (_timerLastActionSent.isGone()) {
-			_timerLastActionSent.reset();
-			syncFlagsWithPP();
-		}else{
-			Disconnect("You send action packets too fast!");
 		}
 	}catch(Poco::RuntimeException) {
 		Disconnect(FC_LEAVE_OTHER);
@@ -1392,12 +1384,6 @@ void PlayerThread::Packet15_PlayerBlockPlacement() {
 
 		//Prevent: set a block under the map
 		if(blockCoordinates.Y < 0) {
-			return;
-		}
-
-		//Prevent: set blocks in air (without a block in near)
-		if (_pWorld->isSurroundedByAir(blockCoordinates)) {
-			Disconnect("You are not able to set blocks into air!");
 			return;
 		}
 
