@@ -196,10 +196,11 @@ void PlayerJoinEvent::Execute(vector<PlayerThread*>& rvPlayers,PlayerPool* pPlay
 	for (int x=0;x<=rvPlayers.size()-1;x++) {
 		if (!(rvPlayers[x]->isAssigned() && rvPlayers[x]->isSpawned())) {continue;}
 		if (rvPlayers[x] == _pSourcePlayer) {continue;} //Event Source filter
+		rvPlayers[x]->PlayerInfoList(true,_pSourcePlayer->getUsername()); //Spawn name to playerlist
 		if (MathHelper::distance2D(rvPlayers[x]->getCoordinates(),SourcePlayer._Coordinates) > 100.0) {continue;}//Too distant members filter
 
 		rvPlayers[x]->spawnPlayer(SourcePlayerID,SourcePlayer); //Spawn event source to others
-
+		
 		//Spawn other players to event source
 		TargetPlayer = PlayerPool::buildEntityPlayerFromPlayerPtr(rvPlayers[x]); 
 		TargetPlayerID = rvPlayers[x]->getEntityID();
@@ -217,6 +218,8 @@ void PlayerDisconnectEvent::Execute(vector<PlayerThread*>& rvPlayers,PlayerPool*
 	for (int x=0;x<=rvPlayers.size()-1;x++) {
 		if (!(rvPlayers[x]->isAssigned() && rvPlayers[x]->isSpawned())) {continue;}
 		if (rvPlayers[x] == _pSourcePlayer) {continue;}
+
+		rvPlayers[x]->PlayerInfoList(false,_sName); //despawn name
 
 		if (rvPlayers[x]->isEntitySpawned(_iEntityID)) {
 			rvPlayers[x]->despawnEntity(_iEntityID);
