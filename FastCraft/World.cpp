@@ -145,8 +145,8 @@ MapChunk* World::generateChunk(int X,int Z) {
 
 	//Light & Metadata
 	std::memset(pAffectedChunk->Metadata,0,FC_CHUNK_NIBBLECOUNT);
-	std::memset(pAffectedChunk->BlockLight,0xff,FC_CHUNK_NIBBLECOUNT);
-	std::memset(pAffectedChunk->SkyLight,0xff,FC_CHUNK_NIBBLECOUNT);
+	std::memset(pAffectedChunk->BlockLight,0x00,FC_CHUNK_NIBBLECOUNT);
+	std::memset(pAffectedChunk->SkyLight,0xFF,FC_CHUNK_NIBBLECOUNT);
 	_iLoadedChunks++;
 
 	return pAffectedChunk;
