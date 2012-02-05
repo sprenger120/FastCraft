@@ -91,6 +91,7 @@ _sName(""),
 
 	_fSpawned = false;
 	_fAssigned = false;
+	_fHandshakeSent=false;
 
 	//Start NetworkWriter Thread
 	_threadNetworkWriter.start(_NetworkWriter);
@@ -334,15 +335,18 @@ void PlayerThread::Connect(Poco::Net::StreamSocket& Sock) {
 
 	_timerLastBlockPlace.reset();
 	_timerStartedEating.reset();
+	_fHandshakeSent=false;
 }
 
 string PlayerThread::generateConnectionHash() {
 	std::stringstream StringStream;
 	long long iVal = 0;
 
+
+	while ((iVal&0xFFFFFFFFFFFFFF00) == 0) {
 	iVal = ((((long long)_Rand.next())<<32) & 0xFFFFFFFF00000000)  |  
 		(((long long)_Rand.next()) & 0x00000000FFFFFFFF);
-
+	}
 
 	StringStream<<std::hex<<iVal;
 	_sConnectionHash.assign(StringStream.str());
@@ -490,6 +494,7 @@ void PlayerThread::Packet0_KeepAlive() {
 
 void PlayerThread::Packet1_Login() {
 	int iProtocolVersion = 0;
+	if (!_fHandshakeSent) { Disconnect("Incorrect login order!"); }
 
 	try {
 		//Check minecraft version
@@ -658,6 +663,7 @@ void PlayerThread::Packet2_Handshake() {
 	}
 	Out.Finalize(FC_QUEUE_HIGH);
 
+	_fHandshakeSent = true;
 	ProcessQueue();
 }
 

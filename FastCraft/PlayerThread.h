@@ -72,6 +72,7 @@ private:
 	short _iFood;
 	float _nSaturation;
     bool _fSpawned;
+	bool _fHandshakeSent;
 	int _Spawned_PlayerInfoList;
 	PlayerInventory _Inventory;
 	double _dRunnedMeters;
