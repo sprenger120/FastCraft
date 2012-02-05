@@ -49,7 +49,6 @@ World::~World() {
 }
 
 void World::generateChunks(int FromX,int FromZ,int ToX,int ToZ) {
-	int x = FromX,z=FromZ;
 	try {
 		for (int x=FromX;x<=ToX;x++) {
 			for(int z=FromZ;z<=ToZ;z++) {
@@ -126,7 +125,7 @@ MapChunk* World::generateChunk(int X,int Z) {
 	try {
 		ChunkTerraEditor::setPlate(pAffectedChunk,0,b); //Bedrock 
 
-		b.BlockID = 12;
+		b.BlockID = 35;
 
 		for (short y=1;y<=70;y++) {
 			ChunkTerraEditor::setPlate(pAffectedChunk,y,b);
@@ -144,7 +143,7 @@ MapChunk* World::generateChunk(int X,int Z) {
 	}
 
 	//Light & Metadata
-	std::memset(pAffectedChunk->Metadata,0,FC_CHUNK_NIBBLECOUNT);
+	std::memset(pAffectedChunk->Metadata,0x00,FC_CHUNK_NIBBLECOUNT);
 	std::memset(pAffectedChunk->BlockLight,0x00,FC_CHUNK_NIBBLECOUNT);
 	std::memset(pAffectedChunk->SkyLight,0xFF,FC_CHUNK_NIBBLECOUNT);
 	_iLoadedChunks++;
