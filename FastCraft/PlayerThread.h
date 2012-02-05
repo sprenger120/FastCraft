@@ -39,6 +39,7 @@ GNU General Public License for more details.
 #include "EntityPlayer.h"
 #include <utility>
 #include "ItemInfoStorage.h"
+#include "ThreadTickSpan.h"
 
 class EntityProvider;
 class PlayerPool;
@@ -49,17 +50,6 @@ using std::string;
 using std::stringstream;
 using std::vector;
 using std::pair;
-
-struct TimeJobs {
-	long long LastTimeSend;
-	long long LastKeepAliveSend;
-	long long LastHandleMovement;
-	long long LastMovementSend;
-	long long LastSpeedCalculation;
-	long long LastPositionCheck;
-	long long LastBlockPlace;
-	long long StartedEating;
-};
 
 struct EntityListEntry {
 	int EntityID;
@@ -113,11 +103,19 @@ private:
 	string _sConnectionHash;
 	Poco::Random _Rand;
 
-	//Time jobs
-	TimeJobs _TimeJobs;
-
 	//Entities
 	vector<EntityListEntry> _vSpawnedEntities;
+
+	//Thread Tick spans
+	ThreadTickSpan _timespanSendTime;
+	ThreadTickSpan _timespanSendKeepAlive;
+	ThreadTickSpan _timespanHandleMovement;
+	ThreadTickSpan _timespanMovementSent;
+	ThreadTickSpan _timespanSpeedCalculation;
+	ThreadTickSpan _timespanPositionCheck;
+
+	ThreadTickSpan _timerLastBlockPlace;
+	ThreadTickSpan _timerStartedEating;
 public:
 	/*
 	* De- / constructor

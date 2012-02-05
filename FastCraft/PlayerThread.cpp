@@ -41,7 +41,7 @@ using std::dec;
 PlayerThread::PlayerThread(PlayerPool* pPoolMaster,
 	PackingThread& rPackingThread
 	) : 
-	_sName(""),
+_sName(""),
 	_sIP(""),
 	_sLeaveMessage(""),
 	_Connection(),
@@ -60,7 +60,19 @@ PlayerThread::PlayerThread(PlayerPool* pPoolMaster,
 	_threadNetworkWriter("NetworkWriter"),
 	_ChunkProvider(_NetworkOutRoot,rPackingThread,this),
 	_Inventory(_NetworkOutRoot,_NetworkInRoot),
-	_vSpawnedEntities(0)
+	_vSpawnedEntities(0),
+
+	_iThreadTicks(0),
+
+	_timespanSendTime(&_iThreadTicks,FC_INTERVAL_TIMESEND),
+	_timespanSendKeepAlive(&_iThreadTicks,FC_INTERVAL_KEEPACTIVE),
+	_timespanHandleMovement(&_iThreadTicks,FC_INTERVAL_HANDLEMOVEMENT),
+	_timespanMovementSent(&_iThreadTicks,FC_INTERVAL_MOVEMENT),
+	_timespanSpeedCalculation(&_iThreadTicks,FC_INTERVAL_CALCULATESPEED),
+	_timespanPositionCheck(&_iThreadTicks,FC_INTERVAL_CHECKPOSITION),
+
+	_timerLastBlockPlace(&_iThreadTicks,0),
+	_timerStartedEating(&_iThreadTicks,0)
 {
 	_Coordinates.OnGround = false;
 	_Coordinates.Pitch = 0.0F;
@@ -70,14 +82,7 @@ PlayerThread::PlayerThread(PlayerPool* pPoolMaster,
 	_Coordinates.Yaw = 0.0F;
 	_Coordinates.Z = 0.0;
 
-	_TimeJobs.LastTimeSend = 0L;
-	_TimeJobs.LastKeepAliveSend = 0L;
-	_TimeJobs.LastHandleMovement = 0L;
-	_TimeJobs.LastMovementSend = 0L;
-	_TimeJobs.LastSpeedCalculation=0L;
-	_TimeJobs.LastPositionCheck=0L;
-	_TimeJobs.LastBlockPlace=0L;
-	_TimeJobs.StartedEating=0L;
+
 	_dRunnedMeters=0.0;
 
 	_iEntityID=0;
@@ -86,7 +91,6 @@ PlayerThread::PlayerThread(PlayerPool* pPoolMaster,
 
 	_fSpawned = false;
 	_fAssigned = false;
-	_iThreadTicks = 0;
 
 	//Start NetworkWriter Thread
 	_threadNetworkWriter.start(_NetworkWriter);
@@ -194,10 +198,10 @@ void PlayerThread::run() {
 			case 0xd: 
 				Packet13_PosAndLook();
 				break;
-			/*case 0xe:
+				/*case 0xe:
 				Packet14_Digging();
 				break;
-			*/
+				*/
 			case 0xf: 
 				Packet15_PlayerBlockPlacement();
 				break;
@@ -295,14 +299,6 @@ void PlayerThread::Disconnect(char iLeaveMode) {
 	_sIP.clear();
 	if (iLeaveMode!=FC_LEAVE_KICK) {_NetworkWriter.clearQueues();}
 
-	_TimeJobs.LastKeepAliveSend = 0L;
-	_TimeJobs.LastTimeSend = 0L;
-	_TimeJobs.LastHandleMovement = 0L;
-	_TimeJobs.LastMovementSend = 0L;
-	_TimeJobs.LastSpeedCalculation = 0L;
-	_TimeJobs.LastPositionCheck=0L;
-	_TimeJobs.LastBlockPlace=0L;
-	_TimeJobs.StartedEating=0L;
 	_dRunnedMeters=0;
 	_Spawned_PlayerInfoList=0;
 
@@ -326,33 +322,45 @@ void PlayerThread::Connect(Poco::Net::StreamSocket& Sock) {
 
 	_Inventory.clear();
 	_sIP.assign(_Connection.peerAddress().toString());
+
 	_iThreadTicks = 0;
+
+	_timespanSendTime.reset();
+	_timespanSendKeepAlive.reset();
+	_timespanHandleMovement.reset();
+	_timespanMovementSent.reset();
+	_timespanSpeedCalculation.reset();
+	_timespanPositionCheck.reset();
+
+	_timerLastBlockPlace.reset();
+	_timerStartedEating.reset();
 }
 
 string PlayerThread::generateConnectionHash() {
 	std::stringstream StringStream;
+	long long iVal = 0;
 
-	StringStream<<std::hex<<_Rand.next();
-	if(StringStream.str().length() % 2) {
-		StringStream<<"0";
-	}
-	StringStream<<std::hex<<_Rand.next();
+	iVal = ((((long long)_Rand.next())<<32) & 0xFFFFFFFF00000000)  |  
+		(((long long)_Rand.next()) & 0x00000000FFFFFFFF);
+
+
+	StringStream<<std::hex<<iVal;
 	_sConnectionHash.assign(StringStream.str());
 	return _sConnectionHash;
 }
 
 void PlayerThread::Interval_Time() {
 	if (!isSpawned()) {return;}
-	if (_TimeJobs.LastTimeSend + FC_INTERVAL_TIMESEND <= getTicks()) {
-		_TimeJobs.LastTimeSend = getTicks();
+	if (_timespanSendTime.isGone()) {
+		_timespanSendTime.reset();
 		sendTime();
 	}
 }
 
 void PlayerThread::Interval_HandleMovement() {
 	if (!isSpawned()) {return;}
-	if (_TimeJobs.LastHandleMovement + FC_INTERVAL_HANDLEMOVEMENT <= getTicks()) {
-		_TimeJobs.LastHandleMovement = getTicks();
+	if (_timespanHandleMovement.isGone()) {
+		_timespanHandleMovement.reset();
 		_ChunkProvider.HandleMovement(_Coordinates);
 	}
 }
@@ -395,8 +403,8 @@ void PlayerThread::sendClientPosition() {
 
 void PlayerThread::Interval_KeepAlive() {
 	if (!isSpawned()){return;}
-	if (_TimeJobs.LastKeepAliveSend + FC_INTERVAL_KEEPACTIVE <= getTicks()) { //Send new keep alive
-		_TimeJobs.LastKeepAliveSend = getTicks();
+	if (_timespanSendKeepAlive.isGone()) { //Send new keep alive
+		_timespanSendKeepAlive.reset();
 
 		NetworkOut Out(&_NetworkOutRoot);
 		Out.addByte(0x0);
@@ -580,8 +588,8 @@ void PlayerThread::Packet1_Login() {
 
 		//Time
 		sendTime();
-		
-		
+
+
 		_ChunkProvider.HandleNewPlayer();
 		_ChunkProvider.HandleMovement(_Coordinates); //Pre Chunks
 
@@ -846,7 +854,7 @@ void PlayerThread::Packet102_WindowClick() {
 
 	if (aHeld[0].getItemID() != _Inventory.getSlot(36 + _Inventory.getSlotSelection()).getItemID()) { //Check if held item were changed
 		Item.first = _Inventory.getSlot(36+_Inventory.getSlotSelection()).getItemID();
-	
+
 		PlayerEventBase* p = new PlayerChangeHeldEvent(this,Item,0);
 		_pPoolMaster->addEvent(p);
 	}
@@ -854,10 +862,10 @@ void PlayerThread::Packet102_WindowClick() {
 	int s=8;
 	for (int x=1;x<=4;x++) {
 		if (aHeld[x].getItemID() != _Inventory.getSlot(s).getItemID()) {//Check if boots were changed
-		Item.first = _Inventory.getSlot(s).getItemID();
-	
-		PlayerEventBase* p = new PlayerChangeHeldEvent(this,Item,x);
-		_pPoolMaster->addEvent(p);
+			Item.first = _Inventory.getSlot(s).getItemID();
+
+			PlayerEventBase* p = new PlayerChangeHeldEvent(this,Item,x);
+			_pPoolMaster->addEvent(p);
 		}
 		s--;
 	}
@@ -865,21 +873,22 @@ void PlayerThread::Packet102_WindowClick() {
 
 void PlayerThread::Interval_Movement() {
 	if (!isSpawned()) {return;}
-	if (_TimeJobs.LastMovementSend + FC_INTERVAL_MOVEMENT <= getTicks()) { //Send new keep alive
+
+	if (_timespanMovementSent.isGone()) {
 		if (!(_Coordinates == _lastCoordinates)) {
 			PlayerEventBase* p = new PlayerMoveEvent(this,_Coordinates);
 			_pPoolMaster->addEvent(p);
 
 			_lastCoordinates = _Coordinates;
-			_TimeJobs.LastMovementSend = getTicks();
-		}else{
-			if (_TimeJobs.LastMovementSend + 1000 <= getTicks()) {  //Workaound for the invisable player bug
-				//Send a "still alive" event
+			_timespanMovementSent.reset();
+		}else{ //If position not changed after 1 second, push a movement event to player pool (Workaound for the invisable player bug)
+			if (_timespanMovementSent.getGoneTime() >= 1000) {
 				PlayerEventBase* p = new PlayerMoveEvent(this,_Coordinates);
 				_pPoolMaster->addEvent(p);
-				_TimeJobs.LastMovementSend = getTicks();
+				_timespanMovementSent.reset();
 			}
 		}
+
 	}
 }
 
@@ -1154,9 +1163,9 @@ void PlayerThread::updateEntityMetadata(int ID,EntityFlags Flags) {
 
 void PlayerThread::Interval_CalculateSpeed() {
 	if (!isSpawned()) {return;}
-	if (_TimeJobs.LastSpeedCalculation + FC_INTERVAL_CALCULATESPEED <= getTicks()) {
-		double iTime = double(getTicks()) - double(_TimeJobs.LastSpeedCalculation);
-		_TimeJobs.LastSpeedCalculation = getTicks();
+	if (_timespanSpeedCalculation.isGone()) {
+		double iTime = double(_timespanSpeedCalculation.getGoneTime());
+		_timespanSpeedCalculation.reset();
 
 
 		double iSpeed = (_dRunnedMeters * 60.0 * 60.0) / (iTime*3.6);
@@ -1218,8 +1227,8 @@ void PlayerThread::CheckPosition(bool fSynchronize) {
 
 void PlayerThread::Interval_CheckPosition() {
 	if (!isSpawned()) {return;}
-	if (_TimeJobs.LastPositionCheck + FC_INTERVAL_CHECKPOSITION <= getTicks()) {
-		_TimeJobs.LastPositionCheck = getTicks();
+	if (_timespanPositionCheck.isGone()) {
+		_timespanPositionCheck.reset();
 		CheckPosition();
 	}
 }
@@ -1238,10 +1247,10 @@ void PlayerThread::Packet15_PlayerBlockPlacement() {
 		Slot.readFromNetwork(_NetworkInRoot);
 
 
-		if (getTicks()-_TimeJobs.LastBlockPlace < 100) { //Client sends placeblock packet two times if you are aiming at a block
+		if (_timerLastBlockPlace.getGoneTime() < 100) { //Client sends placeblock packet two times if you are aiming at a block
 			return;
 		}
-		_TimeJobs.LastBlockPlace = getTicks();
+		_timerLastBlockPlace.reset();
 
 		ItemSlot & InHand = _Inventory.getSelectedSlot();
 		char iBlock = 0;
@@ -1276,7 +1285,7 @@ void PlayerThread::Packet15_PlayerBlockPlacement() {
 
 					_Flags.setRightClicking(true);
 					syncFlagsWithPP();
-					_TimeJobs.StartedEating = getTicks();
+					_timerStartedEating.reset();
 				}
 				return;
 			}
