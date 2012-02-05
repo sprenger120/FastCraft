@@ -171,6 +171,20 @@ public:
 	* Returns dimension
 	*/
 	char getDimension();
+
+
+	/*
+	* Sets metadata of specific block
+	* Will throw Poco::RuntimeException if metadata is invalid
+	* Will rethrow all errors of getChunkByChunkCoordinates
+
+	Parameters:
+	@1 : X in WorldCoordinates
+	@2 : Y in WorldCoordinates
+	@3 : Z in WorldCoordinates
+	@4 : Metadata
+	*/
+	void setMetadata(int,short,int,char);
 private:
 	void generateChunks(int,int,int,int);
 	MapChunk* generateChunk(int,int);

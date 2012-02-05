@@ -361,3 +361,31 @@ string World::getName() {
 char World::getDimension() {
 	return _iDimension;
 }
+
+
+void World::setMetadata(int X,short Y,int Z,char iMetadata) {
+	try {
+		int iBlockIndex = ChunkMath::toIndex(X,Y,Z);
+		if (iBlockIndex==-1) {
+			cout<<"World::setMetadata invalid coordinates\n";
+			throw Poco::RuntimeException("Invalid coordinates");
+		}
+		if (iMetadata<0 || iMetadata > 16) {
+			cout<<"World::setMetadata invalid metadata\n";
+			throw Poco::RuntimeException("Invalid metadata");
+		}
+
+		MapChunk* p = getChunkByChunkCoordinates(X>>4,Z>>4);
+		int iNibbleIndex = iBlockIndex/2;
+		
+		iMetadata &= 15; //Filter bottom 4 bit 
+
+		if (iBlockIndex%2) { //Set top 4 bits
+			p->Metadata[iNibbleIndex] |= iMetadata<<4;
+		}else{//Set lower 4 bits
+			p->Metadata[iNibbleIndex] |= iMetadata;
+		}	
+	} catch (Poco::RuntimeException& ex) {
+		ex.rethrow();
+	}
+}
