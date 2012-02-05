@@ -72,7 +72,9 @@ _sName(""),
 	_timespanPositionCheck(&_iThreadTicks,FC_INTERVAL_CHECKPOSITION),
 
 	_timerLastBlockPlace(&_iThreadTicks,0),
-	_timerStartedEating(&_iThreadTicks,0)
+	_timerStartedEating(&_iThreadTicks,0),
+	_timerLastAnimationSent(&_iThreadTicks,FC_MINTIMESPAN_ANIMATION),
+	_timerLastActionSent(&_iThreadTicks,FC_MINTIMESPAN_ACTION)
 {
 	_Coordinates.OnGround = false;
 	_Coordinates.Pitch = 0.0F;
@@ -164,6 +166,11 @@ void PlayerThread::run() {
 			Interval_CheckPosition();
 
 			iPacket = _NetworkInRoot.readByte();
+
+			if (!_fSpawned &&  (iPacket!=0x01 && iPacket!=0x02 && iPacket!=0xFE)) {
+				Disconnect("Login not done!");
+				continue;
+			}
 
 			//cout<<"Package recovered:"<<std::hex<<int(iPacket)<<"\n";
 			switch (iPacket) {
@@ -335,6 +342,9 @@ void PlayerThread::Connect(Poco::Net::StreamSocket& Sock) {
 
 	_timerLastBlockPlace.reset();
 	_timerStartedEating.reset();
+	_timerLastAnimationSent.reset();
+	_timerLastActionSent.reset();
+
 	_fHandshakeSent=false;
 }
 
@@ -1081,9 +1091,14 @@ void PlayerThread::Packet18_Animation() {
 		if (iEID != _iEntityID){
 			Disconnect("You can't use other EntityID's as yours"); 
 		}
-
-		PlayerEventBase* p = new PlayerAnimationEvent(this,iAnimID);
-		_pPoolMaster->addEvent(p);
+		
+		if (_timerLastAnimationSent.isGone()) {
+			_timerLastAnimationSent.reset();
+			PlayerEventBase* p = new PlayerAnimationEvent(this,iAnimID);
+			_pPoolMaster->addEvent(p);
+		}else{
+			Disconnect("You send animation packets too fast!");
+		}
 	}catch(Poco::RuntimeException) {
 		Disconnect(FC_LEAVE_OTHER);
 	}
@@ -1100,9 +1115,11 @@ void PlayerThread::Packet19_EntityAction() {
 
 		switch(iActionID) {
 		case FC_ACTION_CROUCH:
+			if (_Flags.isCrouched()) {return;}
 			_Flags.setCrouched(true);
 			break;
 		case FC_ACTION_UNCROUCH:
+			if (!_Flags.isCrouched()) {return;}
 			_Flags.setCrouched(false);
 			break;
 		case FC_ACTION_STARTSPRINTING:
@@ -1110,9 +1127,11 @@ void PlayerThread::Packet19_EntityAction() {
 				Disconnect("Non vanilla behavior (SP while C)");
 				return;
 			}
+			if (_Flags.isSprinting()) {return;}
 			_Flags.setSprinting(true);
 			break;
 		case FC_ACTION_STOPSPRINTING:
+			if (!_Flags.isSprinting()) {return;}
 			_Flags.setSprinting(false);
 			break;
 		default:
@@ -1120,7 +1139,12 @@ void PlayerThread::Packet19_EntityAction() {
 			break;
 		}
 
-		syncFlagsWithPP();
+		if (_timerLastActionSent.isGone()) {
+			_timerLastActionSent.reset();
+			syncFlagsWithPP();
+		}else{
+			Disconnect("You send action packets too fast!");
+		}
 	}catch(Poco::RuntimeException) {
 		Disconnect(FC_LEAVE_OTHER);
 	}

@@ -117,6 +117,8 @@ private:
 
 	ThreadTickSpan _timerLastBlockPlace;
 	ThreadTickSpan _timerStartedEating;
+	ThreadTickSpan _timerLastAnimationSent;
+	ThreadTickSpan _timerLastActionSent;
 public:
 	/*
 	* De- / constructor

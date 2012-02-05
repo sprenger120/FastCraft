@@ -71,4 +71,8 @@ GNU General Public License for more details.
 //Queue Types
 #define FC_QUEUE_LOW					1
 #define FC_QUEUE_HIGH					2
+
+//Min Timespans
+#define FC_MINTIMESPAN_ANIMATION		60
+#define FC_MINTIMESPAN_ACTION			15
 #endif
