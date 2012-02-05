@@ -551,9 +551,9 @@ void ItemInfoStorage::isValid(ItemEntry Entry) {
 	}
 
 
-	int x,i;
 	if (!_vItems.empty()) {
 		bool found = false;
+		int x,i;
 
 		//Check ConnectedBlock existance
 		if (Entry.ConnectedBlock != 0) {
@@ -619,8 +619,8 @@ void ItemInfoStorage::isValid(BlockEntry Entry) {
 	}
 
 	//Check ID & name availability
-	int x,i;
 	if (!_vItems.empty()) {
+		int x,i;
 		for (x=0;x<=_vItems.size()-1;x++) {
 			if (_vItems[x].ID == Entry.ID) { //ID is already taken.. lets check SubID
 				for (i=0;i<=_vItems.size()-1;i++) {
