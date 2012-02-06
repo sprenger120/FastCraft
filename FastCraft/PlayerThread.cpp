@@ -71,9 +71,8 @@ _sName(""),
 	_timespanSpeedCalculation(&_iThreadTicks,FC_INTERVAL_CALCULATESPEED),
 	_timespanPositionCheck(&_iThreadTicks,FC_INTERVAL_CHECKPOSITION),
 
-	_timerLastBlockPlace(&_iThreadTicks,0),
-	_timerStartedEating(&_iThreadTicks,0),
-	_timerLastAnimationSent(&_iThreadTicks,FC_MINTIMESPAN_ANIMATION)
+	_timerLastBlockPlace(&_iThreadTicks,0L),
+	_timerStartedEating(&_iThreadTicks,0L)
 {
 	_Coordinates.OnGround = false;
 	_Coordinates.Pitch = 0.0F;
@@ -343,7 +342,6 @@ void PlayerThread::Connect(Poco::Net::StreamSocket& Sock) {
 
 	_timerLastBlockPlace.reset();
 	_timerStartedEating.reset();
-	_timerLastAnimationSent.reset();
 
 	_fHandshakeSent=false;
 }
@@ -614,7 +612,7 @@ void PlayerThread::Packet1_Login() {
 		//Inventory
 		ItemSlot Item1(1,64);
 		ItemSlot Item2(5,64);
-		ItemSlot Item3(260,64);
+		ItemSlot Item3(35,64);
 
 		_Inventory.setSlot(38,Item1);
 		_Inventory.setSlot(37,Item2);
@@ -1092,14 +1090,9 @@ void PlayerThread::Packet18_Animation() {
 			Disconnect("You can't use other EntityID's as yours"); 
 		}
 		
-		if (_timerLastAnimationSent.isGone() || _timerLastAnimationSent.getGoneTime() < 10)  {
-			_timerLastAnimationSent.reset();
-			PlayerEventBase* p = new PlayerAnimationEvent(this,iAnimID);
-			_pPoolMaster->addEvent(p);
-		}else{
-			Disconnect("You send animation packets too fast!");
-			cout<<"Time:"<<_timerLastAnimationSent.getGoneTime()<<" ms"<<"\n";
-		}
+
+		PlayerEventBase* p = new PlayerAnimationEvent(this,iAnimID);
+		_pPoolMaster->addEvent(p);
 	}catch(Poco::RuntimeException) {
 		Disconnect(FC_LEAVE_OTHER);
 	}
