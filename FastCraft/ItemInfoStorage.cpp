@@ -538,7 +538,7 @@ void ItemInfoStorage::isValid(ItemEntry Entry) {
 		throw Poco::RuntimeException("Indestructible weapon");
 	}
 
-	if (Entry.SubID > 17 || Entry.SubID < 0) {
+	if (Entry.SubID > 15 || Entry.SubID < 0) {
 		throw Poco::RuntimeException("Illegal SubID");
 	}
 
@@ -588,7 +588,7 @@ void ItemInfoStorage::isValid(ItemEntry Entry) {
 }
 
 void ItemInfoStorage::isValid(BlockEntry Entry) {
-	if (Entry.SubID > 17 || Entry.SubID < 0) {
+	if (Entry.SubID > 15 || Entry.SubID < 0) {
 		throw Poco::RuntimeException("Illegal SubID");
 	}
 
