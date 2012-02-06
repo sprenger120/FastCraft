@@ -174,7 +174,7 @@ public:
 
 
 	/*
-	* Sets metadata of specific block
+	* Sets metadata of given block
 	* Will throw Poco::RuntimeException if metadata is invalid
 	* Will rethrow all errors of getChunkByChunkCoordinates
 
@@ -182,12 +182,31 @@ public:
 	@1 : X in WorldCoordinates
 	@2 : Y in WorldCoordinates
 	@3 : Z in WorldCoordinates
-	@4 : Metadata
+	@4 : new metadata
 	*/
 	void setMetadata(int,short,int,char);
+
+
+	/*
+	* Sets block light of given block
+	* Will throw Poco::RuntimeException if block light is invalid
+	* Will rethrow all errors of getChunkByChunkCoordinates
+
+	Parameters:
+	@1 : X in WorldCoordinates
+	@2 : Y in WorldCoordinates
+	@3 : Z in WorldCoordinates
+	@4 : new light level
+	*/
+	void setBlockLight(int,short,int,char);
 private:
 	void generateChunks(int,int,int,int);
 	MapChunk* generateChunk(int,int);
-};
+
+	char prepareNibble(char, /* Modulo of Nibble index and 2 */
+					   char, /* Old value */
+					   char /* Value to set */
+					   );
+}; 
 
 #endif

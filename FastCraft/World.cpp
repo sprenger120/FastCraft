@@ -29,9 +29,9 @@ using std::cout;
 
 World::World(string Name,char iDimension,PlayerPool& rPP) :
 _WorldName(Name),
-_iDimension(iDimension),
-_rPlayerPool(rPP),
-_vChunks(0)
+	_iDimension(iDimension),
+	_rPlayerPool(rPP),
+	_vChunks(0)
 {
 	_iLoadedChunks = 0;
 	generateChunks(-10,-10,10,10);
@@ -278,7 +278,7 @@ void World::setBlock(int X,short Y,int Z,char Block) {
 	}
 
 	MapChunk* p;
-	
+
 	try {
 		auto Coords = WorldCoordinateConverter(X,Y,Z);
 		p = getChunkByChunkCoordinates(Coords.first.X,Coords.first.Z);
@@ -290,7 +290,7 @@ void World::setBlock(int X,short Y,int Z,char Block) {
 
 char World::getBlock(int X,short Y,int Z) {
 	MapChunk* p;
-	
+
 	try {
 		auto Coords = WorldCoordinateConverter(X,Y,Z);
 		p = getChunkByChunkCoordinates(Coords.first.X,Coords.first.Z);
@@ -309,41 +309,41 @@ bool World::isSurroundedByAir(BlockCoordinates TargetBlock) {
 	BlockCoordinates Temp = TargetBlock;
 
 	try {
-	
-	//X--
-	if (getBlock(Temp.X-1,Temp.Y,Temp.Z) != 0) {
-		return false;
-	}
 
-	//X++
-	if (getBlock(Temp.X+1,Temp.Y,Temp.Z) != 0) {
-		return false;
-	}
-
-	//Z--
-	if (getBlock(Temp.X,Temp.Y,Temp.Z-1) != 0) {
-		return false;
-	}
-
-	//Z++
-	if (getBlock(Temp.X,Temp.Y,Temp.Z+1) != 0) {
-		return false;
-	}
-
-	//Y--
-	if (TargetBlock.Y >= 1) {
-		if (getBlock(Temp.X,Temp.Y-1,Temp.Z) != 0) {
+		//X--
+		if (getBlock(Temp.X-1,Temp.Y,Temp.Z) != 0) {
 			return false;
 		}
-	}
 
-	//Y++
-	if (TargetBlock.Y <= SettingsHandler::getWorldHeight()-1) {
-		if (getBlock(Temp.X,Temp.Y+1,Temp.Z) != 0) {
+		//X++
+		if (getBlock(Temp.X+1,Temp.Y,Temp.Z) != 0) {
 			return false;
 		}
-	}
-	
+
+		//Z--
+		if (getBlock(Temp.X,Temp.Y,Temp.Z-1) != 0) {
+			return false;
+		}
+
+		//Z++
+		if (getBlock(Temp.X,Temp.Y,Temp.Z+1) != 0) {
+			return false;
+		}
+
+		//Y--
+		if (TargetBlock.Y >= 1) {
+			if (getBlock(Temp.X,Temp.Y-1,Temp.Z) != 0) {
+				return false;
+			}
+		}
+
+		//Y++
+		if (TargetBlock.Y <= SettingsHandler::getWorldHeight()-1) {
+			if (getBlock(Temp.X,Temp.Y+1,Temp.Z) != 0) {
+				return false;
+			}
+		}
+
 	}catch(Poco::RuntimeException& ex) {
 		cout<<"Exception World::isSurroundedByAir: "<<ex.message()<<"\n";
 	}
@@ -365,26 +365,62 @@ char World::getDimension() {
 
 void World::setMetadata(int X,short Y,int Z,char iMetadata) {
 	try {
-		int iBlockIndex = ChunkMath::toIndex(X,Y,Z);
-		if (iBlockIndex==-1) {
+		auto coord = WorldCoordinateConverter(X,Y,Z);
+		if (coord.second==-1) {
 			cout<<"World::setMetadata invalid coordinates\n";
 			throw Poco::RuntimeException("Invalid coordinates");
 		}
-		if (iMetadata<0 || iMetadata > 16) {
+		if (iMetadata<0 || iMetadata > 15) {
 			cout<<"World::setMetadata invalid metadata\n";
 			throw Poco::RuntimeException("Invalid metadata");
 		}
 
-		MapChunk* p = getChunkByChunkCoordinates(X>>4,Z>>4);
-		int iNibbleIndex = iBlockIndex/2;
-		
-		iMetadata &= 15; //Filter bottom 4 bit 
+		MapChunk* p = getChunkByChunkCoordinates(coord.first.X,coord.first.Z);
+		int iNibbleIndex = coord.second/2;
 
-		if (iBlockIndex%2) { //Set top 4 bits
-			p->Metadata[iNibbleIndex] |= iMetadata<<4;
-		}else{//Set lower 4 bits
-			p->Metadata[iNibbleIndex] |= iMetadata;
-		}	
+
+		p->Metadata[iNibbleIndex] = prepareNibble( 
+												char(coord.second%2),
+												p->Metadata[iNibbleIndex],
+												iMetadata
+												);
+	} catch (Poco::RuntimeException& ex) {
+		ex.rethrow();
+	}
+}
+
+char World::prepareNibble(char iMod,char iOld,char iNew) {
+	iNew &= 15; //Filter bottom 4 bit 
+
+	if (iMod) { //Set top 4 bits
+		iOld |= iNew<<4;
+	}else{      //Set lower 4 bits
+		iOld |= iNew;
+	}	
+	return iOld;
+}
+
+void World::setBlockLight(int X,short Y,int Z,char iLightLevel) {
+	try {
+		auto coord = WorldCoordinateConverter(X,Y,Z);
+		if (coord.second==-1) {
+			cout<<"World::setBlockLight invalid coordinates\n";
+			throw Poco::RuntimeException("Invalid coordinates");
+		}
+		if (iLightLevel<0 || iLightLevel > 15) {
+			cout<<"World::setBlockLight invalid light level\n";
+			throw Poco::RuntimeException("Invalid light level");
+		}
+
+		MapChunk* p = getChunkByChunkCoordinates(coord.first.X,coord.first.Z);
+		int iNibbleIndex = coord.second/2;
+
+
+		p->BlockLight[iNibbleIndex] = prepareNibble( 
+												char(coord.second%2),
+												p->BlockLight[iNibbleIndex],
+												iLightLevel
+												);
 	} catch (Poco::RuntimeException& ex) {
 		ex.rethrow();
 	}
