@@ -18,6 +18,7 @@ GNU General Public License for more details.
 #include "PlayerPool.h"
 #include <Poco/Net/StreamSocket.h>
 #include <Poco/Thread.h>
+#include "PlayerPool.h"
 
 using Poco::Net::StreamSocket;
 using std::cout;
@@ -41,6 +42,11 @@ AcceptThread::~AcceptThread() {
 
 void AcceptThread::run() {
 	Poco::Net::StreamSocket StrmSock;
+	
+	while(!PlayerPool::isReady()) {
+		Thread::sleep(50);
+	}
+
 	_fRunning=true;
 	while(_fRunning) {
 		try {
