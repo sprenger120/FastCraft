@@ -34,6 +34,8 @@ GNU General Public License for more details.
 using Poco::Thread;
 using std::cout;
 
+bool PlayerPool::_fReady = false;
+
 PlayerPool::PlayerPool(PackingThread& rPackingThread):
 _vPlayerThreads(0),
 	_ThreadPool("PlayerThreads",1,SettingsHandler::getPlayerSlotCount()),
@@ -61,7 +63,7 @@ void PlayerPool::run() {
 
 		_ThreadPool.defaultPool().start(*_vPlayerThreads[x]);
 	}
-
+	_fReady=true;
 
 	_fRunning=true;
 	PlayerEventBase* p;
@@ -103,6 +105,7 @@ void PlayerPool::Assign(Poco::Net::StreamSocket& StrmSocket) {
 
 int PlayerPool::getFreeSlot() {
 	for (int x=0;x<=_vPlayerThreads.size()-1;x++) { //Release objects
+		if (_vPlayerThreads[x] == NULL) {continue;}
 		if (!_vPlayerThreads[x]->isAssigned()) {
 			return x;
 		}
@@ -214,4 +217,8 @@ void PlayerPool::shutdown() {
 	}
 
 	cout<<"\tDone\n"<<std::flush;
+}
+
+bool PlayerPool::isReady() {
+	return _fReady;
 }

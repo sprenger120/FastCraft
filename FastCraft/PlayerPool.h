@@ -43,6 +43,7 @@ private:
 	
 	PackingThread& _PackingThread;
 	bool _fRunning;
+	static bool _fReady;
 public:
 	/*
 	* De/constructor
@@ -135,6 +136,12 @@ public:
 	* Sends a message to all connected and spawned players
 	*/
 	void sendMessageToAll(string);
+
+
+	/*
+	* Returns true if PlayerPool is ready
+	*/
+	static bool isReady();
 private:
 	int getFreeSlot(); //Returns -1 if there is no free slot
 };
