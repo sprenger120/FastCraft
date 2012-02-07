@@ -282,7 +282,7 @@ void PlayerThread::Disconnect(string sReason,bool fShow) {
 void PlayerThread::Disconnect(char iLeaveMode) {
 	if (!_fAssigned) { return; }
 
-	if (isSpawned() || iLeaveMode==FC_LEAVE_KICK) {
+	if (isSpawned() || iLeaveMode == FC_LEAVE_KICK) {
 		_ChunkProvider.HandleDisconnect();
 		_Inventory.HandleDisconnect();
 		_PlayerCount--;
@@ -305,7 +305,7 @@ void PlayerThread::Disconnect(char iLeaveMode) {
 
 	_sName.clear();
 	_sIP.clear();
-	if (iLeaveMode!=FC_LEAVE_KICK) {_NetworkWriter.clearQueues();}
+	if (iLeaveMode != FC_LEAVE_KICK) {_NetworkWriter.clearQueues();}
 
 	_dRunnedMeters=0;
 	_Spawned_PlayerInfoList=0;
@@ -314,6 +314,7 @@ void PlayerThread::Disconnect(char iLeaveMode) {
 	_vSpawnedEntities.clear();
 	_fSpawned = false;
 	_fAssigned = false;
+	_fHandshakeSent=false;
 }
 
 
@@ -323,6 +324,7 @@ void PlayerThread::Connect(Poco::Net::StreamSocket& Sock) {
 		Disconnect(FC_LEAVE_OTHER);
 	}
 	_fAssigned=true;
+	
 	_Connection = Sock; 
 	_Connection.setLinger(true,5);
 	_Connection.setNoDelay(false);
@@ -342,8 +344,6 @@ void PlayerThread::Connect(Poco::Net::StreamSocket& Sock) {
 
 	_timerLastBlockPlace.reset();
 	_timerStartedEating.reset();
-
-	_fHandshakeSent=false;
 }
 
 string PlayerThread::generateConnectionHash() {
@@ -502,7 +502,7 @@ void PlayerThread::Packet0_KeepAlive() {
 
 void PlayerThread::Packet1_Login() {
 	int iProtocolVersion = 0;
-	if (!_fHandshakeSent) { Disconnect("Incorrect login order!"); }
+	if (!_fHandshakeSent) { Disconnect("Incorrect login order!",false); }
 
 	try {
 		//Check minecraft version
@@ -543,7 +543,7 @@ void PlayerThread::Packet1_Login() {
 			is>>sErg;
 
 			if (sErg.compare("YES") != 0) {
-				Disconnect("Failed to verify username!");
+				Disconnect("Failed to verify username!",false);
 				return;
 			}
 		}
@@ -610,9 +610,9 @@ void PlayerThread::Packet1_Login() {
 		UpdateHealth(10,10,5.0F); //Health
 
 		//Inventory
-		ItemSlot Item1(1,64);
-		ItemSlot Item2(5,64);
-		ItemSlot Item3(35,64);
+		ItemSlot Item1(std::make_pair(1,0),64);
+		ItemSlot Item2(std::make_pair(351,14),64);
+		ItemSlot Item3(std::make_pair(35,4),64);
 
 		_Inventory.setSlot(38,Item1);
 		_Inventory.setSlot(37,Item2);
@@ -829,11 +829,8 @@ void PlayerThread::Packet16_HoldingChange() {
 		}
 		_Inventory.HandleSelectionChange(iSlot);
 
-		ItemID Item;
-		Item.first = _Inventory.getSlot(36+iSlot).getItemID();
-		Item.second=0;
 
-		PlayerEventBase* p = new PlayerChangeHeldEvent(this,Item,0);
+		PlayerEventBase* p = new PlayerChangeHeldEvent(this,_Inventory.getSlot(36+iSlot).getItem(),0);
 		_pPoolMaster->addEvent(p);
 	} catch(Poco::RuntimeException) {
 		Disconnect(FC_LEAVE_OTHER);
@@ -863,22 +860,20 @@ void PlayerThread::Packet102_WindowClick() {
 	aHeld[4] = _Inventory.getSlot(5);
 
 	_Inventory.HandleWindowClick(this);	
-	//_Inventory.synchronizeInventory();
+	_Inventory.synchronizeInventory();
 
 
-	if (aHeld[0].getItemID() != _Inventory.getSlot(36 + _Inventory.getSlotSelection()).getItemID()) { //Check if held item were changed
-		Item.first = _Inventory.getSlot(36+_Inventory.getSlotSelection()).getItemID();
+	if (aHeld[0].getItem() != _Inventory.getSlot(36 + _Inventory.getSlotSelection()).getItem()) { //Check if held item were changed
 
-		PlayerEventBase* p = new PlayerChangeHeldEvent(this,Item,0);
+		PlayerEventBase* p = new PlayerChangeHeldEvent(this,_Inventory.getSlot(36+_Inventory.getSlotSelection()).getItem(),0);
 		_pPoolMaster->addEvent(p);
 	}
 
 	int s=8;
 	for (int x=1;x<=4;x++) {
-		if (aHeld[x].getItemID() != _Inventory.getSlot(s).getItemID()) {//Check if boots were changed
-			Item.first = _Inventory.getSlot(s).getItemID();
+		if (aHeld[x].getItem() != _Inventory.getSlot(s).getItem()) {//Check if boots were changed
 
-			PlayerEventBase* p = new PlayerChangeHeldEvent(this,Item,x);
+			PlayerEventBase* p = new PlayerChangeHeldEvent(this,_Inventory.getSlot(s).getItem(),x);
 			_pPoolMaster->addEvent(p);
 		}
 		s--;
@@ -935,7 +930,7 @@ void PlayerThread::spawnPlayer(int ID,EntityPlayer& rPlayer) {
 	Out.addByte( (char) rPlayer._Coordinates.Yaw);
 	Out.addByte( (char) rPlayer._Coordinates.Pitch);
 
-	Out.addShort(rPlayer._aHeldItems[0].getItemID());
+	Out.addShort(rPlayer._aHeldItems[0].getItem().first);
 
 	Out.Finalize(FC_QUEUE_HIGH);
 
@@ -944,12 +939,12 @@ void PlayerThread::spawnPlayer(int ID,EntityPlayer& rPlayer) {
 		Out.addByte(0x05);
 		Out.addInt(ID);
 		Out.addShort(x);
-		if (rPlayer._aHeldItems[x].getItemID() == 0) {
+		if (rPlayer._aHeldItems[x].getItem().first == 0) {
 			Out.addShort(-1);
 		}else{
-			Out.addShort(rPlayer._aHeldItems[x].getItemID());
+			Out.addShort(rPlayer._aHeldItems[x].getItem().first);
 		}
-		Out.addShort(0); //Damage/Metadata
+		Out.addShort(rPlayer._aHeldItems[x].getItem().second); //Damage/Metadata
 		Out.Finalize(FC_QUEUE_HIGH);
 	}
 }
@@ -1276,20 +1271,20 @@ void PlayerThread::Packet15_PlayerBlockPlacement() {
 			return;
 		}
 
-		if (ItemInfoStorage::isBlock(InHand.getItemID())) {
-			iBlock = (char)InHand.getItemID();
+		if (ItemInfoStorage::isBlock(InHand.getItem())) {
+			iBlock = (char)InHand.getItem().first;
 		}
 
 		if (blockCoordinates.X==-1 && blockCoordinates.Y == -1 && blockCoordinates.Z == -1 && Direction == -1) { //Special action
 
 			//Special actions are not allowed with blocks
-			if (ItemInfoStorage::isBlock(_Inventory.getSelectedSlot().getItemID())) { 
+			if (ItemInfoStorage::isBlock(_Inventory.getSelectedSlot().getItem())) { 
 				sendEmptyBlock(blockCoordinates);
 				return;
 			}
 
 			//Eating
-			if (ItemInfoStorage::getItem(_Inventory.getSelectedSlot().getItemID()).Eatable) {
+			if (ItemInfoStorage::getItem(_Inventory.getSelectedSlot().getItem()).Eatable) {
 				if (_Flags.isRightClicking()) {
 					if (_iFood==20) {return;}
 
@@ -1308,14 +1303,14 @@ void PlayerThread::Packet15_PlayerBlockPlacement() {
 			}
 
 			//Weapon blocking
-			if (ItemInfoStorage::getItem(_Inventory.getSelectedSlot().getItemID()).Weapon) {
+			if (ItemInfoStorage::getItem(_Inventory.getSelectedSlot().getItem()).Weapon) {
 				_Flags.setRightClicking(true);
 				syncFlagsWithPP();
 			}
 			return; 
 		}else{ //Client wants to place a block
-			if (! ItemInfoStorage::isBlock(_Inventory.getSelectedSlot().getItemID())) { //But it's a item...
-				ItemEntry Entry = ItemInfoStorage::getItem(InHand.getItemID());
+			if (! ItemInfoStorage::isBlock(_Inventory.getSelectedSlot().getItem())) { //But it's a item...
+				ItemEntry Entry = ItemInfoStorage::getItem(InHand.getItem());
 				if (Entry.ConnectedBlock == 0) { 
 					return; 
 				}
@@ -1351,7 +1346,7 @@ void PlayerThread::Packet15_PlayerBlockPlacement() {
 		* Check blockCoordinates
 		*/
 
-		if(ItemInfoStorage::isSolid(InHand.getItemID())) {
+		if(ItemInfoStorage::isSolid(InHand.getItem())) {
 			//Prevent: set a block into your body
 			if ((ClientCoordinats.X == blockCoordinates.X && ClientCoordinats.Z == blockCoordinates.Z)  &&
 				(ClientCoordinats.Y == blockCoordinates.Y || ClientCoordinats.Y+1==blockCoordinates.Y)) { 
@@ -1425,7 +1420,7 @@ void PlayerThread::Packet15_PlayerBlockPlacement() {
 		Out.addByte(blockCoordinates.Y);
 		Out.addInt(blockCoordinates.Z);
 		Out.addByte(iBlock);
-		Out.addByte(0);	
+		Out.addByte((char)InHand.getItem().second);	
 		Out.Finalize(FC_QUEUE_HIGH);
 
 
@@ -1435,12 +1430,10 @@ void PlayerThread::Packet15_PlayerBlockPlacement() {
 
 		//Append to map
 		_pWorld->setBlock(blockCoordinates.X,blockCoordinates.Y,blockCoordinates.Z,iBlock);
+		_pWorld->setMetadata(blockCoordinates.X,blockCoordinates.Y,blockCoordinates.Z,(char)InHand.getItem().second);
 
 		//Event to player pool
-		ItemID Item;
-		Item.first = (short)iBlock;
-		Item.second=0;
-		PlayerEventBase* p = new PlayerSetBlockEvent(this,blockCoordinates,Item);
+		PlayerEventBase* p = new PlayerSetBlockEvent(this,blockCoordinates,InHand.getItem());
 		_pPoolMaster->addEvent(p);
 	} catch(Poco::RuntimeException& ex ) {
 		cout<<"Exception cateched: "<<ex.message()<<"\n";
@@ -1492,13 +1485,6 @@ void PlayerThread::syncFlagsWithPP() {
 
 void PlayerThread::Packet14_Digging() {
 	try {
-
-
-
-
-
-
-
 	} catch(Poco::RuntimeException& ex ) {
 		cout<<"Exception cateched: "<<ex.message()<<"\n";
 		Disconnect(FC_LEAVE_OTHER);

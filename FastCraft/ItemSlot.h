@@ -18,6 +18,7 @@ GNU General Public License for more details.
 #define _FASTCRAFTHEADER_ITEMSLOT	
 #include <vector>
 #include "Structs.h"
+#include "ItemInfoStorage.h"
 
 using std::vector;
 class NetworkIn;
@@ -31,7 +32,7 @@ Note2: Enchantments are not supported right now
 
 class ItemSlot {
 private:
-	short _iItemID;
+	ItemID _iItem;
 	char _iStackSize;
 	short _iUsage;
 	bool _isTool;
@@ -52,7 +53,7 @@ public:
 	@1 : ItemID
 	@2 : Stack size
 	*/
-	ItemSlot(short,char);
+	ItemSlot(ItemID,char);
 
 	/*
 	* Construct as a used slot with extra informations
@@ -62,7 +63,7 @@ public:
 	@2 : Stack size
 	@3 : Usage
 	*/
-	ItemSlot(short,char,short);
+	ItemSlot(ItemID,char,short);
 
 	/*
 	* Construct with a NetworkIO reference and reads slot data from given TCP stream
@@ -108,19 +109,19 @@ public:
 
 
 	/*
-	* Returns item ID
+	* Returns item data
 	*/
-	short getItemID();
+	ItemID getItem();
 
 
 	/*
-	* Sets item ID
+	* Sets item data
 	* will throw Poco::RuntimeException, if item doesn't exists
 
 	Parameter:
-	@1 : new item ID
+	@1 : new item data
 	*/
-	void setItemID(short);
+	void setItem(ItemID);
 
 
 	/*

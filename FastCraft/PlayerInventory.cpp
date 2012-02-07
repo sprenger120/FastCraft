@@ -46,27 +46,21 @@ void PlayerInventory::synchronizeInventory() {
 	Out.addShort(45); //Slots in inventory
 
 	//Build payload
-	short iItemID= 0;
+	ItemID Item;
 	for (int x=0;x<=_vItemStack.size()-1;x++){
-		iItemID = _vItemStack[x].getItemID();
-		if (iItemID == 0) { //Slot is empty
+		Item = _vItemStack[x].getItem();
+
+		if (Item.first==0) { //Slot is empty
 			Out.addShort(-1);
 		}else{
-			Out.addShort(iItemID);
+			Out.addShort(Item.first);
 			Out.addByte(_vItemStack[x].getStackSize());
-			Out.addShort(_vItemStack[x].getUsage());
-
-			if (ItemInfoStorage::isDamageable(iItemID)) { //Item has a usage bar
-				Out.addShort(-1); //enchantments are not supported yet - a java nullpointer exception blocks the enchantment phrasing in client
-
-				/*
-				//Add nbt tag
-				Enchantment Ench;
-				Ench.EnchID = 19;
-				Ench.Level = 1;
-				NBT::writeEnchantment(Ench,_rNetwork);
-				//	std::cout<<"NBT TAGS ARE NOT SUPPORTED YET!!"<<"\n";
-				*/
+			
+			if (ItemInfoStorage::isDamageable(Item)) { //Item has a usage bar
+				Out.addShort(_vItemStack[x].getUsage());
+				Out.addShort(-1);
+			}else {
+				Out.addShort(Item.second);
 			}
 		}
 	}
@@ -140,11 +134,11 @@ void PlayerInventory::HandleWindowClick(PlayerThread* pPlayer) {
 		}
 
 		if (fShift) { //Shift was pressed
-			if (_vItemStack[iSlot].getItemID() == 0) { //Affected slot is empty
+			if (_vItemStack[iSlot].isEmpty()) { //Affected slot is empty
 				return; 
 			}
 
-			char iMaxStackSize = ItemInfoStorage::getMaxStackSize(_vItemStack[iSlot].getItemID());
+			char iMaxStackSize = ItemInfoStorage::getMaxStackSize(_vItemStack[iSlot].getItem());
 			short iFrom=0;
 			short iTo=0;
 
@@ -167,7 +161,7 @@ void PlayerInventory::HandleWindowClick(PlayerThread* pPlayer) {
 
 			//Merge same item stacks
 			for (int x=iFrom;x<=iTo;x++) { 
-				if(_vItemStack[x].getItemID()==_vItemStack[iSlot].getItemID()) {
+				if(_vItemStack[x].getItem()==_vItemStack[iSlot].getItem()) {
 					short iSum = _vItemStack[x].getStackSize() + _vItemStack[iSlot].getStackSize();
 
 					if (iSum < iMaxStackSize) { //Stacks fit in each other
@@ -183,7 +177,7 @@ void PlayerInventory::HandleWindowClick(PlayerThread* pPlayer) {
 			//If there are still some items in the affected slot
 			if (_vItemStack[iSlot].getStackSize() > 0) { //Look for a free slot
 				for (int x=iFrom;x<=iTo;x++) {
-					if(_vItemStack[x].getItemID()==0) {
+					if(_vItemStack[x].isEmpty()) {
 						_vItemStack[x] = _vItemStack[iSlot];
 						_vItemStack[iSlot].clear();
 						break;
@@ -203,8 +197,8 @@ void PlayerInventory::HandleWindowClick(PlayerThread* pPlayer) {
 					_vItemStack[iSlot] = _ItemInHand;
 					_ItemInHand.clear();
 				}else{ //Not empty 
-					if (_vItemStack[iSlot].getItemID() ==  _ItemInHand.getItemID()) { // Merge stacks
-						short iItemMaxStackSize = ItemInfoStorage::getMaxStackSize(_ItemInHand.getItemID());
+					if (_vItemStack[iSlot].getItem() ==  _ItemInHand.getItem()) { // Merge stacks
+						short iItemMaxStackSize = ItemInfoStorage::getMaxStackSize(_ItemInHand.getItem());
 						short iItemSum = _vItemStack[iSlot].getStackSize() +  _ItemInHand.getStackSize();
 
 						if (iItemSum <= iItemMaxStackSize) {//Merge stacks into one slot
@@ -235,16 +229,16 @@ void PlayerInventory::HandleWindowClick(PlayerThread* pPlayer) {
 				_vItemStack[iSlot].setStackSize(iFullStackSize/2);//Interger division - without decimal places
 				_ItemInHand.setStackSize(iFullStackSize/2  +  ( iFullStackSize%2 ? 1 : 0 ) ); //if stack size odd: bigger part is in players hand
 			}else{//item in hand -> put one item into other stack
-				if (_vItemStack[iSlot].getItemID() == 0) { //Put one item into an empty slot
+				if (_vItemStack[iSlot].isEmpty()) { //Put one item into an empty slot
 
-					_vItemStack[iSlot].setItemID(_ItemInHand.getItemID());
+					_vItemStack[iSlot].setItem(_ItemInHand.getItem());
 					_vItemStack[iSlot].setStackSize(1);
 
 					_ItemInHand.setStackSize(_ItemInHand.getStackSize()-1);
 					return;
 				}
-				if (_vItemStack[iSlot].getItemID() ==  _ItemInHand.getItemID()) { //If stack types are equal
-					if(ItemInfoStorage::getMaxStackSize(_vItemStack[iSlot].getItemID()) ==  _vItemStack[iSlot].getStackSize() ) {
+				if (_vItemStack[iSlot].getItem() == _ItemInHand.getItem()) { //If stack types are equal
+					if(ItemInfoStorage::getMaxStackSize(_vItemStack[iSlot].getItem()) ==  _vItemStack[iSlot].getStackSize() ) {
 						return; //max stack size reached
 					}
 
