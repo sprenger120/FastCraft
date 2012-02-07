@@ -101,7 +101,7 @@ void SettingsHandler::readConfiguration(Poco::Path path) {
 	//Server
 	parseNodeString(pDoc,"/settings/Server/Description",_sServerDescription,"Server description not found!");
 	parseNodeString(pDoc,"/settings/Server/motd",_sMOTD,"MOTD not defined!");
-	
+
 	iData = parseNodeInt(pDoc,"/settings/Server/OnlineMode");
 	_fOnlineMode = (iData == -1 || iData != 0 ? true : false); //Activate if node doesnt exists
 
@@ -146,6 +146,12 @@ void SettingsHandler::readConfiguration(Poco::Path path) {
 	double dData;
 	dData = parseNodeDouble(pDoc,"/settings/Player/FlyMod/MaxSpeed");
 	_dMaxSpeed = (dData == -1.0 || dData < 7.5 ? 7.5 : dData);
+
+
+	if (!_fOnlineMode) {	
+		cout<<"***Config WARNING: Server runs in unsafe mode. Hackers can connect without verification!"<<"\n";  	
+		cout<<"***Solution: Set OnlineMode in your fastcraft.properties to true."<<"\n";
+	}
 
 	return;
 }
