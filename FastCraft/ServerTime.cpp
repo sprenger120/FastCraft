@@ -25,7 +25,7 @@ ServerTime::ServerTime() {
 ServerTime::~ServerTime() {
 }
 
-long long ServerTime::_iServerTime = 24000*2;
+long long ServerTime::_iServerTime = 24000L*2L;
 
 void ServerTime::tick() {
 	_iServerTime += 20;
