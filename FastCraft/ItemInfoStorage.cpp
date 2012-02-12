@@ -69,7 +69,8 @@ void ItemInfoStorage::refreshCache() {
 	workDir.list(vFiles);
 
 	if (!vFiles.empty()) {
-		for (int x=0;x<=vFiles.size()-1;x++) {
+		int x,i;
+		for (x=0;x<=vFiles.size()-1;x++) {
 			{
 				_workingDirectory.setFileName(vFiles[x]);
 
@@ -88,6 +89,50 @@ void ItemInfoStorage::refreshCache() {
 				iLoadedDatabases++;
 			}
 		}
+
+		cout<<"Postprocessing entries...";
+		bool fhasSub = false;
+		int index;
+
+		if (!_vItems.empty()) {
+			for (x = 0;x<=_vItems.size()-1;x++) {
+				if (_vItems[x].hasSubItems) {continue;}
+
+				for (i = 1;i<=15;i++) {
+					index = search(_vItems,  std::make_pair(_vItems[x].ID,i));
+					if (index != -1) {
+						fhasSub = true;
+						_vItems[index].hasSubItems = true;
+					} 
+				}
+
+				if (fhasSub) {
+					_vItems[x].hasSubItems = true;
+					fhasSub=false;
+				}
+			}
+		}
+
+		if (!_vBlocks.empty()) {
+			for (x = 0;x<=_vBlocks.size()-1;x++) {
+				if (_vBlocks[x].hasSubBlocks) {continue;}
+
+				for (i = 1;i<=15;i++) {
+					index = search(_vBlocks,std::make_pair(_vBlocks[x].ID,i));
+					if (index != -1) {
+						fhasSub = true;
+						_vBlocks[index].hasSubBlocks = true;
+					} 
+				}
+
+				if (fhasSub) {
+					_vBlocks[x].hasSubBlocks = true;
+					fhasSub=false;
+				}
+			}
+		}
+
+		cout<<" Done.\n";
 	}
 	if (iLoadedDatabases==0) {
 		cout<<"No databases found!"<<"\n";
@@ -96,16 +141,39 @@ void ItemInfoStorage::refreshCache() {
 }
 
 void ItemInfoStorage::loadSingleDatabase(Poco::Data::Session& rDB) {
-	int iItemCount = 0,iBlockCount=0,x;
+	int iItemCount = 0,iBlockCount=0,x=0,i=0,index=0,iCount=0;
 	ItemEntry IEntry;
 	BlockEntry BEntry;
+	ItemID ID;
 
 	rDB<<"SELECT count(`ID`) FROM `Items`",into(iItemCount),now; //Fetch item count
 	rDB<<"SELECT count(`ID`) FROM `Blocks`",into(iBlockCount),now; //Fetch block count
 
+
+	BEntry.Thickness		= FC_IIS_DEFAULT_BLOCK_THICKNESS;
+	BEntry.Height			= FC_IIS_DEFAULT_BLOCK_HEIGHT;
+	BEntry.Stackable		= FC_IIS_DEFAULT_BLOCK_STACKABLE;
+	BEntry.CanFloat			= FC_IIS_DEFAULT_BLOCK_CANFLOAT;
+	BEntry.ConnectedItem	= FC_IIS_DEFAULT_BLOCK_CONNECTEDITEM;
+	BEntry.BlastResistance  = 1.0F;
+	BEntry.hasSubBlocks		= false;
+	BEntry.noLoot			= false;
+	BEntry.Placeable		= true;
+
+	IEntry.Eatable			= FC_IIS_DEFAULT_ITEM_EATABLE;
+	IEntry.ConnectedBlock	= FC_IIS_DEFAULT_ITEM_CONNECTEDBLOCK;
+	IEntry.Weapon			= FC_IIS_DEFAULT_ITEM_WEAPON;
+	IEntry.Damage			= FC_IIS_DEFAULT_ITEM_WEAPON_DAMAGE;
+	IEntry.FoodValue		= FC_IIS_DEFAULT_ITEM_FOODVALUE;
+	IEntry.hasSubItems		= false;
+
+	/*
+	* Load Item/Blocks
+	*/
+	cout<<"\t-Reading block IDs...\n";
 	if (iBlockCount>0) {
 		for (x=0;x<=iBlockCount-1;x++) {
-			rDB<<"SELECT ID,SubID,Name,MaxStackSize,SelfLightLevel,Flammable,Solid,NeededTool,ToolLevel,Thickness,Height,Stackable,NeedWallOrFloorConnection FROM Blocks LIMIT :x,1;",
+			rDB<<"SELECT ID,SubID,Name,MaxStackSize,SelfLightLevel,Flammable,Solid,NeededTool,ToolLevel FROM Blocks LIMIT :x,1;",
 				into(BEntry.ID),
 				into(BEntry.SubID),
 				into(BEntry.Name),
@@ -115,26 +183,20 @@ void ItemInfoStorage::loadSingleDatabase(Poco::Data::Session& rDB) {
 				into(BEntry.Solid),
 				into(BEntry.NeededTool),
 				into(BEntry.ToolLevel),
-				into(BEntry.Thickness),
-				into(BEntry.Height),
-				into(BEntry.Stackable),
-				into(BEntry.NeedWallOrFloorConnection),
 				use(x),
 				now;
-
-			try {
-				isValid(BEntry);
-			}catch(Poco::RuntimeException& ex) {
-				cout<<"Block #"<<int(BEntry.ID)<<":"<<int(BEntry.SubID)<<" is invalid ("<<ex.message()<<")"<<"\n";
+			if (search(_vBlocks, std::make_pair(BEntry.ID,BEntry.SubID)) != -1) {
+				cout<<"\t\tBlockID "<<int(BEntry.ID)<<":"<<int(BEntry.SubID)<<" already used\n";
 				continue;
 			}
 			_vBlocks.push_back(BEntry);
 		}
 	}
 
+	cout<<"\t-Reading item IDs...\n";
 	if (iItemCount>0) {
 		for (x=0;x<=iItemCount-1;x++) {
-			rDB<<"SELECT ID,SubID,Name,Damageable,Enchantable,Durability,MaxStackSize,Eatable,ConnectedBlock,Weapon FROM Items LIMIT :x,1;",
+			rDB<<"SELECT ID,SubID,Name,Damageable,Enchantable,Durability,MaxStackSize FROM Items LIMIT :x,1;",
 				into(IEntry.ID),
 				into(IEntry.SubID),
 				into(IEntry.Name),
@@ -142,19 +204,248 @@ void ItemInfoStorage::loadSingleDatabase(Poco::Data::Session& rDB) {
 				into(IEntry.Enchantable),
 				into(IEntry.Durability),
 				into(IEntry.MaxStackSize),
-				into(IEntry.Eatable),
-				into(IEntry.ConnectedBlock),
-				into(IEntry.Weapon),
 				use(x),
 				now;
-
-			try {
-				isValid(IEntry);
-			}catch(Poco::RuntimeException& ex) {
-				cout<<"Item #"<<IEntry.ID<<":"<<int(IEntry.SubID)<<" is invalid ("<<ex.message()<<")"<<"\n";
+			if (search(_vItems, std::make_pair(IEntry.ID,IEntry.SubID)) != -1) {
+				cout<<"\t\tItemID "<<IEntry.ID<<":"<<IEntry.SubID<<" already used\n";
 				continue;
 			}
 			_vItems.push_back(IEntry);
+		}
+	}
+
+
+	/*
+	* Load special per block/item properties
+	*/
+	cout<<"\t-Loading per block/item properties...\n";
+
+
+	//Connected Block
+	cout<<"\t\t*Reading connected blocks...\n";
+	rDB<<"SELECT count(`ID`) FROM `ConnectedBlock`",into(iCount),now;
+	if (iCount > 0) {
+		ItemID ConnectedBlock;
+
+		for (x=0;x<=iCount-1;x++) {
+			rDB<<"SELECT ID,SubID,ConnectedBlockID,ConnectedBlockSubID FROM ConnectedBlock LIMIT :x,1;",
+				into(ID.first),
+				into(ID.second),
+				into(ConnectedBlock.first),
+				into(ConnectedBlock.second),
+				use(x),
+				now;
+
+
+			index = search(_vItems,ID);
+
+			if (index==-1) {
+				cout<<"\t\t\tItem "<<ID.first<<":"<<int(ID.second)<<" not found!\n";
+			}else{
+				_vItems[index].ConnectedBlock = ConnectedBlock;
+			}
+		}
+	}
+	iCount=0;
+
+
+	//Connected Item
+	cout<<"\t\t*Reading connected items...\n";
+	rDB<<"SELECT count(`ID`) FROM `ConnectedItem`",into(iCount),now;
+	if (iCount > 0) {
+		ItemID ConnectedItem;
+
+		for (x=0;x<=iCount-1;x++) {
+			rDB<<"SELECT ID,SubID,ConnectedItemID,ConnectedItemSubID FROM ConnectedItem LIMIT :x,1;",
+				into(ID.first),
+				into(ID.second),
+				into(ConnectedItem.first),
+				into(ConnectedItem.second),
+				use(x),
+				now;
+
+			index = search(_vBlocks,ID);
+
+			if (index == -1) {
+				cout<<"\t\t\tBlock "<<ID.first<<":"<<int(ID.second)<<" not found!\n";
+			}else{
+				if (ConnectedItem.first == 0) {_vBlocks[index].noLoot = true; }
+				_vBlocks[index].ConnectedItem = ConnectedItem;
+			}
+		}
+	}
+	iCount=0;
+
+
+	//Eatable
+	cout<<"\t\t*Reading eatable flags...\n";
+	rDB<<"SELECT count(`ID`) FROM `Eatable`",into(iCount),now; 
+	if (iCount > 0) {
+		char iFoodValue;
+		for (x=0;x<=iCount-1;x++) {
+			rDB<<"SELECT ID,SubID,FoodValue FROM Eatable LIMIT :x,1;",
+				into(ID.first),
+				into(ID.second),
+				into(iFoodValue),
+				use(x),
+				now;
+
+			index = search(_vItems,ID);
+
+			if (index == -1) {
+				cout<<"\t\t\tItem "<<ID.first<<":"<<int(ID.second)<<" not found!\n";
+			}else{
+				_vItems[index].Eatable = true;
+				_vItems[index].FoodValue = iFoodValue;
+			}
+		}
+	}
+	iCount=0;
+
+
+	//NoFloating
+	cout<<"\t\t*Reading noFloating flags...\n";
+	rDB<<"SELECT count(`ID`) FROM `NoFloating`",into(iCount),now;
+	if (iCount > 0) {
+		for (x=0;x<=iCount-1;x++) {
+			rDB<<"SELECT ID,SubID FROM NoFloating LIMIT :x,1;",
+				into(ID.first),
+				into(ID.second),
+				use(x),
+				now;
+
+			index = search(_vBlocks,ID);
+
+			if (index == -1) {
+				cout<<"\t\t\tBlock "<<ID.first<<":"<<int(ID.second)<<" not found!\n";
+			}else{
+				_vBlocks[index].CanFloat = false;
+			}
+		}
+	}
+	iCount=0;
+
+
+	//Not stackable
+	cout<<"\t\t*Reading notStackable flags...\n";
+	rDB<<"SELECT count(`ID`) FROM `NotStackable`",into(iCount),now;
+	if (iCount > 0) {
+		for (x=0;x<=iCount-1;x++) {
+			rDB<<"SELECT ID,SubID FROM NotStackable LIMIT :x,1;",
+				into(ID.first),
+				into(ID.second),
+				use(x),
+				now;
+
+			index = search(_vBlocks,ID);
+
+			if (index == -1) {
+				cout<<"\t\t\tBlock "<<ID.first<<":"<<int(ID.second)<<" not found!\n";
+			}else{
+				_vBlocks[index].Stackable = false;
+			}
+		}
+	}
+	iCount=0;
+
+
+	//Special scale
+	cout<<"\t\t*Reading special scales...\n";
+	rDB<<"SELECT count(`ID`) FROM `SpecialScale`",into(iCount),now;
+	if (iCount > 0) {
+		float Height,Thickness;
+
+		for (x=0;x<=iCount-1;x++) {
+			rDB<<"SELECT ID,SubID,Height,Thickness FROM SpecialScale LIMIT :x,1;",
+				into(ID.first),
+				into(ID.second),
+				into(Height),
+				into(Thickness),
+				use(x),
+				now;
+
+			index = search(_vBlocks,ID);
+
+			if (index == -1) {
+				cout<<"\t\t\tBlock "<<ID.first<<":"<<int(ID.second)<<" not found!\n";
+			}else{
+				_vBlocks[index].Height = Height;
+				_vBlocks[index].Thickness = Thickness;
+			}
+		}
+	}
+	iCount=0;
+
+
+	//Weapons
+	cout<<"\t\t*Reading weapon flags...\n";
+	rDB<<"SELECT count(`ID`) FROM `Weapons`",into(iCount),now;
+	if (iCount > 0) {
+		char Damage;
+		ID.second = 0;
+
+		for (x=0;x<=iCount-1;x++) {
+			rDB<<"SELECT ID,Damage FROM Weapons LIMIT :x,1;",
+				into(ID.first),
+				into(Damage),
+				use(x),
+				now;
+
+			index = search(_vItems,ID);
+
+			if (index == -1) {
+				cout<<"\t\t\tItem "<<ID.first<<" not found!\n";
+			}else{
+				_vItems[index].Weapon = true;
+				_vItems[index].Damage = Damage;
+			}
+		}
+	}
+	iCount=0;
+
+
+	//Not placeable
+	cout<<"\t\t*Reading notPlaceable flags...\n";
+	rDB<<"SELECT count(`ID`) FROM `NotPlaceable`",into(iCount),now;
+	if (iCount > 0) {
+		for (x=0;x<=iCount-1;x++) {
+			rDB<<"SELECT ID,SubID FROM NotPlaceable LIMIT :x,1;",
+				into(ID.first),
+				into(ID.second),
+				use(x),
+				now;
+
+			index = search(_vBlocks,ID);
+
+			if (index == -1) {
+				cout<<"\t\t\tBlock "<<ID.first<<":"<<int(ID.second)<<" not found!\n";
+			}else{
+				_vBlocks[index].Placeable = false;
+			}
+		}
+	}
+	iCount=0;
+
+	cout<<"\t-Checking data...\n";
+	if (!_vBlocks.empty()) {
+		for (x = _vBlocks.size() -1; x > 0; x--) {
+			try {
+				isValid(_vBlocks[x]);
+			}catch(Poco::RuntimeException& ex) {
+				cout<<"Block #"<<int(_vBlocks[x].ID)<<":"<<int(_vBlocks[x].SubID)<<" is invalid ("<<ex.message()<<")\n";
+				_vBlocks.erase (_vBlocks.begin() + x);
+			}
+		}
+	}
+
+	if (!_vItems.empty()) {
+		for (x = _vItems.size() -1; x > 0; x--) {
+			try {
+				isValid(_vItems[x]);
+			}catch(Poco::RuntimeException& ex) {
+				cout<<"Item #"<<_vItems[x].ID<<":"<<int(_vItems[x].SubID)<<" is invalid ("<<ex.message()<<")\n";
+				_vItems.erase (_vItems.begin() + x);
+			}
 		}
 	}
 }
@@ -209,51 +500,21 @@ string ItemInfoStorage::getName(short ID) {
 
 
 bool ItemInfoStorage::isRegistered(ItemID ID) {
-	int x;
-
-	//Loop through blocks
-	if (!_vBlocks.empty() && isBlock(ID)) {
-		for (x=0;x<=_vBlocks.size()-1;x++) {
-			if (_vBlocks[x].ID == ID.first && _vBlocks[x].SubID == ID.second) {
-				return true;
-			}
-		}
+	if (search(_vBlocks, ID) == -1 && 
+		search(_vItems, ID) == -1) {
+		return false;
+	}else{
+		return true;
 	}
-
-	//Loop through items
-	if (!_vItems.empty() && !isBlock(ID)) {
-		for (x=0;x<=_vItems.size()-1;x++) {
-			if (_vItems[x].ID == ID.first && _vItems[x].SubID == ID.second) {
-				return true;
-			}
-		}
-	}
-
-	return false;
 }
 
 bool ItemInfoStorage::isRegistered(short ID) {
-	int x;
-
-	//Loop through blocks
-	if (!_vBlocks.empty() && isBlock(ID)) {
-		for (x=0;x<=_vBlocks.size()-1;x++) {
-			if (_vBlocks[x].ID == ID  && _vBlocks[x].SubID == 0) {
-				return true;
-			}
-		}
+	if (search(_vBlocks,  std::make_pair(ID,0)) == -1 && 
+		search(_vItems,  std::make_pair(ID,0)) == -1) {
+		return false;
+	}else{
+		return true;
 	}
-
-	//Loop through items
-	if (!_vItems.empty() && !isBlock(ID)) {
-		for (x=0;x<=_vItems.size()-1;x++) {
-			if (_vItems[x].ID == ID && _vItems[x].SubID == 0) {
-				return true;
-			}
-		}
-	}
-
-	return false;
 }
 
 ItemID ItemInfoStorage::getIDbyName(string Name) {
@@ -306,49 +567,48 @@ BlockEntry ItemInfoStorage::getBlock(ItemID ID) {
 	if (_vBlocks.empty()) { throw Poco::RuntimeException("Not found!"); }
 	if (!isBlock(ID)) { throw Poco::RuntimeException("Not a block!"); }
 
-	for (int x=0;x<=_vBlocks.size()-1;x++) {
-		if (_vBlocks[x].ID == ID.first && _vBlocks[x].SubID == ID.second) {
-			return _vBlocks[x];
-		}
+	int index = search(_vBlocks,ID);
+	if (index == -1) {
+		throw Poco::RuntimeException("Not found!");
 	}
 
-	throw Poco::RuntimeException("Not found!");
+	return _vBlocks[index];	
 }
 
 BlockEntry ItemInfoStorage::getBlock(short iID) {
 	if (_vBlocks.empty()) { throw Poco::RuntimeException("Not found!"); }
 	if (!isBlock(iID)) { throw Poco::RuntimeException("Not a block!"); }
 
-	for (int x=0;x<=_vBlocks.size()-1;x++) {
-		if (_vBlocks[x].ID == iID && _vBlocks[x].SubID == 0) {
-			return _vBlocks[x];
-		}
+	int index = search(_vBlocks, std::make_pair(iID,0));
+	if (index == -1) {
+		throw Poco::RuntimeException("Not found!");
 	}
-	throw Poco::RuntimeException("Not found!");
+
+	return _vBlocks[index];	
 }
 
 ItemEntry ItemInfoStorage::getItem(ItemID ID) {
 	if (_vItems.empty()) { throw Poco::RuntimeException("Not found!"); }
 	if (isBlock(ID)) { throw Poco::RuntimeException("Not a item!"); }
 
-	for (int x=0;x<=_vItems.size()-1;x++) {
-		if (_vItems[x].ID == ID.first && _vItems[x].SubID == ID.second) {
-			return _vItems[x];
-		}
+	int index = search(_vItems, ID);
+	if (index == -1) {
+		throw Poco::RuntimeException("Not found!");
 	}
-	throw Poco::RuntimeException("Not found!");
+
+	return _vItems[index];	
 }
 
 ItemEntry ItemInfoStorage::getItem(short iID) {
 	if (_vItems.empty()) { throw Poco::RuntimeException("Not found!"); }
 	if (isBlock(iID)) { throw Poco::RuntimeException("Not a item!"); }
 
-	for (int x=0;x<=_vItems.size()-1;x++) {
-		if (_vItems[x].ID == iID && _vItems[x].SubID == 0) {
-			return _vItems[x];
-		}
+	int index = search(_vItems, std::make_pair(iID,0));
+	if (index == -1) {
+		throw Poco::RuntimeException("Not found!");
 	}
-	throw Poco::RuntimeException("Not found!");
+
+	return _vItems[index];	
 }
 
 bool ItemInfoStorage::isDamageable(ItemID ID) {
@@ -550,39 +810,21 @@ void ItemInfoStorage::isValid(ItemEntry Entry) {
 		throw Poco::RuntimeException("Name is empty");
 	}
 
+	if (Entry.Damage <= 0) {
+		throw Poco::RuntimeException("Illegal damage");
+	}
 
-	if (!_vItems.empty()) {
-		bool found = false;
-		int x,i;
+	if (Entry.FoodValue < 0) { 
+		throw Poco::RuntimeException("Invalid food value");
+	}
 
-		//Check ConnectedBlock existance
-		if (Entry.ConnectedBlock != 0) {
-			if (!_vBlocks.empty()) {
-				for (x=0;x<=_vBlocks.size()-1;x++) {
-					if (_vBlocks[x].ID == Entry.ConnectedBlock) {
-						found=true;
-						break;
-					}
-				}
-			}
-			if (!found){
-				throw Poco::RuntimeException("Connected Block doesn't exist");
-			}
-		}
-	
+	if (!Entry.Eatable && Entry.FoodValue != 0) {
+		throw Poco::RuntimeException("Non eatable things can't have food value");
+	}
 
-		//Check ID & name availability
-		for (x=0;x<=_vItems.size()-1;x++) {
-			if (_vItems[x].ID == Entry.ID) { //ID is already taken.. lets check SubID
-				for (i=0;i<=_vItems.size()-1;i++) {
-					if (_vItems[i].ID == Entry.ID && _vItems[i].SubID == Entry.SubID) {
-						throw Poco::RuntimeException("ID already taken");
-					}
-				}
-			}
-			if ( Poco::icompare(_vItems[x].Name,Entry.Name) == 0) {
-				throw Poco::RuntimeException("Name already taken");
-			}
+	if(Entry.ConnectedBlock.first != -1 && Entry.ConnectedBlock.second != -1) {
+		if (search(_vBlocks,Entry.ConnectedBlock) == -1) {
+			throw Poco::RuntimeException("Connected block doesn't exist");
 		}
 	}
 }
@@ -608,7 +850,6 @@ void ItemInfoStorage::isValid(BlockEntry Entry) {
 		throw Poco::RuntimeException("Illegal SelfLightLevel");
 	}
 
-	//ToDo: tool check
 
 	if (Entry.Thickness < 0.0F || Entry.Thickness > 1.0F) {
 		throw Poco::RuntimeException("Illegal thickness");
@@ -618,20 +859,41 @@ void ItemInfoStorage::isValid(BlockEntry Entry) {
 		throw Poco::RuntimeException("Illegal height");
 	}
 
-	//Check ID & name availability
-	if (!_vItems.empty()) {
-		int x,i;
-		for (x=0;x<=_vItems.size()-1;x++) {
-			if (_vItems[x].ID == Entry.ID) { //ID is already taken.. lets check SubID
-				for (i=0;i<=_vItems.size()-1;i++) {
-					if (_vItems[i].ID == Entry.ID && _vItems[i].SubID == Entry.SubID) {
-						throw Poco::RuntimeException("ID already taken");
-					}
-				}
-			}
-			if ( Poco::icompare(_vItems[x].Name,Entry.Name) == 0) {
-				throw Poco::RuntimeException("Name already taken");
+	if (Entry.noLoot) {
+		if (Entry.ConnectedItem.first != 0) {
+			throw Poco::RuntimeException("noLoot flag set, connected item != 0");
+		}
+	}else{
+		if (Entry.ConnectedItem.first != -1 && Entry.ConnectedItem.second != -1) {
+			if (search(_vItems,Entry.ConnectedItem) == -1) {
+				throw Poco::RuntimeException("Connected item doesn't exist");
 			}
 		}
 	}
+}
+
+int ItemInfoStorage::search(vector<BlockEntry>& vec,ItemID id) {
+	if (vec.empty()) {return -1;}
+	if (id.first > 255) {return -1;}
+	if (id.second < 0 || id.second > 15) {return -1;}
+
+	for (int x=0;x<=vec.size()-1;x++) {
+		if (  vec[x].ID == id.first && vec[x].SubID == id.second) {
+			return x;
+		}
+	}
+	return -1;
+}
+
+int ItemInfoStorage::search(vector<ItemEntry>& vec,ItemID id) {
+	if (vec.empty()) {return -1;}
+	if (id.first < 256) {return -1;}
+	if (id.second < 0 || id.second > 15) {return -1;}
+
+	for (int x=0;x<=vec.size()-1;x++) {
+		if (vec[x].ID == id.first && vec[x].SubID == id.second) {
+			return x;
+		}
+	}
+	return -1;
 }

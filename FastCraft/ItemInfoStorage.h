@@ -32,31 +32,62 @@ struct ItemEntry {
 	short ID;
 	char SubID;
 	string Name;
+	char MaxStackSize;
+
 	bool Damageable;
 	bool Enchantable;
 	short Durability;
-	char MaxStackSize;
+	
 	bool Eatable;
-	char ConnectedBlock;
+	char FoodValue;
+
 	bool Weapon;
+	char Damage;
+
+	bool hasSubItems;
+
+	ItemID ConnectedBlock;
 };
 
 struct BlockEntry {
 	unsigned char ID;
 	char SubID;
 	string Name;
-	float BlastResistance;
 	char MaxStackSize;
-	char SelfLightLevel;
+
 	bool Flammable;
 	bool Solid;
+	float BlastResistance;
+	char SelfLightLevel;
+	
 	char NeededTool;
 	char ToolLevel;
+
 	float Thickness;
 	float Height;
+
 	bool Stackable;
-	bool NeedWallOrFloorConnection;
+	bool CanFloat;
+	bool Placeable;
+	bool hasSubBlocks;
+	bool noLoot;
+
+	ItemID ConnectedItem;
 };
+
+
+#define FC_IIS_DEFAULT_BLOCK_THICKNESS				1.0F 
+#define FC_IIS_DEFAULT_BLOCK_HEIGHT					1.0F
+#define FC_IIS_DEFAULT_BLOCK_STACKABLE				true   /* You can place a block of same type above or under */
+#define FC_IIS_DEFAULT_BLOCK_CANFLOAT				true   /* The Block can float in the air without */
+#define FC_IIS_DEFAULT_BLOCK_CONNECTEDITEM			std::make_pair(-1,-1)  /* if this field is set to another value as -1, the given ITEM will pop off on breaking*/
+
+#define FC_IIS_DEFAULT_ITEM_EATABLE					false 
+#define FC_IIS_DEFAULT_ITEM_CONNECTEDBLOCK			std::make_pair(-1,-1)  /* if this field is set to another value as -1, the given BLOCK will placed*/
+#define FC_IIS_DEFAULT_ITEM_WEAPON					false 
+#define FC_IIS_DEFAULT_ITEM_WEAPON_DAMAGE			1
+#define FC_IIS_DEFAULT_ITEM_FOODVALUE				0
+
 
 class ItemInfoStorage {
 private:
@@ -233,5 +264,8 @@ private:
 	static void isValid(BlockEntry);
 
 	static void loadSingleDatabase(Poco::Data::Session&);
+
+	static int search(vector<BlockEntry>&,ItemID);
+	static int search(vector<ItemEntry>&,ItemID);
 };
 #endif
