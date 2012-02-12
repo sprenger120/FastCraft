@@ -68,10 +68,12 @@ void PlayerPool::run() {
 	_fRunning=true;
 	PlayerEventBase* p;
 
-	while (_fRunning) {
-		while(_qEvents.empty()) {
+	while (_fRunning) {		
+		if (_qEvents.empty()) {
 			Thread::sleep(50);
+			continue;
 		}
+
 		try {
 			p = _qEvents.front();
 			p->Execute(_vPlayerThreads,this);
@@ -82,6 +84,7 @@ void PlayerPool::run() {
 			_qEvents.pop();
 		}
 	}
+	_fRunning=true;
 }
 
 

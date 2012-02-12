@@ -54,7 +54,7 @@ _q()
 
 template <typename T>
 inline ThreadSafeQueue<T>::~ThreadSafeQueue() {
-	clear();
+	if (!empty()) {clear();}
 }
 
 
