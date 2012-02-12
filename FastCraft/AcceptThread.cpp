@@ -18,6 +18,7 @@ GNU General Public License for more details.
 #include "PlayerPool.h"
 #include <Poco/Net/StreamSocket.h>
 #include <Poco/Thread.h>
+#include <Poco/Net/NetException.h>
 #include "PlayerPool.h"
 
 using Poco::Net::StreamSocket;
@@ -27,12 +28,18 @@ using Poco::Thread;
 AcceptThread::AcceptThread(PlayerPool& rPlayerPool):
 _rPlayerPool(rPlayerPool),
 	_ServerFullMsg(""),
-	_ServerSock(SettingsHandler::getPort())
+	_ServerSock()
 {
 	_ServerFullMsg.append<unsigned char>(1,0xFF);
 	NetworkOut::addString(_ServerFullMsg,"Server full!");
 
-	_ServerSock.setBlocking(true);
+	try {
+		_ServerSock = Poco::Net::ServerSocket(SettingsHandler::getPort());
+		_ServerSock.setBlocking(true);
+	}catch(Poco::IOException& ex) {
+		ex.rethrow();
+	}
+
 	_fRunning=false;
 }
 
@@ -42,7 +49,7 @@ AcceptThread::~AcceptThread() {
 
 void AcceptThread::run() {
 	Poco::Net::StreamSocket StrmSock;
-	
+
 	while(!PlayerPool::isReady()) {
 		Thread::sleep(50);
 	}
@@ -62,17 +69,18 @@ void AcceptThread::run() {
 			}
 
 			_rPlayerPool.Assign(StrmSock);
-		}catch(Poco::IOException) {
-			_fRunning=true;
+		}catch(...) { /* Only happen if socket become closed */
+			_fRunning=true; //ok shutdown(), I'm ready
 			return;
 		}
 	}
+
 }
 
 void AcceptThread::shutdown() {
 	if (!_fRunning) {return;}
-	_ServerSock.close();
 	_fRunning=false;
+	_ServerSock.close();
 	while(!_fRunning){ //Wait till _fRunning turns true
 	}
 	_fRunning=false;

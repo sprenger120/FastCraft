@@ -28,8 +28,8 @@ class AcceptThread : public Poco::Runnable {
 private:
 	string _sIP;
 	string _ServerFullMsg;
-	Poco::Net::ServerSocket _ServerSock;
 	PlayerPool& _rPlayerPool;
+	Poco::Net::ServerSocket _ServerSock;
 	bool _fRunning;
 public:
 	//De- /constructor

@@ -88,7 +88,16 @@ int main(int argc, char *argv[]) {
 
 	PackingThread Packer;
 	PlayerPool PPool(Packer);	
-	AcceptThread Acceptor(PPool);
+	AcceptThread* pAcceptor;
+
+	try {
+		pAcceptor = new AcceptThread(PPool);
+	}catch(Poco::IOException) {
+		cout<<"\n***ERROR: Unable to bind 0.0.0.0:"<<SettingsHandler::getPort()<<"\n"
+			<<"Perhaps another Minecraft server is running on this port.";
+		Thread::sleep(3000);
+		return 1;
+	}
 	
 	
 	/*
@@ -105,7 +114,7 @@ int main(int argc, char *argv[]) {
 	*/
 	threadPackingThread.start(Packer);
 	threadPlayerPool.start(PPool);
-	threadAcceptThread.start(Acceptor);
+	threadAcceptThread.start(*pAcceptor);
 	
 
 	//Init Done!
@@ -115,12 +124,13 @@ int main(int argc, char *argv[]) {
 	while(1) {
 		Thread::sleep(1000);
 		ServerTime::tick();
+		cout<<std::flush;
 	}
 
 	cout<<"Shutting down server!\n\n";
 
 	cout<<"Stopping Accept thread...\n";
-	Acceptor.shutdown();
+	pAcceptor->shutdown();
 	cout<<"Done.\n";
 
 	cout<<"Stopping ChunkPacking thread...\n";
