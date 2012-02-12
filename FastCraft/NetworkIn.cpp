@@ -170,7 +170,7 @@ void NetworkIn::read(int iLenght) {
 		if (iReadedLenght != iLenght) {
 			iUnderflowCount++;
 			if (iUnderflowCount > 10) {
-				throw Poco::RuntimeException("Connection too slow");
+				throw Poco::RuntimeException("TCP Underflow");
 			}
 			fUnderflow = true;
 		}
