@@ -425,3 +425,30 @@ void World::setBlockLight(int X,short Y,int Z,char iLightLevel) {
 		ex.rethrow();
 	}
 }
+
+char World::getMetadata(int X,short Y,int Z) {
+	try {
+		auto coord = WorldCoordinateConverter(X,Y,Z);
+		if (coord.second==-1) {
+			cout<<"World::setBlockLight invalid coordinates\n";
+			throw Poco::RuntimeException("Invalid coordinates");
+		}
+
+		MapChunk* p = getChunkByChunkCoordinates(coord.first.X,coord.first.Z);
+		int iNibbleIndex = coord.second/2;
+
+		char iData = p->BlockLight[iNibbleIndex];
+		
+		if (coord.second%2) {
+			 return (iData>>4) & 15;
+		}else{
+			 return iData & 15;
+		}
+	} catch (Poco::RuntimeException& ex) {
+		ex.rethrow();
+	}
+}
+
+char World::getMetadata(BlockCoordinates Coords) {
+	return getMetadata(Coords.X,Coords.Y,Coords.Z);
+}

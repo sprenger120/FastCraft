@@ -199,6 +199,18 @@ public:
 	@4 : new light level
 	*/
 	void setBlockLight(int,short,int,char);
+
+
+	/*
+	* Returns metadata of specific block
+
+	Paramter:
+	@1 : X in WorldCoordinates
+	@2 : Y in WorldCoordinates
+	@3 : Z in WorldCoordinates
+	*/
+	char getMetadata(int,short,int);
+	char getMetadata(BlockCoordinates);
 private:
 	void generateChunks(int,int,int,int);
 	MapChunk* generateChunk(int,int);
