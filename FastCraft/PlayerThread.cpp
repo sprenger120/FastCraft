@@ -72,7 +72,8 @@ _sName(""),
 	_timespanPositionCheck(&_iThreadTicks,FC_INTERVAL_CHECKPOSITION),
 
 	_timerLastBlockPlace(&_iThreadTicks,0L),
-	_timerStartedEating(&_iThreadTicks,0L)
+	_timerStartedEating(&_iThreadTicks,0L),
+	_timerStartedDigging(&_iThreadTicks,0L)
 {
 	_Coordinates.OnGround = false;
 	_Coordinates.Pitch = 0.0F;
@@ -206,10 +207,9 @@ void PlayerThread::run() {
 			case 0xd: 
 				Packet13_PosAndLook();
 				break;
-				/*case 0xe:
+			case 0xe:
 				Packet14_Digging();
 				break;
-				*/
 			case 0xf: 
 				Packet15_PlayerBlockPlacement();
 				break;
@@ -324,7 +324,7 @@ void PlayerThread::Connect(Poco::Net::StreamSocket& Sock) {
 		Disconnect(FC_LEAVE_OTHER);
 	}
 	_fAssigned=true;
-	
+
 	_Connection = Sock; 
 	_Connection.setLinger(true,5);
 	_Connection.setNoDelay(false);
@@ -344,6 +344,7 @@ void PlayerThread::Connect(Poco::Net::StreamSocket& Sock) {
 
 	_timerLastBlockPlace.reset();
 	_timerStartedEating.reset();
+	_timerStartedDigging.reset();
 }
 
 string PlayerThread::generateConnectionHash() {
@@ -352,8 +353,8 @@ string PlayerThread::generateConnectionHash() {
 
 
 	while ((iVal&0xFFFFFFFFFFFFFF00) == 0) {
-	iVal = ((((long long)_Rand.next())<<32) & 0xFFFFFFFF00000000)  |  
-		(((long long)_Rand.next()) & 0x00000000FFFFFFFF);
+		iVal = ((((long long)_Rand.next())<<32) & 0xFFFFFFFF00000000)  |  
+			(((long long)_Rand.next()) & 0x00000000FFFFFFFF);
 	}
 
 	StringStream<<std::hex<<iVal;
@@ -602,7 +603,6 @@ void PlayerThread::Packet1_Login() {
 		//Time
 		sendTime();
 
-
 		_ChunkProvider.HandleNewPlayer();
 		_ChunkProvider.HandleMovement(_Coordinates); //Pre Chunks
 
@@ -610,8 +610,8 @@ void PlayerThread::Packet1_Login() {
 		UpdateHealth(10,10,5.0F); //Health
 
 		//Inventory
-		ItemSlot Item1(std::make_pair(1,0),64);
-		ItemSlot Item2(std::make_pair(351,14),64);
+		ItemSlot Item1(std::make_pair(260,0),64);
+		ItemSlot Item2(std::make_pair(338,14),64);
 		ItemSlot Item3(std::make_pair(35,4),64);
 
 		_Inventory.setSlot(38,Item1);
@@ -1084,7 +1084,7 @@ void PlayerThread::Packet18_Animation() {
 		if (iEID != _iEntityID){
 			Disconnect("You can't use other EntityID's as yours"); 
 		}
-		
+
 
 		PlayerEventBase* p = new PlayerAnimationEvent(this,iAnimID);
 		_pPoolMaster->addEvent(p);
@@ -1264,22 +1264,23 @@ void PlayerThread::Packet15_PlayerBlockPlacement() {
 		}
 		_timerLastBlockPlace.reset();
 
-		ItemSlot & InHand = _Inventory.getSelectedSlot();
-		char iBlock = 0;
+		_Inventory.getSelectedSlot().removeUnnecessarySubID();
+		ItemSlot& InHand = _Inventory.getSelectedSlot();
+		ItemID iSelectedBlock = std::make_pair(0,0);
 		if (InHand.isEmpty()) {
 			InHand.clear();
 			return;
 		}
 
 		if (ItemInfoStorage::isBlock(InHand.getItem())) {
-			iBlock = (char)InHand.getItem().first;
+			iSelectedBlock = InHand.getItem();
 		}
 
 		if (blockCoordinates.X==-1 && blockCoordinates.Y == -1 && blockCoordinates.Z == -1 && Direction == -1) { //Special action
 
 			//Special actions are not allowed with blocks
 			if (ItemInfoStorage::isBlock(_Inventory.getSelectedSlot().getItem())) { 
-				sendEmptyBlock(blockCoordinates);
+				spawnBlock(blockCoordinates,std::make_pair(0,0));
 				return;
 			}
 
@@ -1287,13 +1288,7 @@ void PlayerThread::Packet15_PlayerBlockPlacement() {
 			if (ItemInfoStorage::getItem(_Inventory.getSelectedSlot().getItem()).Eatable) {
 				if (_Flags.isRightClicking()) {
 					if (_iFood==20) {return;}
-
-					NetworkOut Out(&_NetworkOutRoot);
-
-					Out.addByte(0x26);
-					Out.addInt(_iEntityID);
-					Out.addByte(9);
-					Out.Finalize(FC_QUEUE_HIGH);
+					setEntityStatus(9); //Accept eating
 
 					_Flags.setRightClicking(true);
 					syncFlagsWithPP();
@@ -1311,10 +1306,10 @@ void PlayerThread::Packet15_PlayerBlockPlacement() {
 		}else{ //Client wants to place a block
 			if (! ItemInfoStorage::isBlock(_Inventory.getSelectedSlot().getItem())) { //But it's a item...
 				ItemEntry Entry = ItemInfoStorage::getItem(InHand.getItem());
-				if (Entry.ConnectedBlock == 0) { 
+				if (Entry.ConnectedBlock.first == -1 && Entry.ConnectedBlock.first == -1 ) { //No connected item
 					return; 
 				}
-				iBlock = Entry.ConnectedBlock;
+				iSelectedBlock = Entry.ConnectedBlock;
 			}
 		}
 
@@ -1346,7 +1341,7 @@ void PlayerThread::Packet15_PlayerBlockPlacement() {
 		* Check blockCoordinates
 		*/
 
-		if(ItemInfoStorage::isSolid(InHand.getItem())) {
+		if(ItemInfoStorage::isSolid(iSelectedBlock)) {
 			//Prevent: set a block into your body
 			if ((ClientCoordinats.X == blockCoordinates.X && ClientCoordinats.Z == blockCoordinates.Z)  &&
 				(ClientCoordinats.Y == blockCoordinates.Y || ClientCoordinats.Y+1==blockCoordinates.Y)) { 
@@ -1355,7 +1350,7 @@ void PlayerThread::Packet15_PlayerBlockPlacement() {
 
 			//Prevent: set a block into other body
 			if (_pPoolMaster->willHurtOther(blockCoordinates,this)) { 
-				sendEmptyBlock(blockCoordinates);
+				spawnBlock(blockCoordinates,std::make_pair(0,0));
 				return;
 			}
 		}
@@ -1368,7 +1363,7 @@ void PlayerThread::Packet15_PlayerBlockPlacement() {
 
 		//Prevent: set a block above the map
 		if (blockCoordinates.Y >= SettingsHandler::getWorldHeight()-2) { 
-			sendEmptyBlock(blockCoordinates);
+			spawnBlock(blockCoordinates,std::make_pair(0,0));
 			return;
 		}
 
@@ -1385,24 +1380,28 @@ void PlayerThread::Packet15_PlayerBlockPlacement() {
 
 
 		//Prevent: set non solid blocks ontop of non solid blocks
-		if (blockCoordinates.Y>0 && !ItemInfoStorage::isSolid(iBlock)) {
+		if (blockCoordinates.Y>0 && !ItemInfoStorage::isSolid(iSelectedBlock)) {
 			BlockCoordinates temp = blockCoordinates;
 			temp.Y--;
-			char iBlockBelow = _pWorld->getBlock(temp);
 
-			switch(ItemInfoStorage::getBlock(iBlock).Stackable) {
-			case true:
-				if (!ItemInfoStorage::getBlock(iBlockBelow).Stackable) { //Disallow placing fern or bushes or sugarcane on redstone
-					sendEmptyBlock(blockCoordinates);
+			char iBlock = _pWorld->getBlock(temp);
+			ItemID iBlockBelow = std::make_pair( 
+				short(iBlock),
+				(ItemInfoStorage::getBlock(iBlock).hasSubBlocks ? _pWorld->getMetadata(temp) : 0)
+				);
+			switch(ItemInfoStorage::getBlock(iSelectedBlock).Stackable) {
+			case true: //You can stack it, but it need a solid base block
+				if (!ItemInfoStorage::getBlock(iBlockBelow).Solid && iBlockBelow.first != iSelectedBlock.first) {
+					spawnBlock(blockCoordinates,std::make_pair(0,0));
 					return;
 				}
 				break;
-			case false:
-				if( (iBlockBelow==iBlock) || //Disallow redstone stacking
-					(!ItemInfoStorage::getBlock(iBlockBelow).Solid)//Redstone needs a solid ground
+			case false: //Not stackable
+				if( (iBlockBelow==iSelectedBlock) || 
+					(!ItemInfoStorage::getBlock(iBlockBelow).Solid) //unsolid blocks need a solid ground
 					) 
 				{
-					sendEmptyBlock(blockCoordinates);
+					spawnBlock(blockCoordinates,std::make_pair(0,0));
 					return;
 				}
 				break;
@@ -1414,14 +1413,7 @@ void PlayerThread::Packet15_PlayerBlockPlacement() {
 		* All test done. 
 		*/
 		//Send block acception
-		NetworkOut Out(&_NetworkOutRoot);
-		Out.addByte(0x35);
-		Out.addInt(blockCoordinates.X);
-		Out.addByte(blockCoordinates.Y);
-		Out.addInt(blockCoordinates.Z);
-		Out.addByte(iBlock);
-		Out.addByte((char)InHand.getItem().second);	
-		Out.Finalize(FC_QUEUE_HIGH);
+		spawnBlock(blockCoordinates,iSelectedBlock);
 
 
 		//Send inventory update to player
@@ -1429,11 +1421,11 @@ void PlayerThread::Packet15_PlayerBlockPlacement() {
 
 
 		//Append to map
-		_pWorld->setBlock(blockCoordinates.X,blockCoordinates.Y,blockCoordinates.Z,iBlock);
-		_pWorld->setMetadata(blockCoordinates.X,blockCoordinates.Y,blockCoordinates.Z,(char)InHand.getItem().second);
+		_pWorld->setBlock(blockCoordinates.X,blockCoordinates.Y,blockCoordinates.Z,char(iSelectedBlock.first));
+		_pWorld->setMetadata(blockCoordinates.X,blockCoordinates.Y,blockCoordinates.Z,(char)iSelectedBlock.second);
 
 		//Event to player pool
-		PlayerEventBase* p = new PlayerSetBlockEvent(this,blockCoordinates,InHand.getItem());
+		PlayerEventBase* p = new PlayerSetBlockEvent(this,blockCoordinates,iSelectedBlock);
 		_pPoolMaster->addEvent(p);
 	} catch(Poco::RuntimeException& ex ) {
 		cout<<"Exception cateched: "<<ex.message()<<"\n";
@@ -1467,16 +1459,6 @@ void PlayerThread::spawnBlock(BlockCoordinates blockCoords,ItemID Item) {
 	Out.Finalize(FC_QUEUE_HIGH);
 }
 
-void PlayerThread::sendEmptyBlock(BlockCoordinates coords) {
-	NetworkOut Out(&_NetworkOutRoot);
-	Out.addByte(0x35);
-	Out.addInt(coords.X);
-	Out.addByte((char)coords.Y);
-	Out.addInt(coords.Z);
-	Out.addByte(0);
-	Out.addByte(0);		
-	Out.Finalize(FC_QUEUE_HIGH);
-}
 
 void PlayerThread::syncFlagsWithPP() {
 	PlayerEventBase* p = new PlayerUpdateFlagsEvent(this,_Flags);
@@ -1485,6 +1467,42 @@ void PlayerThread::syncFlagsWithPP() {
 
 void PlayerThread::Packet14_Digging() {
 	try {
+		char iStatus,Y,iFace;
+		int X,Z;
+
+		iStatus = _NetworkInRoot.readByte();
+		X = _NetworkInRoot.readInt();
+		Y = _NetworkInRoot.readByte();
+		Z = _NetworkInRoot.readInt();
+		iFace = _NetworkInRoot.readByte();
+
+		if (X == 0 && Y == 0 && Z == 0) { //Special case
+			switch (iStatus) {
+			case 4: //Drop item
+				cout<<_sName<<" dropped item\n";
+				break;
+			case 5: //Shot arrow / finish eating
+				cout<<"needed eattime:"<<_timerStartedEating.getGoneTime()<<"\n";
+				_timerStartedEating.reset();
+
+				//minimal 2 sekunden damit essvorgang erfolgreich ist 
+				//stop eating packet?
+
+				break;
+			default:
+				Disconnect("Invalid digging status code!");
+				return;
+			}
+
+
+
+
+
+		}
+
+
+		cout<<"iStatus:"<<int(iStatus)<<"\tiFace:"<<int(iFace)<<"\n";
+
 	} catch(Poco::RuntimeException& ex ) {
 		cout<<"Exception cateched: "<<ex.message()<<"\n";
 		Disconnect(FC_LEAVE_OTHER);
@@ -1501,4 +1519,26 @@ void PlayerThread::shutdown() {
 	while(!_fRunning){ //Wait till _fRunning turns true
 	}
 	_fRunning=false;
+}
+
+void PlayerThread::setEntityStatus(char iCode) {
+	NetworkOut Out(&_NetworkOutRoot);
+
+	Out.addByte(0x26);
+	Out.addInt(_iEntityID);
+	Out.addByte(iCode);
+	Out.Finalize(FC_QUEUE_HIGH);
+}
+
+void PlayerThread::setEntityStatus(int iID,char iCode) {
+	if (!isEntitySpawned(iID)) {
+		cout<<"PlayerThread::setEntityStatus "<<iID<<" is not spawned!\n";
+		return;
+	}
+	NetworkOut Out(&_NetworkOutRoot);
+
+	Out.addByte(0x26);
+	Out.addInt(iID);
+	Out.addByte(iCode);
+	Out.Finalize(FC_QUEUE_HIGH);
 }

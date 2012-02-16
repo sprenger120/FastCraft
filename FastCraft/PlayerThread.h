@@ -117,6 +117,7 @@ private:
 
 	ThreadTickSpan _timerLastBlockPlace;
 	ThreadTickSpan _timerStartedEating;
+	ThreadTickSpan _timerStartedDigging;
 public:
 	/*
 	* De- / constructor
@@ -341,6 +342,17 @@ public:
 	* Forces the thread to exit
 	*/
 	void shutdown();
+
+
+	/*
+	* Sets the statuscode of a entity
+
+	Parameter:
+	@1 : Entity ID
+	@2 : Status code (Constants.h FC_ENTITYSTATUS_)
+	*/
+	void setEntityStatus(int,char);
+	void setEntityStatus(char); //Sets status on player's id
 private:
 	void ProcessQueue();
 	 
@@ -357,7 +369,6 @@ private:
 	void syncFlagsWithPP();
 	void sendClientPosition();
 	void CheckPosition(bool=true); //checks players position and correct it. Will synchronize with player if bool is true
-	void sendEmptyBlock(BlockCoordinates);
 
 	//Ticks
 	long long getTicks(); 
