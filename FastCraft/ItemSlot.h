@@ -32,7 +32,7 @@ Note2: Enchantments are not supported right now
 
 class ItemSlot {
 private:
-	ItemID _iItem;
+	ItemID _Item;
 	char _iStackSize;
 	short _iUsage;
 	bool _isTool;
@@ -201,5 +201,16 @@ public:
 	*/
 	bool operator == (ItemSlot&);
 	bool operator != (ItemSlot&);
+
+
+	/*
+	* Removes metadata from items that haven't any sub Items
+	* Rethrows all ItemInfoStorage errors
+
+	Parameter:
+	@1 : ItemID of item
+	*/
+	static ItemID removeUnnecessarySubID(ItemID);
+	void removeUnnecessarySubID(); //Use function on itself
 };
 #endif

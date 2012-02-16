@@ -23,7 +23,7 @@ GNU General Public License for more details.
 ItemSlot::ItemSlot(): 
 _vEnchantments(0)
 {
-	_iItem.first = _iItem.second = 0;
+	_Item.first = _Item.second = 0;
 	_iStackSize = 0;
 	_iUsage = 0;
 	_isTool = false;
@@ -32,6 +32,7 @@ _vEnchantments(0)
 ItemSlot::ItemSlot(ItemID id,char stacksize):
 _vEnchantments(0)
 {
+	id = removeUnnecessarySubID(id);
 	char iInfo;
 	try{
 		iInfo = ItemInfoStorage::getMaxStackSize(id);
@@ -41,7 +42,7 @@ _vEnchantments(0)
 		return;
 	}
 
-	_iItem = id;
+	_Item = id;
 	_iUsage = 0;
 
 	//Check stack size
@@ -73,6 +74,7 @@ _vEnchantments(0)
 {
 	short iUsageInfo;
 	char iStackInfo;
+	id = removeUnnecessarySubID(id);
 
 	try	{
 		iStackInfo = ItemInfoStorage::getMaxStackSize(id);
@@ -83,7 +85,7 @@ _vEnchantments(0)
 		return;
 	}
 
-	_iItem = id;
+	_Item = id;
 
 	//Check stack size
 	if (stacksize<0){
@@ -101,7 +103,7 @@ _vEnchantments(0)
 		return;
 	}
 
-	if (ItemInfoStorage::isDamageable(_iItem)) {
+	if (ItemInfoStorage::isDamageable(_Item)) {
 		_isTool=true;
 		//Check usage
 		if (usage > iUsageInfo || usage < 0) {
@@ -112,9 +114,9 @@ _vEnchantments(0)
 		}
 	}else{
 		_isTool=false;
-		if (_iItem.second < 0 || _iItem.second > 15) {
+		if (_Item.second < 0 || _Item.second > 15) {
 			std::cout<<"ItemSlot::ItemSlot(ex) invalid metadata. Affected:"<<id.first<<":"<<id.second<<"\n";
-			_iItem.second = 0;
+			_Item.second = 0;
 		}
 	}
 }
@@ -126,6 +128,7 @@ ItemSlot::ItemSlot(NetworkIn& rNetwork) {
 	} catch(Poco::RuntimeException& ex) {
 		ex.rethrow();
 	}
+	removeUnnecessarySubID();
 }
 
 ItemSlot::~ItemSlot() {
@@ -133,11 +136,12 @@ ItemSlot::~ItemSlot() {
 }
 
 ItemID ItemSlot::getItem() {
-	return _iItem;
+	return _Item;
 }
 
 void ItemSlot::setItem(ItemID id) {
 	try{
+		id = removeUnnecessarySubID(id);
 		if (ItemInfoStorage::isDamageable(id)) {
 			_isTool=true;
 		}else{
@@ -151,7 +155,7 @@ void ItemSlot::setItem(ItemID id) {
 		clear();
 		return;
 	}else{
-		_iItem = id;
+		_Item = id;
 	}
 }
 
@@ -172,7 +176,7 @@ void ItemSlot::setStackSize(char size) {
 		return;
 	}
 
-	SizeInfo = ItemInfoStorage::getMaxStackSize(_iItem);
+	SizeInfo = ItemInfoStorage::getMaxStackSize(_Item);
 
 	if (size > SizeInfo) {
 		_iStackSize = SizeInfo;
@@ -192,7 +196,7 @@ void ItemSlot::IncrementUsage() {
 		std::cout<<"ItemSlot::IncrementUsage Not a tool!"<<"\n";
 		throw Poco::RuntimeException("Not a tool");
 	}
-	short iUsageInfo = ItemInfoStorage::getDurability(_iItem);
+	short iUsageInfo = ItemInfoStorage::getDurability(_Item);
 
 	if(_iUsage > iUsageInfo || _iUsage < 0) {
 		if (_iStackSize == 1) {//Last item in stack 
@@ -213,7 +217,7 @@ void ItemSlot::setUsage(short iUsage){
 		throw Poco::RuntimeException("Not a tool");
 	}
 
-	iUsageInfo = ItemInfoStorage::getDurability(_iItem);
+	iUsageInfo = ItemInfoStorage::getDurability(_Item);
 
 	if(iUsage > iUsageInfo || iUsage < 0) {
 		//Decrement stack size if more than one
@@ -229,14 +233,14 @@ void ItemSlot::setUsage(short iUsage){
 }
 
 void ItemSlot::clear() {
-	_iItem.first = _iItem.second = 0;
+	_Item.first = _Item.second = 0;
 	_iStackSize = 0;
 	_iUsage = 0;
 	_isTool=false;
 }
 
 bool ItemSlot::isEmpty() {
-	if (_iStackSize == 0 || _iItem.first == 0) {
+	if (_iStackSize == 0 || _Item.first == 0) {
 		return true;
 	}else{
 		return false;
@@ -289,7 +293,7 @@ void ItemSlot::readFromNetwork(NetworkIn& rNetwork) {
 				clear();
 				return;
 			}
-			_iItem = std::make_pair(iItemID,0);
+			_Item = std::make_pair(iItemID,0);
 		}else{
 			if (Usage < 0 || Usage > 15) {
 				std::cout<<"ItemSlot::readFromNetwork invalid metadata. Affected:"<<iItemID<<"\n";
@@ -297,9 +301,10 @@ void ItemSlot::readFromNetwork(NetworkIn& rNetwork) {
 			}else{
 				_iUsage=Usage;
 			}
-			_iItem = std::make_pair(iItemID,(char)_iUsage);
+			_Item = std::make_pair(iItemID,(char)_iUsage);
 		}
 
+		removeUnnecessarySubID();
 	}catch (Poco::RuntimeException) {
 		std::cout<<"ItemSlot::ItemSlot(fetch) Item wasn't found.\n";
 		clear();
@@ -312,20 +317,20 @@ void ItemSlot::writeToNetwork(NetworkOut& Out) {
 		Out.addShort(-1);
 		return;
 	}else{
-		Out.addShort(_iItem.first);
+		Out.addShort(_Item.first);
 		Out.addByte(_iStackSize);
 
-		if ( ItemInfoStorage::isDamageable(_iItem)) {
+		if ( ItemInfoStorage::isDamageable(_Item)) {
 			Out.addShort(_iUsage);
 			Out.addShort(-1);
 		}else{
-			Out.addShort(_iItem.second);
+			Out.addShort(_Item.second);
 		}
 	}
 }
 
 bool ItemSlot::operator == (ItemSlot& other) {
-	if (_iItem.first == other.getItem().first && _iItem.second == other.getItem().second && _iStackSize == other.getStackSize() && _iUsage == other.getUsage()) {
+	if (_Item.first == other.getItem().first && _Item.second == other.getItem().second && _iStackSize == other.getStackSize() && _iUsage == other.getUsage()) {
 		return true;
 	}else{
 		return false;
@@ -333,9 +338,32 @@ bool ItemSlot::operator == (ItemSlot& other) {
 }
 
 bool ItemSlot::operator != (ItemSlot& other) {
-	if (_iItem.first == other.getItem().first && _iItem.second == other.getItem().second && _iStackSize == other.getStackSize() && _iUsage == other.getUsage()) {
+	if (_Item.first == other.getItem().first && _Item.second == other.getItem().second && _iStackSize == other.getStackSize() && _iUsage == other.getUsage()) {
 		return false;
 	}else{
 		return true;
 	}
 }
+
+ItemID ItemSlot::removeUnnecessarySubID(ItemID ID) {
+	try {
+
+		switch (ItemInfoStorage::isBlock(ID)) {
+		case true:
+			return std::make_pair(ID.first,  
+				(ItemInfoStorage::getBlock(ID.first).hasSubBlocks ? ID.second : 0)
+				);
+		case false:
+			return std::make_pair(ID.first,  
+				(ItemInfoStorage::getItem(ID.first).hasSubItems ? ID.second : 0)
+				);
+		}
+	}catch(Poco::RuntimeException& ex) {
+		ex.rethrow();
+	}
+}
+
+void ItemSlot::removeUnnecessarySubID() {
+	_Item = removeUnnecessarySubID(_Item);
+}
+
