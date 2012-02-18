@@ -30,7 +30,7 @@ GNU General Public License for more details.
 
 //Interval in milli seconds
 #define FC_INTERVAL_TIMESEND			5000
-#define FC_INTERVAL_KEEPACTIVE			15000
+#define FC_INTERVAL_KEEPALIVE			15000
 #define FC_INTERVAL_HANDLEMOVEMENT		500
 #define FC_INTERVAL_MOVEMENT			50
 #define FC_INTERVAL_CALCULATESPEED		1000
@@ -72,7 +72,12 @@ GNU General Public License for more details.
 #define FC_QUEUE_LOW					1
 #define FC_QUEUE_HIGH					2
 
-//Min Timespans
-#define FC_MINTIMESPAN_ANIMATION		60
-#define FC_MINTIMESPAN_ACTION			15
+//Entity Status Codes
+#define FC_ENTITYSTATUS_HURT			2	
+#define FC_ENTITYSTATUS_DEAD			3
+#define FC_ENTITYSTATUS_WOLF_TAMING		6
+#define FC_ENTITYSTATUS_WOLF_TAMED		7
+#define FC_ENTITYSTATUS_WOLF_SHAKE		8
+#define FC_ENTITYSTATUS_ACCEPTEATING	9
+
 #endif
