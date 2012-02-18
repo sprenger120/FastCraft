@@ -118,6 +118,8 @@ private:
 	ThreadTickSpan _timerLastBlockPlace;
 	ThreadTickSpan _timerStartedEating;
 	ThreadTickSpan _timerStartedDigging;
+	ThreadTickSpan _timerLastAlivePacketSent;
+	long long _iPlayerPing;
 public:
 	/*
 	* De- / constructor
@@ -144,17 +146,6 @@ public:
 	* true:  Thread is busy 
 	*/
 	bool isAssigned(); 
-
-	/*
-	* Update health and food from client
-	* This function will send informations to client
-	
-	Prameter:
-	@1 : Health (0-20)
-	@2 : Food   (0-20)
-	@3 : Saturation (0.0F - 5.0F)
-	*/
-	void UpdateHealth(short,short,float);
 
 
 	/*
@@ -354,8 +345,6 @@ public:
 	void setEntityStatus(int,char);
 	void setEntityStatus(char); //Sets status on player's id
 private:
-	void ProcessQueue();
-	 
 	//Interval functions
 	void Interval_KeepAlive();
 	void Interval_Time();
@@ -363,21 +352,12 @@ private:
 	void Interval_Movement();
 	void Interval_CalculateSpeed();
 	void Interval_CheckPosition();
-
-	void sendTime();
-	void ChatToAll(string&);
-	void syncFlagsWithPP();
-	void sendClientPosition();
-	void CheckPosition(bool=true); //checks players position and correct it. Will synchronize with player if bool is true
-
+	void Interval_CheckEating();
+	
 	//Ticks
 	long long getTicks(); 
 
-	//Other
-	string generateConnectionHash(); //Generate a new connection hash, write it to _ConnectionHash	
-	template <class T> T fixRange(T,T,T);
-
-	//Packets - receive only
+	//Packets
 	void Packet0_KeepAlive();
 	void Packet1_Login();
 	void Packet2_Handshake();
@@ -395,6 +375,29 @@ private:
 	void Packet102_WindowClick();
 	void Packet254_ServerListPing();
 	void Packet255_Disconnect();
+
+	//Network
+	void ProcessQueue();
+	void sendTime();
+	void sendClientPosition();
+	void sendKeepAlive();
+	void ChatToAll(string&);
+
+	//Handler
+	void handleEating(); 
+
+
+	//'fix' functions
+	template <class T> T fixRange(T,T,T);
+
+	//sync functions
+	void syncHealth();
+	void syncFlagsWithPP();
+
+
+	//Other
+	string generateConnectionHash(); //Generate a new connection hash, write it to _ConnectionHash	
+	void CheckPosition(bool=true); //checks players position and correct it. Will synchronize with player if bool is true
 };
 
 #endif

@@ -65,7 +65,7 @@ _sName(""),
 	_iThreadTicks(0),
 
 	_timespanSendTime(&_iThreadTicks,FC_INTERVAL_TIMESEND),
-	_timespanSendKeepAlive(&_iThreadTicks,FC_INTERVAL_KEEPACTIVE),
+	_timespanSendKeepAlive(&_iThreadTicks,FC_INTERVAL_KEEPALIVE),
 	_timespanHandleMovement(&_iThreadTicks,FC_INTERVAL_HANDLEMOVEMENT),
 	_timespanMovementSent(&_iThreadTicks,FC_INTERVAL_MOVEMENT),
 	_timespanSpeedCalculation(&_iThreadTicks,FC_INTERVAL_CALCULATESPEED),
@@ -73,7 +73,8 @@ _sName(""),
 
 	_timerLastBlockPlace(&_iThreadTicks,0L),
 	_timerStartedEating(&_iThreadTicks,0L),
-	_timerStartedDigging(&_iThreadTicks,0L)
+	_timerStartedDigging(&_iThreadTicks,0L),
+	_timerLastAlivePacketSent(&_iThreadTicks,0L)
 {
 	_Coordinates.OnGround = false;
 	_Coordinates.Pitch = 0.0F;
@@ -90,6 +91,8 @@ _sName(""),
 	_Spawned_PlayerInfoList = 0;
 	_pPoolMaster = pPoolMaster;
 	_pWorld=NULL;
+
+	_iPlayerPing= -1L;
 
 	_fSpawned = false;
 	_fAssigned = false;
@@ -165,6 +168,8 @@ void PlayerThread::run() {
 			Interval_Movement();
 			Interval_CalculateSpeed();
 			Interval_CheckPosition();
+			Interval_CheckEating();
+
 
 			iPacket = _NetworkInRoot.readByte();
 
@@ -309,6 +314,7 @@ void PlayerThread::Disconnect(char iLeaveMode) {
 
 	_dRunnedMeters=0;
 	_Spawned_PlayerInfoList=0;
+	_iPlayerPing= -1L;
 
 	_Connection.close();
 	_vSpawnedEntities.clear();
@@ -418,25 +424,16 @@ void PlayerThread::Interval_KeepAlive() {
 	if (!isSpawned()){return;}
 	if (_timespanSendKeepAlive.isGone()) { //Send new keep alive
 		_timespanSendKeepAlive.reset();
-
-		NetworkOut Out(&_NetworkOutRoot);
-		Out.addByte(0x0);
-		Out.addInt(_Rand.next());
-		Out.Finalize(FC_QUEUE_HIGH);
+		sendKeepAlive();
 	}
 }
 
-void PlayerThread::UpdateHealth(short iHealth,short iFood,float nSaturation) {
-	//Send Health
-	_iHealth = fixRange<short>(iHealth,0,20);
-	_iFood = fixRange<short>(iFood,0,20);
-	_nSaturation = fixRange<float>(iFood,0.0F,5.0F);
-
+void PlayerThread::syncHealth() {
 	NetworkOut Out(&_NetworkOutRoot);
 	Out.addByte(0x8);
-	Out.addShort(_iHealth);
-	Out.addShort(_iFood);
-	Out.addFloat(_nSaturation);
+	Out.addShort(fixRange<short>(_iHealth,0,20));
+	Out.addShort(fixRange<short>(_iFood,0,20));
+	Out.addFloat(fixRange<float>(_nSaturation,0.0F,5.0F));
 	Out.Finalize(FC_QUEUE_HIGH);
 }
 
@@ -499,6 +496,8 @@ void PlayerThread::ProcessQueue() {
 
 void PlayerThread::Packet0_KeepAlive() {
 	_NetworkInRoot.readInt(); //Get id
+	_iPlayerPing = _timerLastAlivePacketSent.getGoneTime();
+	cout<<"ping:"<<_iPlayerPing<<"\n";
 }
 
 void PlayerThread::Packet1_Login() {
@@ -607,11 +606,14 @@ void PlayerThread::Packet1_Login() {
 		_ChunkProvider.HandleMovement(_Coordinates); //Pre Chunks
 
 		//Health
-		UpdateHealth(10,10,5.0F); //Health
+		_iHealth= 10;
+		_iFood=0;
+		_nSaturation=0.0F;
+		syncHealth();
 
 		//Inventory
-		ItemSlot Item1(std::make_pair(260,0),64);
-		ItemSlot Item2(std::make_pair(338,14),64);
+		ItemSlot Item1(std::make_pair(276,0),1);
+		ItemSlot Item2(std::make_pair(360,0),64);
 		ItemSlot Item3(std::make_pair(35,4),64);
 
 		_Inventory.setSlot(38,Item1);
@@ -624,10 +626,12 @@ void PlayerThread::Packet1_Login() {
 		insertChat("§dWelcome to FastCraft 0.0.2 Alpha server.");
 		ProcessQueue(); //Send login packages
 
+		sendKeepAlive(); //Measure ping
+		
+		_fSpawned = true;	
 		PlayerEventBase* p = new PlayerJoinEvent(this);//Push PlayerPool Join event
 		_pPoolMaster->addEvent(p);
-		_fSpawned = true;	
-
+		
 
 		//Spawn own name to playerinfo
 		PlayerInfoList(true,_sName);
@@ -1127,6 +1131,8 @@ void PlayerThread::Packet19_EntityAction() {
 			Disconnect("Unsupported action.");
 			break;
 		}
+
+		syncFlagsWithPP();
 	}catch(Poco::RuntimeException) {
 		Disconnect(FC_LEAVE_OTHER);
 	}
@@ -1286,14 +1292,10 @@ void PlayerThread::Packet15_PlayerBlockPlacement() {
 
 			//Eating
 			if (ItemInfoStorage::getItem(_Inventory.getSelectedSlot().getItem()).Eatable) {
-				if (_Flags.isRightClicking()) {
-					if (_iFood==20) {return;}
-					setEntityStatus(9); //Accept eating
-
-					_Flags.setRightClicking(true);
-					syncFlagsWithPP();
-					_timerStartedEating.reset();
-				}
+				if (_iFood==20) {return;}
+				_timerStartedEating.reset();
+				_Flags.setRightClicking(true);
+				syncFlagsWithPP();
 				return;
 			}
 
@@ -1482,27 +1484,20 @@ void PlayerThread::Packet14_Digging() {
 				cout<<_sName<<" dropped item\n";
 				break;
 			case 5: //Shot arrow / finish eating
-				cout<<"needed eattime:"<<_timerStartedEating.getGoneTime()<<"\n";
-				_timerStartedEating.reset();
-
-				//minimal 2 sekunden damit essvorgang erfolgreich ist 
-				//stop eating packet?
-
+				if (_Flags.isRightClicking()) {
+					_Flags.setRightClicking(false);
+					syncFlagsWithPP();
+					return;
+				}
 				break;
 			default:
 				Disconnect("Invalid digging status code!");
 				return;
 			}
-
-
-
-
-
 		}
 
 
 		cout<<"iStatus:"<<int(iStatus)<<"\tiFace:"<<int(iFace)<<"\n";
-
 	} catch(Poco::RuntimeException& ex ) {
 		cout<<"Exception cateched: "<<ex.message()<<"\n";
 		Disconnect(FC_LEAVE_OTHER);
@@ -1540,5 +1535,53 @@ void PlayerThread::setEntityStatus(int iID,char iCode) {
 	Out.addByte(0x26);
 	Out.addInt(iID);
 	Out.addByte(iCode);
+	Out.Finalize(FC_QUEUE_HIGH);
+}
+
+void PlayerThread::Interval_CheckEating() {
+	if (!isSpawned()) {return;}
+	handleEating();
+}
+
+
+void PlayerThread::handleEating() {
+	if (!_Flags.isRightClicking()) {return;}
+
+	ItemSlot& rInHandSlot = _Inventory.getSelectedSlot();
+	if (rInHandSlot.isEmpty() || ItemInfoStorage::isBlock(rInHandSlot.getItem())) { //Block or empty
+		_Flags.setRightClicking(false);
+		syncFlagsWithPP();
+		return;
+	}
+
+	ItemEntry IEntry = ItemInfoStorage::getItem(rInHandSlot.getItem());
+	if (IEntry.Weapon) {return;}
+	if (!IEntry.Eatable) {
+		_Flags.setRightClicking(false);
+		syncFlagsWithPP();
+		return;
+	}
+
+	if (_timerStartedEating.getGoneTime() >= 1600 + (_iPlayerPing>500 ||_iPlayerPing == -1 ? 500 : _iPlayerPing)  ) {return;}
+	if (_timerStartedEating.getGoneTime() >= 1500) {
+		_iFood = fixRange<short>(_iFood+IEntry.FoodValue,0,20); 
+		_nSaturation = fixRange<float>(_nSaturation + float(IEntry.FoodValue)*0.3F,0.0F,5.0F);
+		
+		setEntityStatus(FC_ENTITYSTATUS_ACCEPTEATING); //Accept eating
+		syncHealth();
+		_Inventory.DecreaseInHandStack();
+		
+
+		_Flags.setRightClicking(false);
+		syncFlagsWithPP();
+	}
+}
+
+void PlayerThread::sendKeepAlive() {
+	_timerLastAlivePacketSent.reset();
+
+	NetworkOut Out(&_NetworkOutRoot);
+	Out.addByte(0x0);
+	Out.addInt(_Rand.next());
 	Out.Finalize(FC_QUEUE_HIGH);
 }
