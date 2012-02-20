@@ -56,7 +56,6 @@ public:
 
 	/*
 	* Sets slot 
-	* Doesn't synchronize with player!
 	* Will throw Poco::RuntimeException if slot id is invalid
 
 	Parameter:

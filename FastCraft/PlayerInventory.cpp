@@ -76,6 +76,7 @@ void PlayerInventory::clear() {
 	for(int x=0;x<=_vItemStack.size()-1;x++) {
 		_vItemStack[x].clear();
 	}
+	_iSlotSelection = 0;
 }
 
 void PlayerInventory::setSlot(short iSlot,ItemSlot& rItem) {
@@ -83,6 +84,13 @@ void PlayerInventory::setSlot(short iSlot,ItemSlot& rItem) {
 		std::cout<<"PlayerInventory::setSlot illegal slot id"<<"\n";
 		throw Poco::RuntimeException("Invalid slot ID");
 	}
+
+	NetworkOut Out(&_rNetwork);
+	Out.addByte(0x67);
+	Out.addByte(0);
+	Out.addShort(iSlot);
+	rItem.writeToNetwork(Out);
+	Out.Finalize(FC_QUEUE_HIGH);
 
 	_vItemStack[iSlot] = rItem;
 }
@@ -282,10 +290,13 @@ ItemSlot& PlayerInventory::getSelectedSlot() {
 void PlayerInventory::DecreaseInHandStack() {
 	ItemSlot& rItem = getSelectedSlot();
 
-
-	rItem.setStackSize(rItem.getStackSize()-1);
-	if (rItem.isEmpty()) {
-		rItem.clear();
+	if (rItem.getItem().first == 326 || rItem.getItem().first == 327) {
+		rItem.setItem(std::make_pair(325,0));
+	}else{
+		rItem.setStackSize(rItem.getStackSize()-1);
+		if (rItem.isEmpty()) {
+			rItem.clear();
+		}
 	}
 
 	NetworkOut Out(&_rNetwork);
