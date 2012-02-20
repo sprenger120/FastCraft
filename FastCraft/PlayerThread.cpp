@@ -497,7 +497,6 @@ void PlayerThread::ProcessQueue() {
 void PlayerThread::Packet0_KeepAlive() {
 	_NetworkInRoot.readInt(); //Get id
 	_iPlayerPing = _timerLastAlivePacketSent.getGoneTime();
-	cout<<"ping:"<<_iPlayerPing<<"\n";
 }
 
 void PlayerThread::Packet1_Login() {
@@ -612,9 +611,9 @@ void PlayerThread::Packet1_Login() {
 		syncHealth();
 
 		//Inventory
-		ItemSlot Item1(std::make_pair(276,0),1);
-		ItemSlot Item2(std::make_pair(360,0),64);
-		ItemSlot Item3(std::make_pair(35,4),64);
+		ItemSlot Item1(std::make_pair(325,0),1);
+		ItemSlot Item2(std::make_pair(35,15),64);
+		ItemSlot Item3(std::make_pair(326,0),1);
 
 		_Inventory.setSlot(38,Item1);
 		_Inventory.setSlot(37,Item2);
@@ -1264,7 +1263,6 @@ void PlayerThread::Packet15_PlayerBlockPlacement() {
 		Direction = _NetworkInRoot.readByte();
 		Slot.readFromNetwork(_NetworkInRoot);
 
-
 		if (_timerLastBlockPlace.getGoneTime() < 100) { //Client sends placeblock packet two times if you are aiming at a block
 			return;
 		}
@@ -1272,6 +1270,8 @@ void PlayerThread::Packet15_PlayerBlockPlacement() {
 
 		_Inventory.getSelectedSlot().removeUnnecessarySubID();
 		ItemSlot& InHand = _Inventory.getSelectedSlot();
+		
+
 		ItemID iSelectedBlock = std::make_pair(0,0);
 		if (InHand.isEmpty()) {
 			InHand.clear();
@@ -1280,39 +1280,6 @@ void PlayerThread::Packet15_PlayerBlockPlacement() {
 
 		if (ItemInfoStorage::isBlock(InHand.getItem())) {
 			iSelectedBlock = InHand.getItem();
-		}
-
-		if (blockCoordinates.X==-1 && blockCoordinates.Y == -1 && blockCoordinates.Z == -1 && Direction == -1) { //Special action
-
-			//Special actions are not allowed with blocks
-			if (ItemInfoStorage::isBlock(_Inventory.getSelectedSlot().getItem())) { 
-				spawnBlock(blockCoordinates,std::make_pair(0,0));
-				return;
-			}
-
-			//Eating
-			if (ItemInfoStorage::getItem(_Inventory.getSelectedSlot().getItem()).Eatable) {
-				if (_iFood==20) {return;}
-				_timerStartedEating.reset();
-				_Flags.setRightClicking(true);
-				syncFlagsWithPP();
-				return;
-			}
-
-			//Weapon blocking
-			if (ItemInfoStorage::getItem(_Inventory.getSelectedSlot().getItem()).Weapon) {
-				_Flags.setRightClicking(true);
-				syncFlagsWithPP();
-			}
-			return; 
-		}else{ //Client wants to place a block
-			if (! ItemInfoStorage::isBlock(_Inventory.getSelectedSlot().getItem())) { //But it's a item...
-				ItemEntry Entry = ItemInfoStorage::getItem(InHand.getItem());
-				if (Entry.ConnectedBlock.first == -1 && Entry.ConnectedBlock.first == -1 ) { //No connected item
-					return; 
-				}
-				iSelectedBlock = Entry.ConnectedBlock;
-			}
 		}
 
 		switch (Direction) {
@@ -1334,11 +1301,69 @@ void PlayerThread::Packet15_PlayerBlockPlacement() {
 		case 5:
 			blockCoordinates.X++;
 			break;
+		case -1:
+			if (blockCoordinates.X==-1 && blockCoordinates.Y == -1 && blockCoordinates.Z == -1) {
+				if (InHand.getItem().first == 326 || InHand.getItem().first == 327) {return;} //Filter lava and water buckets
+
+				//Special actions are not allowed with blocks
+				if (ItemInfoStorage::isBlock(_Inventory.getSelectedSlot().getItem())) { 
+					spawnBlock(blockCoordinates,std::make_pair(0,0));
+					return;
+				}
+
+				//Eating
+				if (ItemInfoStorage::getItem(_Inventory.getSelectedSlot().getItem()).Eatable) {
+					if (_iFood==20) {return;}
+					_timerStartedEating.reset();
+					_Flags.setRightClicking(true);
+					syncFlagsWithPP();
+					return;
+				}
+
+				//Weapon blocking
+				if (ItemInfoStorage::getItem(_Inventory.getSelectedSlot().getItem()).Weapon) {
+					_Flags.setRightClicking(true);
+					syncFlagsWithPP();
+				}
+				return; 
+			}
+			break;
 		default:
 			Disconnect("Illegal block direction: " + int(Direction));
 			return;
 		}
 
+		if (!ItemInfoStorage::isBlock(InHand.getItem())) { //But it's a item...
+			if (InHand.getItem().first == 325) { //Fill your bucket with water / lava
+					char iBlock = _pWorld->getBlock(blockCoordinates);
+
+					if (iBlock == 9 || iBlock == 11) {
+						_pWorld->setBlock(blockCoordinates.X,blockCoordinates.Y,blockCoordinates.Z,0);
+						_pWorld->setMetadata(blockCoordinates.X,blockCoordinates.Y,blockCoordinates.Z,0);
+						spawnBlock(blockCoordinates,std::make_pair(0,0));
+
+						switch(iBlock) {
+						case 9: //Water
+							InHand.setItem( std::make_pair(326,0));
+							_Inventory.setSlot(36+_Inventory.getSlotSelection(),InHand);
+							break;
+						case 11: //Lava
+							InHand.setItem( std::make_pair(327,0));
+							_Inventory.setSlot(36+_Inventory.getSlotSelection(),InHand);
+							break;
+						}
+					}
+				return;
+			}
+
+			ItemEntry Entry = ItemInfoStorage::getItem(InHand.getItem());
+			if (Entry.ConnectedBlock.first == -1 && Entry.ConnectedBlock.first == -1 ) { //No connected item
+				spawnBlock(blockCoordinates,std::make_pair(0,0));
+				return; 
+			}
+			iSelectedBlock = Entry.ConnectedBlock;
+		}
+		
 		/*
 		* Check blockCoordinates
 		*/
@@ -1357,9 +1382,15 @@ void PlayerThread::Packet15_PlayerBlockPlacement() {
 			}
 		}
 
+
+		char iBlockAt = _pWorld->getBlock(blockCoordinates);
 		//Prevent: set a block into other block 
-		//ToDo: Exception for liquids
-		if (_pWorld->getBlock(blockCoordinates) != 0) { 
+		if (iBlockAt != 0 &&
+			iBlockAt != 8 &&
+			iBlockAt != 9 &&
+			iBlockAt != 10 &&
+			iBlockAt != 11) 
+		{ 
 			return;
 		}
 
@@ -1376,7 +1407,6 @@ void PlayerThread::Packet15_PlayerBlockPlacement() {
 
 		//Prevent: set too distant blocks
 		if (MathHelper::distance3D(blockCoordinates,ClientCoordinats) > 6.0) {
-			Disconnect("Target block too distant!");
 			return;
 		}
 
@@ -1409,7 +1439,6 @@ void PlayerThread::Packet15_PlayerBlockPlacement() {
 				break;
 			}
 		}
-
 
 		/*
 		* All test done. 
