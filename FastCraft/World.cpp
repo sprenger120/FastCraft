@@ -300,7 +300,7 @@ void World::setBlock(int X,short Y,int Z,ItemID Block) {
 		BlockCoords.Y = (char)Y;
 		BlockCoords.Z = Z;
 		
-		PlayerEventBase* p = new PlayerSetBlockEvent(NULL,BlockCoords,Block);
+		PlayerEventBase* p = new PlayerSetBlockEvent(BlockCoords,Block,_WorldName);
 		_rPlayerPool.addEvent(p);
 	} catch (Poco::RuntimeException& ex) {
 		ex.rethrow();
