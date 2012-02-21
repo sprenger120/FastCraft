@@ -272,7 +272,7 @@ bool World::isSuffocating(EntityCoordinates Coords) {
 	return ItemInfoStorage::isSolid((short)pChunk->Blocks[iOffset]);
 }
 
-void World::setBlock(int X,short Y,int Z,char Block) {
+void World::setBlock(int X,short Y,int Z,ItemID Block) {
 	if (!ItemInfoStorage::isRegistered(Block)) {
 		throw Poco::RuntimeException("Block not registered");
 	}
@@ -281,27 +281,48 @@ void World::setBlock(int X,short Y,int Z,char Block) {
 
 	try {
 		auto Coords = WorldCoordinateConverter(X,Y,Z);
+		int iNibbleIndex = Coords.second/2;
+
 		p = getChunkByChunkCoordinates(Coords.first.X,Coords.first.Z);
-		p->Blocks[Coords.second] = Block;
+		
+		p->Blocks[Coords.second] = (char)Block.first; //Set Block
+		p->Metadata[iNibbleIndex] = prepareNibble(  //Set Metadata
+												char(Coords.second%2),
+												p->BlockLight[iNibbleIndex],
+												Block.second
+												);
 	} catch (Poco::RuntimeException& ex) {
 		ex.rethrow();
 	}
 }
 
-char World::getBlock(int X,short Y,int Z) {
+
+
+ItemID World::getBlock(int X,short Y,int Z) {
 	MapChunk* p;
 
 	try {
 		auto Coords = WorldCoordinateConverter(X,Y,Z);
 		p = getChunkByChunkCoordinates(Coords.first.X,Coords.first.Z);
-		return p->Blocks[Coords.second];
+		
+		ItemID Data;
+		Data.first = p->Blocks[Coords.second];
+		Data.second = p->Metadata[Coords.second/2];
+
+		if (Coords.second%2) {
+			 Data.second = (Data.second>>4) & 15;
+		}else{
+			 Data.second &= 15;
+		}
+
+		return Data;
 	} catch (Poco::RuntimeException& ex) {
 		ex.rethrow();
 	}
-	return 0;
+	return std::make_pair(0,0);
 }
 
-char World::getBlock(BlockCoordinates Coords) {
+ItemID World::getBlock(BlockCoordinates Coords) {
 	return getBlock(Coords.X,(short)Coords.Y,Coords.Z);
 } 
 
@@ -311,35 +332,35 @@ bool World::isSurroundedByAir(BlockCoordinates TargetBlock) {
 	try {
 
 		//X--
-		if (getBlock(Temp.X-1,Temp.Y,Temp.Z) != 0) {
+		if (getBlock(Temp.X-1,Temp.Y,Temp.Z).first != 0) {
 			return false;
 		}
 
 		//X++
-		if (getBlock(Temp.X+1,Temp.Y,Temp.Z) != 0) {
+		if (getBlock(Temp.X+1,Temp.Y,Temp.Z).first != 0) {
 			return false;
 		}
 
 		//Z--
-		if (getBlock(Temp.X,Temp.Y,Temp.Z-1) != 0) {
+		if (getBlock(Temp.X,Temp.Y,Temp.Z-1).first != 0) {
 			return false;
 		}
 
 		//Z++
-		if (getBlock(Temp.X,Temp.Y,Temp.Z+1) != 0) {
+		if (getBlock(Temp.X,Temp.Y,Temp.Z+1).first != 0) {
 			return false;
 		}
 
 		//Y--
 		if (TargetBlock.Y >= 1) {
-			if (getBlock(Temp.X,Temp.Y-1,Temp.Z) != 0) {
+			if (getBlock(Temp.X,Temp.Y-1,Temp.Z).first != 0) {
 				return false;
 			}
 		}
 
 		//Y++
 		if (TargetBlock.Y <= SettingsHandler::getWorldHeight()-1) {
-			if (getBlock(Temp.X,Temp.Y+1,Temp.Z) != 0) {
+			if (getBlock(Temp.X,Temp.Y+1,Temp.Z).first != 0) {
 				return false;
 			}
 		}
@@ -362,33 +383,6 @@ char World::getDimension() {
 	return _iDimension;
 }
 
-
-void World::setMetadata(int X,short Y,int Z,char iMetadata) {
-	try {
-		auto coord = WorldCoordinateConverter(X,Y,Z);
-		if (coord.second==-1) {
-			cout<<"World::setMetadata invalid coordinates\n";
-			throw Poco::RuntimeException("Invalid coordinates");
-		}
-		if (iMetadata<0 || iMetadata > 15) {
-			cout<<"World::setMetadata invalid metadata\n";
-			throw Poco::RuntimeException("Invalid metadata");
-		}
-
-		MapChunk* p = getChunkByChunkCoordinates(coord.first.X,coord.first.Z);
-		int iNibbleIndex = coord.second/2;
-
-
-		p->Metadata[iNibbleIndex] = prepareNibble( 
-												char(coord.second%2),
-												p->Metadata[iNibbleIndex],
-												iMetadata
-												);
-	} catch (Poco::RuntimeException& ex) {
-		ex.rethrow();
-	}
-}
-
 char World::prepareNibble(char iMod,char iOld,char iNew) {
 	iNew &= 15; //Filter bottom 4 bit 
 
@@ -399,6 +393,7 @@ char World::prepareNibble(char iMod,char iOld,char iNew) {
 	}	
 	return iOld;
 }
+
 
 void World::setBlockLight(int X,short Y,int Z,char iLightLevel) {
 	try {
@@ -426,29 +421,10 @@ void World::setBlockLight(int X,short Y,int Z,char iLightLevel) {
 	}
 }
 
-char World::getMetadata(int X,short Y,int Z) {
-	try {
-		auto coord = WorldCoordinateConverter(X,Y,Z);
-		if (coord.second==-1) {
-			cout<<"World::setBlockLight invalid coordinates\n";
-			throw Poco::RuntimeException("Invalid coordinates");
-		}
-
-		MapChunk* p = getChunkByChunkCoordinates(coord.first.X,coord.first.Z);
-		int iNibbleIndex = coord.second/2;
-
-		char iData = p->BlockLight[iNibbleIndex];
-		
-		if (coord.second%2) {
-			 return (iData>>4) & 15;
-		}else{
-			 return iData & 15;
-		}
-	} catch (Poco::RuntimeException& ex) {
-		ex.rethrow();
-	}
+void World::setBlockLight(BlockCoordinates Coords,char iLL) {
+	setBlockLight(Coords.X,Coords.Y,Coords.Z,iLL);
 }
 
-char World::getMetadata(BlockCoordinates Coords) {
-	return getMetadata(Coords.X,Coords.Y,Coords.Z);
+void World::setBlock(BlockCoordinates Coords,ItemID Data) {
+	setBlock(Coords.X,Coords.Y,Coords.Z,Data);
 }

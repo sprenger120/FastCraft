@@ -22,6 +22,7 @@ GNU General Public License for more details.
 #include <Poco/Mutex.h>
 #include "Structs.h"
 #include "EntityCoordinates.h"
+#include "ItemInfoStorage.h"
 #include <Poco/Path.h>
 
 using std::vector;
@@ -124,10 +125,10 @@ public:
 	@1 : X in world coordinates
 	@2 : Y in world coordinates
 	@3 : Z in world coordinates
-	@4 : BlockID
+	@4 : Block information
 	*/
-	void setBlock(int,short,int,char);
-
+	void setBlock(int,short,int,ItemID);
+	void setBlock(BlockCoordinates,ItemID);
 
 	/*
 	* Gets block at given position
@@ -139,8 +140,8 @@ public:
 	@2 : Y in world coordinates
 	@3 : Z in world coordinates
 	*/
-	char getBlock(int,short,int);
-	char getBlock(BlockCoordinates);
+	ItemID getBlock(int,short,int);
+	ItemID getBlock(BlockCoordinates);
 
 
 	/*
@@ -174,20 +175,6 @@ public:
 
 
 	/*
-	* Sets metadata of given block
-	* Will throw Poco::RuntimeException if metadata is invalid
-	* Will rethrow all errors of getChunkByChunkCoordinates
-
-	Parameters:
-	@1 : X in WorldCoordinates
-	@2 : Y in WorldCoordinates
-	@3 : Z in WorldCoordinates
-	@4 : new metadata
-	*/
-	void setMetadata(int,short,int,char);
-
-
-	/*
 	* Sets block light of given block
 	* Will throw Poco::RuntimeException if block light is invalid
 	* Will rethrow all errors of getChunkByChunkCoordinates
@@ -199,18 +186,7 @@ public:
 	@4 : new light level
 	*/
 	void setBlockLight(int,short,int,char);
-
-
-	/*
-	* Returns metadata of specific block
-
-	Paramter:
-	@1 : X in WorldCoordinates
-	@2 : Y in WorldCoordinates
-	@3 : Z in WorldCoordinates
-	*/
-	char getMetadata(int,short,int);
-	char getMetadata(BlockCoordinates);
+	void setBlockLight(BlockCoordinates,char);
 private:
 	void generateChunks(int,int,int,int);
 	MapChunk* generateChunk(int,int);
