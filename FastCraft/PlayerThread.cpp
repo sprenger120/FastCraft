@@ -611,9 +611,9 @@ void PlayerThread::Packet1_Login() {
 		syncHealth();
 
 		//Inventory
-		ItemSlot Item1(std::make_pair(325,0),1);
+		ItemSlot Item1(std::make_pair(34,0),64);
 		ItemSlot Item2(std::make_pair(35,15),64);
-		ItemSlot Item3(std::make_pair(326,0),1);
+		ItemSlot Item3(std::make_pair(338,0),64);
 
 		_Inventory.setSlot(38,Item1);
 		_Inventory.setSlot(37,Item2);
@@ -1335,14 +1335,13 @@ void PlayerThread::Packet15_PlayerBlockPlacement() {
 
 		if (!ItemInfoStorage::isBlock(InHand.getItem())) { //But it's a item...
 			if (InHand.getItem().first == 325) { //Fill your bucket with water / lava
-					char iBlock = _pWorld->getBlock(blockCoordinates);
+					ItemID Block = _pWorld->getBlock(blockCoordinates);
 
-					if (iBlock == 9 || iBlock == 11) {
-						_pWorld->setBlock(blockCoordinates.X,blockCoordinates.Y,blockCoordinates.Z,0);
-						_pWorld->setMetadata(blockCoordinates.X,blockCoordinates.Y,blockCoordinates.Z,0);
+					if (Block.first == 9 || Block.first == 11) {
+						_pWorld->setBlock(blockCoordinates,std::make_pair(0,0));
 						spawnBlock(blockCoordinates,std::make_pair(0,0));
 
-						switch(iBlock) {
+						switch(Block.first) {
 						case 9: //Water
 							InHand.setItem( std::make_pair(326,0));
 							_Inventory.setSlot(36+_Inventory.getSlotSelection(),InHand);
@@ -1383,13 +1382,13 @@ void PlayerThread::Packet15_PlayerBlockPlacement() {
 		}
 
 
-		char iBlockAt = _pWorld->getBlock(blockCoordinates);
+		ItemID BlockAt = _pWorld->getBlock(blockCoordinates);
 		//Prevent: set a block into other block 
-		if (iBlockAt != 0 &&
-			iBlockAt != 8 &&
-			iBlockAt != 9 &&
-			iBlockAt != 10 &&
-			iBlockAt != 11) 
+		if (BlockAt.first != 0 &&
+			BlockAt.first != 8 &&
+			BlockAt.first != 9 &&
+			BlockAt.first != 10 &&
+			BlockAt.first != 11) 
 		{ 
 			return;
 		}
@@ -1413,24 +1412,18 @@ void PlayerThread::Packet15_PlayerBlockPlacement() {
 
 		//Prevent: set non solid blocks ontop of non solid blocks
 		if (blockCoordinates.Y>0 && !ItemInfoStorage::isSolid(iSelectedBlock)) {
-			BlockCoordinates temp = blockCoordinates;
-			temp.Y--;
+			ItemID BlockBelow = _pWorld->getBlock(blockCoordinates.X,blockCoordinates.Y-1,blockCoordinates.Z);
 
-			char iBlock = _pWorld->getBlock(temp);
-			ItemID iBlockBelow = std::make_pair( 
-				short(iBlock),
-				(ItemInfoStorage::getBlock(iBlock).hasSubBlocks ? _pWorld->getMetadata(temp) : 0)
-				);
 			switch(ItemInfoStorage::getBlock(iSelectedBlock).Stackable) {
 			case true: //You can stack it, but it need a solid base block
-				if (!ItemInfoStorage::getBlock(iBlockBelow).Solid && iBlockBelow.first != iSelectedBlock.first) {
+				if (!ItemInfoStorage::getBlock(BlockBelow).Solid && BlockBelow.first != iSelectedBlock.first) {
 					spawnBlock(blockCoordinates,std::make_pair(0,0));
 					return;
 				}
 				break;
 			case false: //Not stackable
-				if( (iBlockBelow==iSelectedBlock) || 
-					(!ItemInfoStorage::getBlock(iBlockBelow).Solid) //unsolid blocks need a solid ground
+				if( (BlockBelow.first==iSelectedBlock.first) || 
+					(!ItemInfoStorage::getBlock(BlockBelow).Solid) //unsolid blocks need a solid ground
 					) 
 				{
 					spawnBlock(blockCoordinates,std::make_pair(0,0));
@@ -1439,6 +1432,14 @@ void PlayerThread::Packet15_PlayerBlockPlacement() {
 				break;
 			}
 		}
+
+		//Prevent: Set not placeable blocks
+		if (!ItemInfoStorage::getBlock(iSelectedBlock).Placeable) {
+			spawnBlock(blockCoordinates,std::make_pair(0,0));
+			return;
+		}
+
+
 
 		/*
 		* All test done. 
@@ -1452,8 +1453,7 @@ void PlayerThread::Packet15_PlayerBlockPlacement() {
 
 
 		//Append to map
-		_pWorld->setBlock(blockCoordinates.X,blockCoordinates.Y,blockCoordinates.Z,char(iSelectedBlock.first));
-		_pWorld->setMetadata(blockCoordinates.X,blockCoordinates.Y,blockCoordinates.Z,(char)iSelectedBlock.second);
+		_pWorld->setBlock(blockCoordinates,iSelectedBlock);
 
 		//Event to player pool
 		PlayerEventBase* p = new PlayerSetBlockEvent(this,blockCoordinates,iSelectedBlock);
