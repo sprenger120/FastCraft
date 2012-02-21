@@ -24,6 +24,8 @@ GNU General Public License for more details.
 #include <math.h>
 #include <Poco/Exception.h>
 #include <Poco/ScopedLock.h>
+#include "PlayerEvents.h"
+#include "PlayerPool.h"
 using std::cout;
 
 
@@ -291,6 +293,15 @@ void World::setBlock(int X,short Y,int Z,ItemID Block) {
 												p->BlockLight[iNibbleIndex],
 												Block.second
 												);
+
+		//Push event
+		BlockCoordinates BlockCoords;
+		BlockCoords.X = X;
+		BlockCoords.Y = (char)Y;
+		BlockCoords.Z = Z;
+		
+		PlayerEventBase* p = new PlayerSetBlockEvent(NULL,BlockCoords,Block);
+		_rPlayerPool.addEvent(p);
 	} catch (Poco::RuntimeException& ex) {
 		ex.rethrow();
 	}

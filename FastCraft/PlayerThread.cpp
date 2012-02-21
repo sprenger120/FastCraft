@@ -1440,24 +1440,16 @@ void PlayerThread::Packet15_PlayerBlockPlacement() {
 		}
 
 
-
 		/*
 		* All test done. 
 		*/
-		//Send block acception
-		spawnBlock(blockCoordinates,iSelectedBlock);
-
 
 		//Send inventory update to player
 		_Inventory.DecreaseInHandStack();
 
 
-		//Append to map
+		//Append to map + push block change event
 		_pWorld->setBlock(blockCoordinates,iSelectedBlock);
-
-		//Event to player pool
-		PlayerEventBase* p = new PlayerSetBlockEvent(this,blockCoordinates,iSelectedBlock);
-		_pPoolMaster->addEvent(p);
 	} catch(Poco::RuntimeException& ex ) {
 		cout<<"Exception cateched: "<<ex.message()<<"\n";
 		Disconnect(FC_LEAVE_OTHER);
