@@ -40,6 +40,7 @@ public:
 	*/
 	static double distance2D(double,double,double,double);
 	static double distance2D(EntityCoordinates,EntityCoordinates);
+	static double distance2D(ChunkCoordinates,ChunkCoordinates);
 	
 	/*
 	* Calculates distance between two points

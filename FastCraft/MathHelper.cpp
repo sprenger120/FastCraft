@@ -57,3 +57,10 @@ double MathHelper::distance3D(BlockCoordinates s,BlockCoordinates t) {
 					   )
 			   );
 }
+
+double MathHelper::distance2D(ChunkCoordinates s,ChunkCoordinates t) {
+	return sqrt( double((s.X-t.X) * (s.X-t.X) + 
+						(s.Z-t.Z) * (s.Z-t.Z) 
+					   )
+	);
+}
