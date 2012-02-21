@@ -347,7 +347,6 @@ bool ItemSlot::operator != (ItemSlot& other) {
 
 ItemID ItemSlot::removeUnnecessarySubID(ItemID ID) {
 	try {
-
 		switch (ItemInfoStorage::isBlock(ID)) {
 		case true:
 			return std::make_pair(ID.first,  
@@ -361,6 +360,7 @@ ItemID ItemSlot::removeUnnecessarySubID(ItemID ID) {
 	}catch(Poco::RuntimeException& ex) {
 		ex.rethrow();
 	}
+	return std::make_pair(0,0);
 }
 
 void ItemSlot::removeUnnecessarySubID() {
