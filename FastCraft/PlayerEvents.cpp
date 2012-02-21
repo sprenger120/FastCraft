@@ -20,6 +20,8 @@ GNU General Public License for more details.
 #include "PlayerPool.h"
 #include "EntityPlayer.h"
 #include "MathHelper.h"
+#include "ChunkMath.h"
+#include "SettingsHandler.h"
 
 /*
 * Con/Destructors
@@ -124,7 +126,7 @@ PlayerEventBase(pThread),
 		std::cout<<"PlayerChangeHeldEvent::PlayerChangeHeldEvent invalid SlotID!\n";
 		_fIgnore=true;
 	}
-	if (Item.second < 0 || Item.second > 16) {
+	if (Item.second < 0 || Item.second > 15) {
 		std::cout<<"PlayerChangeHeldEvent::PlayerChangeHeldEvent invalid metadata entry!\n";
 		_fIgnore=true;
 	}
@@ -139,13 +141,14 @@ PlayerChangeHeldEvent::~PlayerChangeHeldEvent(){
 
 
 
-PlayerSetBlockEvent::PlayerSetBlockEvent(PlayerThread* pThread,BlockCoordinates Coordinates,ItemID Item) :
-PlayerEventBase(pThread),
+PlayerSetBlockEvent::PlayerSetBlockEvent(BlockCoordinates Coordinates,ItemID Item,string sWorldName) :
+PlayerEventBase(NULL,true),
 	_Coordinates(Coordinates),
 	_Item(Item),
-	_fIgnore(false)
+	_fIgnore(false),
+	_sWorldName(sWorldName)
 {
-	if (Item.second < 0 || Item.second > 16) {
+	if (Item.second < 0 || Item.second > 15) {
 		std::cout<<"PlayerSetBlockEvent::PlayerSetBlockEvent invalid metadata entry!\n";
 		_fIgnore=true;
 	}
@@ -301,13 +304,15 @@ void PlayerSetBlockEvent::Execute(vector<PlayerThread*>& rvPlayers,PlayerPool* p
 	if (rvPlayers.empty()) {return;}
 	if (_fIgnore) {return;}
 
-	int iEID = _pSourcePlayer->getEntityID();
+	ChunkCoordinates PlayerChkCoords;
+	ChunkCoordinates BlockChkCoords = ChunkMath::toChunkCoords(_Coordinates);
 
 	for (int x=0;x<=rvPlayers.size()-1;x++) {
 		if (!(rvPlayers[x]->isAssigned() && rvPlayers[x]->isSpawned())) {continue;}
-		if (rvPlayers[x] == _pSourcePlayer) {continue;}
+		if (rvPlayers[x]->getWorldWhoIn().compare(_sWorldName) != 0) { continue;} //Don't accept spawn block events from other worlds
 
-		if (rvPlayers[x]->isEntitySpawned(iEID)) {
+		PlayerChkCoords = ChunkMath::toChunkCoords(rvPlayers[x]->getCoordinates());
+		if (int(MathHelper::distance2D(PlayerChkCoords,BlockChkCoords)) <= SettingsHandler::getViewDistance()) {
 			rvPlayers[x]->spawnBlock(_Coordinates,_Item);
 		}
 	}

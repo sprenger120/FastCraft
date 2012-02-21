@@ -195,16 +195,17 @@ private:
 	ItemID _Item;
 	BlockCoordinates _Coordinates;
 	bool _fIgnore;
+	string _sWorldName;
 public:
 	/*
 	* Constructor
 	
 	Parameter:
-	@1 : this pointer of PlayerThread class that pushes event
-	@2 : Coordiantes of Block
-	@3 : Item data of set item
+	@1 : Coordiantes of Block
+	@2 : Item data of set item
+	@3 : World name who player is in
 	*/
-	PlayerSetBlockEvent(PlayerThread*,BlockCoordinates,ItemID);
+	PlayerSetBlockEvent(BlockCoordinates,ItemID,string);
 	~PlayerSetBlockEvent();
 
 	virtual void Execute(vector<PlayerThread*>&,PlayerPool*);
