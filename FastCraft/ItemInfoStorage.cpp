@@ -782,7 +782,7 @@ void ItemInfoStorage::isValid(ItemEntry Entry) {
 		throw Poco::RuntimeException("Destroyable but no durability");
 	}
 
-	if (Entry.MaxStackSize <= 0 || Entry.MaxStackSize > 127) {
+	if (Entry.MaxStackSize <= 0) {
 		throw Poco::RuntimeException("Illegal stack size");
 	}
 
@@ -834,15 +834,11 @@ void ItemInfoStorage::isValid(BlockEntry Entry) {
 		throw Poco::RuntimeException("Illegal SubID");
 	}
 
-	if (Entry.ID > 255) {
-		throw Poco::RuntimeException("ID illegal or in item range");
-	}
-
 	if (Entry.Name.compare("") == 0) {
 		throw Poco::RuntimeException("Name is empty");
 	}
 
-	if (Entry.MaxStackSize <= 0 || Entry.MaxStackSize > 127) {
+	if (Entry.MaxStackSize <= 0) {
 		throw Poco::RuntimeException("Illegal stack size");
 	}
 

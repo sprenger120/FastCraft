@@ -611,13 +611,13 @@ void PlayerThread::Packet1_Login() {
 		syncHealth();
 
 		//Inventory
-		ItemSlot Item1(std::make_pair(34,0),64);
-		ItemSlot Item2(std::make_pair(35,15),64);
-		ItemSlot Item3(std::make_pair(338,0),64);
+		ItemSlot Item1(std::make_pair(276,0),1);
+		//ItemSlot Item2(std::make_pair(35,15),64);
+		//ItemSlot Item3(std::make_pair(338,0),64);
 
 		_Inventory.setSlot(38,Item1);
-		_Inventory.setSlot(37,Item2);
-		_Inventory.setSlot(36,Item3);
+		//_Inventory.setSlot(37,Item2);
+		//_Inventory.setSlot(36,Item3);
 		_Inventory.synchronizeInventory();
 
 		sendClientPosition();
@@ -986,10 +986,11 @@ void PlayerThread::updateEntityPosition(int ID,EntityCoordinates Coordinates) {
 	}
 
 	NetworkOut Out(&_NetworkOutRoot);
-
-	double dX =  Coordinates.X - _vSpawnedEntities[id].oldPosition.X;
-	double dY =  Coordinates.Y - _vSpawnedEntities[id].oldPosition.Y;
-	double dZ =  Coordinates.Z - _vSpawnedEntities[id].oldPosition.Z;
+	EntityCoordinates& roldPosition = _vSpawnedEntities[id].oldPosition;
+	
+	double dX =  Coordinates.X - roldPosition.X;
+	double dY =  Coordinates.Y - roldPosition.Y;
+	double dZ =  Coordinates.Z - roldPosition.Z;
 
 	//cout<<"dX:"<<dX<<" dY:"<<dY<<" dZ:"<<dZ<<"\n";
 
@@ -1268,9 +1269,8 @@ void PlayerThread::Packet15_PlayerBlockPlacement() {
 		}
 		_timerLastBlockPlace.reset();
 
-		_Inventory.getSelectedSlot().removeUnnecessarySubID();
 		ItemSlot& InHand = _Inventory.getSelectedSlot();
-		
+		InHand.removeUnnecessarySubID();
 
 		ItemID iSelectedBlock = std::make_pair(0,0);
 		if (InHand.isEmpty()) {
@@ -1356,7 +1356,7 @@ void PlayerThread::Packet15_PlayerBlockPlacement() {
 			}
 
 			ItemEntry Entry = ItemInfoStorage::getItem(InHand.getItem());
-			if (Entry.ConnectedBlock.first == -1 && Entry.ConnectedBlock.first == -1 ) { //No connected item
+			if (Entry.ConnectedBlock.first == -1 && Entry.ConnectedBlock.second == -1 ) { //No connected item
 				spawnBlock(blockCoordinates,std::make_pair(0,0));
 				return; 
 			}
