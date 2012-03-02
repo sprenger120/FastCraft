@@ -68,3 +68,59 @@ int NBTTagCompound::getElementIndex(string sName) {
 	}
 	return -1;
 }
+
+NBTTagBase* NBTTagCompound::search(string sPath, char iType) {
+	if (iType < 1 || iType > 10) {throw Poco::RuntimeException("Invalid tag type"); }
+	if (sPath.empty() || sPath[0] != '/') { throw Poco::RuntimeException("Invalid Path"); }
+	
+	vector<string> aPathElements(0);
+	string sTemp("");
+	int iStartSlash=0,iEndSlash;
+
+	//Prepare path
+	while (sPath[sPath.size()-1] == '/' && sPath[sPath.size()-2] == '/') {sPath.pop_back();} //Remove double slashes from end
+	if (sPath[sPath.size()-1] != '/') {sPath.push_back('/');} //add a slash if there aren't one at the end
+
+	//Split path 
+	while(1) {
+		//Search end slash
+		for(iEndSlash = iStartSlash+1;iEndSlash<=sPath.size()-1;iEndSlash++) {
+			if (sPath[iEndSlash] == '/') {  
+				break;
+			}
+		}
+		sTemp.assign(sPath,iStartSlash+1,iEndSlash-iStartSlash-1);
+		aPathElements.push_back(sTemp);
+
+		if (iEndSlash == sPath.size() -1) {break;}
+		iStartSlash = iEndSlash;
+	}
+
+	int iVecIndex = 0;
+	NBTTagBase*			pLastElement = NULL;
+	NBTTagCompound*		pLastCompound = this;
+	
+	while (1) {
+		pLastElement = pLastCompound->getElementByName(aPathElements[iVecIndex]);
+		if (pLastElement==NULL) {throw Poco::RuntimeException("Not found");}
+
+
+		if (iVecIndex == aPathElements.size()-1) {
+			if (pLastElement->getTagType() != iType) {throw Poco::RuntimeException("Not found");}
+			break;
+		}else{
+			if (pLastElement->getTagType() != FC_NBT_TYPE_COMPOUND) {throw Poco::RuntimeException("Not found");}
+			pLastCompound = (NBTTagCompound*)pLastElement;
+			iVecIndex++;
+		}
+	}
+	return pLastElement;
+}
+
+
+NBTTagBase* NBTTagCompound::getElementByName(string sName) {
+	if (_vpElements.empty()) { return NULL;}
+	for (int x=0;x<=_vpElements.size()-1;x++) {
+		if (_vpElements[x]->getName().compare(sName) == 0) {return  _vpElements[x];}
+	}
+}

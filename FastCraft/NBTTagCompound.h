@@ -74,14 +74,26 @@ public:
 
 	/*
 	* Searches a element by given path (e.g.  /players/ExamplePlayer/Health)
+	* Will throw Poco::RuntimeEception if given type is invalid
 	* Will throw Poco::RuntimeEception if item wasn't found
 	* Will throw Poco::RuntimeEception if given type doesn't fits with found item
+	* Will throw Poco::RuntimeEception if path is invalid
 
 	Parameter:
 	@1 : Path to element
 	@2 : Type of element
 	*/
 	NBTTagBase*	search(string,char);
+
+
+	/*
+	* Returns pointer if element otherwise NULL
+	* Search is case sensitive
+	
+	Parameter:
+	@1 : Name of element
+	*/
+	NBTTagBase* getElementByName(string);
 private:
 	int getElementIndex(string); //-1 if not found
 };
