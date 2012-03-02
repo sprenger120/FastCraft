@@ -28,7 +28,8 @@ private:
 public:
 	/*
 	* Constructor
-	
+	* Throws Poco::RuntimeException if given type is invalid
+
 	Parameter:
 	@1 : Name of element
 	@2 : Type of elements to store

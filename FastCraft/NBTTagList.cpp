@@ -22,6 +22,7 @@ NBTTagBase(sName,FC_NBT_TYPE_LIST),
 	_iElementType(iListType),
 	_vpElements(0)
 {
+	if (iListType < 1 || iListType > 10) {throw Poco::RuntimeException("Invalid tag type"); }
 }
 
 NBTTagList::~NBTTagList(){
