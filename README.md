@@ -1,4 +1,4 @@
-![logo](http://host-it.tk/uploads/a525d737eedf8476e18353521fe66256.png)
+![logo](http://fastcraft-server.tk/images/external/FCLogo.png)
 
 
 FastCraft is a SMP Minecraft Server, written in C++.  The current version supports all client moves (excluding eating food) and the ability to set blocks. 
