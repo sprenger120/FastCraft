@@ -78,7 +78,7 @@ NBTTagBase* NBTTagCompound::search(string sPath, char iType) {
 	int iStartSlash=0,iEndSlash;
 
 	//Prepare path
-	while (sPath[sPath.size()-1] == '/' && sPath[sPath.size()-2] == '/') {sPath.pop_back();} //Remove double slashes from end
+	while (sPath[sPath.size()-1] == '/' && sPath[sPath.size()-2] == '/') {sPath.resize(sPath.size()-1);} //Remove double slashes from end
 	if (sPath[sPath.size()-1] != '/') {sPath.push_back('/');} //add a slash if there aren't one at the end
 
 	//Split path 
