@@ -31,7 +31,8 @@ void NBTTagByteArray::write(string& rTarget,bool fMode,bool fHeaderless) {
 		rTarget.append<char>(1,FC_NBT_TYPE_BYTEARRAY); //Tag Type
 		addHeaderlessString(rTarget,_sName);//Name
 	} 
-	addHeaderlessString(rTarget,sData); //Data
+	NetworkOut::addInt(rTarget,sData.length());
+	rTarget.append(sData);
 }
 
 string& NBTTagByteArray::getDataRef() {
