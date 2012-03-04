@@ -26,6 +26,11 @@ NBTTagBase(sName,FC_NBT_TYPE_LIST),
 }
 
 NBTTagList::~NBTTagList(){
+	if (!_vpElements.empty()) {
+		for (int x=0;x<=_vpElements.size()-1;x++) {
+			delete _vpElements[x];
+		}
+	}
 	_vpElements.clear();
 }
 

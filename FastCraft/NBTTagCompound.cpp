@@ -23,6 +23,11 @@ NBTTagCompound::NBTTagCompound(string sName) :
 }
 
 NBTTagCompound::~NBTTagCompound(){
+	if (!_vpElements.empty()) {
+		for (int x=0;x<=_vpElements.size()-1;x++) {
+			delete _vpElements[x];
+		}
+	}
 	_vpElements.clear();
 }
 
@@ -123,4 +128,5 @@ NBTTagBase* NBTTagCompound::getElementByName(string sName) {
 	for (int x=0;x<=_vpElements.size()-1;x++) {
 		if (_vpElements[x]->getName().compare(sName) == 0) {return  _vpElements[x];}
 	}
+	return NULL;
 }
