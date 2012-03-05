@@ -46,7 +46,7 @@ void NBTTagList::write(string& rTarget,bool fMode,bool fHeaderless) {
 	NetworkOut::addInt(rTarget,_vpElements.size());
 	if (iSize > 0) {
 		for (int i = 0; i<= iSize-1;i++) {
-			_vpElements[i]->write(rTarget,FC_NBT_OUTPUT_RAW,FC_NBT_FLAG_HEADERMELESS);
+			_vpElements[i]->write(rTarget,FC_NBT_OUTPUT_RAW,FC_NBT_FLAG_HEADERLESS);
 		}
 	}
 }
