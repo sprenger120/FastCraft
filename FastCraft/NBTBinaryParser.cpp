@@ -38,7 +38,7 @@ NBTTagCompound* NBTBinaryParser::parse(string& rStr, bool fType) {
 		inflator.clear();
 		inflator.close();
 	}
-	string& rTarget = (fType == FC_NBT_INPUT_GZIP ? ssOutput.str() : rStr);
+	string& rTarget = (fType == FC_NBT_INPUT_GZIP ? (string&)ssOutput.str() : rStr);
 	if (rTarget[0] != 0xA) { throw Poco::RuntimeException("Start compound not found!");}
 
 	NBTTagCompound *pRootCompound;
