@@ -194,7 +194,7 @@ void NBTBinaryParser::handleShort(string& rSource,int& iByteIndex,NBTTagBase* pL
 	if (iByteIndex + 2 > rSource.length()-1) {throw Poco::RuntimeException("End of file!");}
 	iByteIndex++; //Move to data start
 	memcpy(unionShort.sData,&rSource[iByteIndex],2);
-	pElement->getDataRef() = Poco::ByteOrder::flipBytes(unionShort.iData);
+	pElement->getDataRef() = Poco::ByteOrder::flipBytes(Poco::Int16(unionShort.iData));
 	iByteIndex++; //Move to data end
 
 
@@ -237,7 +237,7 @@ void NBTBinaryParser::handleInt(string& rSource,int& iByteIndex,NBTTagBase* pLas
 	if (iByteIndex + 4 > rSource.length()-1) {throw Poco::RuntimeException("End of file!");}
 	iByteIndex++;//Move to data start
 	memcpy(unionInt.sData,&rSource[iByteIndex],4);
-	pElement->getDataRef() = Poco::ByteOrder::flipBytes(unionInt.iData);
+	pElement->getDataRef() = Poco::ByteOrder::flipBytes(Poco::Int32(unionInt.iData));
 	iByteIndex += 3;//Move to data end
 
 
@@ -280,7 +280,7 @@ void NBTBinaryParser::handleInt64(string& rSource,int& iByteIndex,NBTTagBase* pL
 	if (iByteIndex + 8 > rSource.length()-1) {throw Poco::RuntimeException("End of file!");}
 	iByteIndex++; //Move to data start
 	memcpy(unionInt64.sData,&rSource[iByteIndex],8);
-	pElement->getDataRef() = Poco::ByteOrder::flipBytes(unionInt64.iData);
+	pElement->getDataRef() = Poco::ByteOrder::flipBytes(Poco::Int64(unionInt64.iData));
 	iByteIndex += 7;//Move to data end
 
 
@@ -323,7 +323,7 @@ void NBTBinaryParser::handleFloat(string& rSource,int& iByteIndex,NBTTagBase* pL
 	if (iByteIndex + 4 > rSource.length()-1) {throw Poco::RuntimeException("End of file!");}
 	iByteIndex++; //Move to data start
 	memcpy(unionInt.sData,&rSource[iByteIndex],4);
-	unionInt.iData = Poco::ByteOrder::flipBytes(unionInt.iData);
+	unionInt.iData = Poco::ByteOrder::flipBytes(Poco::Int32(unionInt.iData));
 	pElement->getDataRef() = unionInt.nData;
 	iByteIndex += 3;//Move to data end
 
@@ -366,7 +366,7 @@ void NBTBinaryParser::handleDouble(string& rSource,int& iByteIndex,NBTTagBase* p
 	if (iByteIndex + 8 > rSource.length()-1) {throw Poco::RuntimeException("End of file!");}
 	iByteIndex++;
 	memcpy(unionInt64.sData,&rSource[iByteIndex],8);
-	unionInt64.iData = Poco::ByteOrder::flipBytes(unionInt64.iData);
+	unionInt64.iData = Poco::ByteOrder::flipBytes(Poco::Int64(unionInt64.iData));
 	pElement->getDataRef() = unionInt64.nData;
 
 	iByteIndex += 7;//Move to data end
