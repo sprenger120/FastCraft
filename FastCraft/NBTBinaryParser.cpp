@@ -19,6 +19,7 @@ GNU General Public License for more details.
 #include <Poco/ByteOrder.h>
 #include <stack>
 #include <cstring>
+#include <string>
 #include <iostream>
 using std::cout;
 
@@ -38,8 +39,9 @@ NBTTagCompound* NBTBinaryParser::parse(string& rStr, bool fType) {
 		inflator.clear();
 		inflator.close();
 	}
-	string& rssOutput = ssOutput.str();
-	string& rTarget = (fType == FC_NBT_INPUT_GZIP ? rssOutput : rStr);
+	string& rTarget = ssOutput.str(); 
+	if (fType == FC_NBT_INPUT_RAW) { rTarget = rStr;}
+
 	if (rTarget[0] != 0xA) { throw Poco::RuntimeException("Start compound not found!");}
 
 	NBTTagCompound *pRootCompound;
