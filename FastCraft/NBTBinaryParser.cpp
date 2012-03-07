@@ -31,18 +31,17 @@ NBTBinaryParser::~NBTBinaryParser(){
 
 
 NBTTagCompound* NBTBinaryParser::parse(string& rStr, bool fType) {
-	std::stringstream ssOutput;
+	
 	if (fType == FC_NBT_INPUT_GZIP) {
+		std::stringstream ssOutput;
 		Poco::InflatingOutputStream inflator(ssOutput,Poco::InflatingStreamBuf::STREAM_GZIP);
 		inflator.write(rStr.c_str(),rStr.length());
 		inflator.flush();
 		inflator.clear();
 		inflator.close();
+		rStr.assign(ssOutput.str());
 	}
-	string& rTarget = ssOutput.str(); 
-	if (fType == FC_NBT_INPUT_RAW) { rTarget = rStr;}
-
-	if (rTarget[0] != 0xA) { throw Poco::RuntimeException("Start compound not found!");}
+	if (rStr[0] != 0xA) { throw Poco::RuntimeException("Start compound not found!");}
 
 	NBTTagCompound *pRootCompound;
 	stack<NBTTagBase*> storageStack;
@@ -50,13 +49,13 @@ NBTTagCompound* NBTBinaryParser::parse(string& rStr, bool fType) {
 	int byteIndex = 1;
 
 	try {
-		readName(rTarget,byteIndex,sName);
+		readName(rStr,byteIndex,sName);
 		pRootCompound = new NBTTagCompound(sName);
 		storageStack.push(pRootCompound);
 
 		while (1) {
-			if (byteIndex+1 > rTarget.length()-1) {throw Poco::RuntimeException("End of file!");}
-			nextElement(rTarget,storageStack,byteIndex,rTarget[byteIndex+1]);
+			if (byteIndex+1 > rStr.length()-1) {throw Poco::RuntimeException("End of file!");}
+			nextElement(rStr,storageStack,byteIndex,rStr[byteIndex+1]);
 			if (storageStack.empty()) {return pRootCompound;}
 		}
 	}catch(Poco::RuntimeException& ex) {
