@@ -66,6 +66,7 @@ NBTTagCompound* NBTBinaryParser::parse(string& rStr, bool fType) {
 
 
 void NBTBinaryParser::nextElement(string& rTarget,stack<NBTTagBase*>& StorageStack,int& byteIndex,char iType,bool fParseHeader) {
+	if (StorageStack.empty()) {return;}
 	NBTTagBase* pLastStorage = StorageStack.top();
 
 
@@ -108,6 +109,7 @@ void NBTBinaryParser::nextElement(string& rTarget,stack<NBTTagBase*>& StorageSta
 			break;
 		case 0: //Compound end tag
 			//cout<<"compound end "<<StorageStack.top()->getName()<<"\n";
+			if (byteIndex + 1 > rTarget.length()-1) {throw Poco::RuntimeException("End of file!");}
 			if (StorageStack.top()->getTagType() != FC_NBT_TYPE_COMPOUND) {throw Poco::RuntimeException("Not a compound");}
 			StorageStack.pop();
 			byteIndex++;
@@ -567,6 +569,7 @@ void NBTBinaryParser::handleList(string& rSource,int& iByteIndex,NBTTagBase* pLa
 				nextElement(rSource,storageStack,iByteIndex,rSource[iByteIndex+1]);
 			}
 			
+			if (storageStack.empty()) {throw Poco::RuntimeException("Unexpected end");}
 			unionInt.iData--;
 		}
 		storageStack.pop();
