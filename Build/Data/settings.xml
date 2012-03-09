@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 
 <settings>
+  <DocVer>1</DocVer> <!-- Do not change! -->
   <Network>
     <Port>25565</Port>
     <Slots>16</Slots>
