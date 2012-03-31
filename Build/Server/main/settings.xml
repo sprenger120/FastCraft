@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 
 <settings>
-  <DocVer>1</DocVer> <!-- Do not change! -->
+  <DocVer>1</DocVer>
   <Network>
     <Port>25565</Port>
     <Slots>16</Slots>
@@ -16,9 +16,7 @@
     <Difficulty>1</Difficulty>
   </Server>
 
-
   <Map>
-    <Height>128</Height>
     <AllowNeather>1</AllowNeather>
     <ViewDistance>10</ViewDistance>
     <RootMap><![CDATA[world]]></RootMap>
@@ -33,7 +31,6 @@
     <AllowPVP>1</AllowPVP>
     <FlyMod>
       <Allow>0</Allow>
-      <!-- Value in km/h.. DO NOT SET TO A VALUE LOWER THAN 7.5 (vanilla maximal run speed) -->
       <MaxSpeed>7.5</MaxSpeed>
     </FlyMod>
   </Player>
