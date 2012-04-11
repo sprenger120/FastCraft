@@ -10,6 +10,7 @@
   <Server>
     <Description><![CDATA[FastCraft Minecraft server]]></Description>
     <motd><![CDATA[§dWelcome to FastCraft 0.0.2 Alpha server.]]></motd>
+	<ServerFullMessage><![CDATA[Server is full!]]></ServerFullMessage>
     <OnlineMode>1</OnlineMode>
     <Whitelist>0</Whitelist>
     <ServerMode>0</ServerMode>
@@ -20,6 +21,8 @@
     <AllowNeather>1</AllowNeather>
     <ViewDistance>10</ViewDistance>
     <RootMap><![CDATA[world]]></RootMap>
+	<loadEnd>1</loadEnd>
+	<AdditionalWorlds><![CDATA[world2,world3]]></AdditionalWorlds>
   </Map>
 
   <Spawning>
