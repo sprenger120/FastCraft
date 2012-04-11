@@ -15,9 +15,19 @@ GNU General Public License for more details.
 
 #ifndef _FASTCRAFTHEADER_CONSTANTS
 #define _FASTCRAFTHEADER_CONSTANTS
+#include <utility>
 
+//Core Constants
+#define FC_VERSION						"0.0.2 Alpha"
+#define FC_SUPPORTED_MINCRAFTVERSION	"1.1"
+#define FC_SUPPORTED_DOCVER				1
+#define FC_SUPPORTED_PROTOCOLVERSION	23
+
+//Various Constants
 #define FC_PLAYERSPAWNRADIUS			100.0
 #define FC_MAXLOGINTIME					10000 //10 Seconds to complete login procedure
+#define FC_EMPTYITEMID					std::make_pair(-1,-1)
+#define FC_WORLDHEIGHT					128
 
 //Properties
 #define FC_SERVMODE_SURVIVAL			0
@@ -80,4 +90,23 @@ GNU General Public License for more details.
 #define FC_ENTITYSTATUS_WOLF_SHAKE		8
 #define FC_ENTITYSTATUS_ACCEPTEATING	9
 
+//Thread status
+#define FC_THREADSTATUS_DEAD			1
+#define FC_THREADSTATUS_RUNNING			2
+#define FC_THREADSTATUS_TERMINATING		3
+
+#define FC_ENTITYTYPE_BOAT				1
+#define FC_ENTITYTYPE_MINECART			10
+#define FC_ENTITYTYPE_MINECART_STORAGE	11
+#define FC_ENTITYTYPE_MINECART_POWERED	12
+#define FC_ENTITYTYPE_PRIMEDTNT			50
+#define FC_ENTITYTYPE_ENDERCRYSTAL		51
+#define FC_ENTITYTYPE_ARROW				60
+#define FC_ENTITYTYPE_SNOWBALL			61
+#define FC_ENTITYTYPE_EGG				62
+#define FC_ENTITYTYPE_FALLINGSAND		70
+#define FC_ENTITYTYPE_FALLINGGRAVEL		71
+#define FC_ENTITYTYPE_ENDEREYE			72
+#define FC_ENTITYTYPE_FALLINGDRAGONEGG	74
+#define FC_ENTITYTYPE_FISHINGFLOAT		90	
 #endif
