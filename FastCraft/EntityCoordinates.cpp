@@ -15,6 +15,16 @@ GNU General Public License for more details.
 #include "EntityCoordinates.h"
 #include <cmath>
 
+EntityCoordinates::EntityCoordinates() {
+	X = Y = Z = Stance = 0.0;
+	Yaw = Pitch = 0.0F;
+	OnGround = false;
+}
+
+EntityCoordinates::~EntityCoordinates() { 
+}
+
+
 bool EntityCoordinates::operator == (const EntityCoordinates& other) {
 	return !(
 		fabs(X - other.X) > 0.1 || 

@@ -19,6 +19,22 @@ GNU General Public License for more details.
 
 class EntityCoordinates {
 public:
+	/*
+	* Constructor
+	* Will set all variables to 0
+	*/
+	EntityCoordinates();
+
+
+	/*
+	* Destructor
+	*/
+	~EntityCoordinates();
+
+
+	/*
+	* Variables
+	*/
 	double X;
 	double Y;
 	double Z;
@@ -27,9 +43,24 @@ public:
 	float Pitch;
 	bool OnGround;
 
+	/*
+	* Operators
+	* Returns true if difference between variables is less than 0.1
+	*/
 	bool operator == (const EntityCoordinates&);
 
+
+	/*
+	* Compares only yaw/pitch
+	* Returns true if difference between variables is less than 0.1
+	*/
 	bool LookEqual(const EntityCoordinates&);
+
+
+	/*
+	* Compares only X/Y/Z/Stance
+	* Returns true if difference between variables is less than 0.1
+	*/
 	bool CoordinatesEqual(const EntityCoordinates&);
 };
 #endif
