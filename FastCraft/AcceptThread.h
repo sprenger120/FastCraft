@@ -15,29 +15,42 @@ GNU General Public License for more details.
 
 #ifndef _FASTCRAFTHEADER_ACCEPTHREAD
 #define _FASTCRAFTHEADER_ACCEPTHREAD
-
-#include <iostream>
-#include <Poco/Runnable.h>
 #include <Poco/Net/ServerSocket.h>
+#include "ServerThreadBase.h"
 #include <string>
+#include <Poco/Thread.h>
+
+//Forward definitions
+class PlayerPool;
+class MinecraftServer;
 
 using std::string;
-class PlayerPool;
 
-class AcceptThread : public Poco::Runnable {
+class AcceptThread : public ServerThreadBase {
 private:
-	string _sIP;
-	string _ServerFullMsg;
-	PlayerPool& _rPlayerPool;
+	MinecraftServer* _pMinecraftServer;
 	Poco::Net::ServerSocket _ServerSock;
-	bool _fRunning;
+	string _preparedServerFullMsg;
 public:
-	//De- /constructor
-	AcceptThread(PlayerPool&);
+	/*
+	* Constructor
+
+	Parameter:
+	@1 : Pointer to minecraft instance that runs this class
+	*/
+	AcceptThread(MinecraftServer*);
+
+
+	/*
+	* Destructor
+	* Will shutdown socket and thread
+	*/
 	~AcceptThread();
 
-	virtual void run(); //Thread Main
-	void shutdown();
-};
 
+	/*
+	* Thread main
+	*/
+	virtual void run(); //Thread Main
+};
 #endif

@@ -13,75 +13,64 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 */
 #include "AcceptThread.h" 
-#include "NetworkOut.h"
-#include "SettingsHandler.h"
-#include "PlayerPool.h"
 #include <Poco/Net/StreamSocket.h>
-#include <Poco/Thread.h>
 #include <Poco/Net/NetException.h>
-#include "PlayerPool.h"
+#include <Poco/Thread.h>
+#include "MinecraftServer.h"
+#include "NetworkOut.h"
+
 
 using Poco::Net::StreamSocket;
 using std::cout;
 using Poco::Thread;
 
-AcceptThread::AcceptThread(PlayerPool& rPlayerPool):
-_rPlayerPool(rPlayerPool),
-	_ServerFullMsg(""),
-	_ServerSock()
+
+AcceptThread::AcceptThread(MinecraftServer* pServer) 
+try :
+ServerThreadBase("AcceptThread"),
+_ServerSock(pServer->getPort()),
+_preparedServerFullMsg("")
 {
-	_ServerFullMsg.append<unsigned char>(1,0xFF);
-	NetworkOut::addString(_ServerFullMsg,"Server full!");
+	_pMinecraftServer = pServer;
+	_preparedServerFullMsg.append<unsigned char>(1,0xFF);
+	NetworkOut::addString(_preparedServerFullMsg,pServer->getServerFullMessage());
 
-	try {
-		_ServerSock = Poco::Net::ServerSocket(SettingsHandler::getPort());
-		_ServerSock.setBlocking(true);
-	}catch(Poco::IOException& ex) {
-		ex.rethrow();
-	}
-
-	_fRunning=false;
+	_Thread.start(*this);
+}catch(Poco::IOException& ex) {
+	cout<<"Unable to bind 0.0.0.0:"<<pServer->getPort()<<" ("<<ex.message()<<")\n"
+		<<"Is there another Minecraft server, running on this port?\n";
+	throw Poco::RuntimeException("Unable to start AcceptThread");
 }
 
+
 AcceptThread::~AcceptThread() {
-	if (_fRunning) {shutdown();}
+	_ServerSock.close();
+	while(_iThreadStatus == FC_THREADSTATUS_RUNNING) {
+		Thread::sleep(100);
+	}
 }
 
 void AcceptThread::run() {
 	Poco::Net::StreamSocket StrmSock;
 
-	while(!PlayerPool::isReady()) {
-		Thread::sleep(50);
-	}
-
-	_fRunning=true;
-	while(_fRunning) {
+	_iThreadStatus = FC_THREADSTATUS_RUNNING;
+	while(_iThreadStatus==FC_THREADSTATUS_RUNNING) {
 		try {
 			_ServerSock.listen();
 			StrmSock = _ServerSock.acceptConnection(); //Ooh a new player
 
 
-			if (!_rPlayerPool.isAnySlotFree()) { //There is no free slot
-				StrmSock.sendBytes(_ServerFullMsg.c_str(),_ServerFullMsg.length());
+			if (!_pMinecraftServer->getPlayerPool()->isAnySlotFree()) { //There is no free slot
+				StrmSock.sendBytes(_preparedServerFullMsg.c_str(),_preparedServerFullMsg.length());
 				Thread::sleep(100); //Wait a moment 
 				StrmSock.close();
 				continue;
 			}
 
-			_rPlayerPool.Assign(StrmSock);
-		}catch(...) { /* Only happen if socket become closed */
-			_fRunning=true; //ok shutdown(), I'm ready
+			_pMinecraftServer->getPlayerPool()->Assign(StrmSock);
+		}catch(...) {       /* Only happen if socket become closed */
+			_iThreadStatus = FC_THREADSTATUS_TERMINATING;
 			return;
 		}
 	}
-
-}
-
-void AcceptThread::shutdown() {
-	if (!_fRunning) {return;}
-	_fRunning=false;
-	_ServerSock.close();
-	while(!_fRunning){ //Wait till _fRunning turns true
-	}
-	_fRunning=false;
 }
