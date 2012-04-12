@@ -22,13 +22,12 @@ GNU General Public License for more details.
 #include <Poco/Mutex.h>
 #include "Structs.h"
 #include "EntityCoordinates.h"
-#include "ItemInfoStorage.h"
-#include <Poco/Path.h>
+#include "ItemInformationProvider.h"
 
 using std::vector;
 using std::string;
 using std::pair;
-class PlayerPool;
+class MinecraftServer;
 
 struct ChunkInternal {
 	int X;
@@ -40,12 +39,10 @@ class World {
 private:
 	string _WorldName;
 	char _iDimension;
-	PlayerPool& _rPlayerPool;
-	
 	vector<vector<ChunkInternal>> _vChunks; //[x][z]
-	int _iLoadedChunks;
-	
+
 	Poco::Mutex _Mutex;
+	MinecraftServer* _pMinecraftServer;
 public:
 	/*
 	* Constructs a new World
@@ -54,14 +51,15 @@ public:
 	Parameter:
 	@1 : World name
 	@2 : Dimension ( 0=Overworld	1=End	-1=Neather )
+	@3 : MinecraftServer instance that runs this class
 	*/
-	World(string,char,PlayerPool&);
+	World(string,char,MinecraftServer*);
 
 
 	/*
 	* Destruct world object
 	* Will free map
-	* Will save map to hdd *soon*
+	* Will save map to hdd
 	*/
 	~World();
 
@@ -157,7 +155,7 @@ public:
 	* Loads world data from given path
 
 	Parameter:
-	@1 : Path to folder that contains chunk data
+	@1 : Path to world folder (contains directories: region,players, level.dat)
 	*/
 	void Load(Poco::Path);
 

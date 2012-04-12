@@ -15,9 +15,9 @@ GNU General Public License for more details.
 #include "World.h"
 #include "ChunkTerraEditor.h"
 #include "Constants.h"
-#include "SettingsHandler.h"
+#include "MinecraftServer.h"
 #include "ChunkMath.h"
-#include "ItemInfoStorage.h"
+#include "ItemInformationProvider.h"
 #include <iostream>
 #include <cstring>
 #include <cmath>
@@ -29,13 +29,12 @@ GNU General Public License for more details.
 using std::cout;
 
 
-World::World(string Name,char iDimension,PlayerPool& rPP) :
+World::World(string Name,char iDimension,MinecraftServer* pServer) :
 _WorldName(Name),
 	_iDimension(iDimension),
-	_rPlayerPool(rPP),
 	_vChunks(0)
 {
-	_iLoadedChunks = 0;
+	_pMinecraftServer = pServer;
 	generateChunks(-10,-10,10,10);
 }
 
@@ -148,7 +147,6 @@ MapChunk* World::generateChunk(int X,int Z) {
 	std::memset(pAffectedChunk->Metadata,0x00,FC_CHUNK_NIBBLECOUNT);
 	std::memset(pAffectedChunk->BlockLight,0x00,FC_CHUNK_NIBBLECOUNT);
 	std::memset(pAffectedChunk->SkyLight,0xFF,FC_CHUNK_NIBBLECOUNT);
-	_iLoadedChunks++;
 
 	return pAffectedChunk;
 }
@@ -191,7 +189,7 @@ pair<ChunkCoordinates,int> World::WorldCoordinateConverter(int X,short Y,int Z) 
 	ChunkCoordinates Coords;
 	int Index;
 
-	if (Y < 0 || Y > SettingsHandler::getWorldHeight()-1) {
+	if (Y < 0 || Y > FC_WORLDHEIGHT-1) {
 		std::cout<<"World::WorldCoordinateConverter  Y is invalid"<<"\n";
 		throw Poco::RuntimeException("Y is invalid");
 	}
@@ -238,13 +236,13 @@ char World::getFreeSpace(int X,int Z) {
 	}
 
 	//Get height
-	for (y=SettingsHandler::getWorldHeight()-1;y>0;y--) { //For from 128 -> 1
-		if (ItemInfoStorage::isSolid(pChunk->Blocks[iOffset+y])) {
+	for (y=FC_WORLDHEIGHT-1;y>0;y--) { //For from 128 -> 1
+		if (_pMinecraftServer->getItemInfoProvider()->getBlock(pChunk->Blocks[iOffset+y]).Solid) {
 			return y+1;
 		}
 	}
 
-	return SettingsHandler::getWorldHeight();
+	return FC_WORLDHEIGHT;
 }
 
 bool World::isSuffocating(EntityCoordinates Coords) {
@@ -261,7 +259,7 @@ bool World::isSuffocating(EntityCoordinates Coords) {
 		ex.rethrow();
 	}
 
-	if (Coords.Y > (double)SettingsHandler::getWorldHeight()) {
+	if (Coords.Y > (double)FC_WORLDHEIGHT) {
 		return false;
 	}
 
@@ -271,11 +269,11 @@ bool World::isSuffocating(EntityCoordinates Coords) {
 		ChunkMath::toChunkInternal((int)floor(Coords.Z))
 		);
 
-	return ItemInfoStorage::isSolid((short)pChunk->Blocks[iOffset]);
+	return _pMinecraftServer->getItemInfoProvider()->getBlock((short)pChunk->Blocks[iOffset]).Solid;
 }
 
 void World::setBlock(int X,short Y,int Z,ItemID Block) {
-	if (!ItemInfoStorage::isRegistered(Block)) {
+	if (!_pMinecraftServer->getItemInfoProvider()->isRegistered(Block)) {
 		throw Poco::RuntimeException("Block not registered");
 	}
 
@@ -301,7 +299,7 @@ void World::setBlock(int X,short Y,int Z,ItemID Block) {
 		BlockCoords.Z = Z;
 		
 		PlayerEventBase* p = new PlayerSetBlockEvent(BlockCoords,Block,_WorldName);
-		_rPlayerPool.addEvent(p);
+		_pMinecraftServer->getPlayerPool()->addEvent(p);
 	} catch (Poco::RuntimeException& ex) {
 		ex.rethrow();
 	}
@@ -370,7 +368,7 @@ bool World::isSurroundedByAir(BlockCoordinates TargetBlock) {
 		}
 
 		//Y++
-		if (TargetBlock.Y <= SettingsHandler::getWorldHeight()-1) {
+		if (TargetBlock.Y <= FC_WORLDHEIGHT-1) {
 			if (getBlock(Temp.X,Temp.Y+1,Temp.Z).first != 0) {
 				return false;
 			}
