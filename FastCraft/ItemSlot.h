@@ -18,7 +18,7 @@ GNU General Public License for more details.
 #define _FASTCRAFTHEADER_ITEMSLOT	
 #include <vector>
 #include "Structs.h"
-#include "ItemInfoStorage.h"
+#include "ItemInformationProvider.h"
 
 using std::vector;
 class NetworkIn;
@@ -26,7 +26,7 @@ class NetworkOut;
 
 /*
 Class Note: If you change something with set... functions, it won't be sync with client
-			call synchronizeInventory from PlayerInventory class for this
+call synchronizeInventory from PlayerInventory for this
 Note2: Enchantments are not supported right now
 */
 
@@ -35,44 +35,31 @@ private:
 	ItemID _Item;
 	char _iStackSize;
 	short _iUsage;
-	bool _isTool;
+	BlockEntry* _pItemCache_Block;
+	ItemEntry*  _pItemCache_Item;
 
 	vector<Enchantment> _vEnchantments;
+	ItemInformationProvider* _pItemInfoProvider;
 public:
 	/*
 	* Construct as a free slot
-	*/
-	ItemSlot();
-
-
-	/*
-	* Constructs as a used slot
-	* Items with a usagebar will be used 
 
 	Parameter:
-	@1 : ItemID
-	@2 : Stack size
+	@1 : A ItemInformationProvider instance
 	*/
-	ItemSlot(ItemID,char);
+	ItemSlot(ItemInformationProvider*);
+
 
 	/*
-	* Construct as a used slot with extra informations
-
-	Parameter: 
-	@1 : ItemID
-	@2 : Stack size
-	@3 : Usage
-	*/
-	ItemSlot(ItemID,char,short);
-
-	/*
-	* Construct with a NetworkIO reference and reads slot data from given TCP stream
-	* Will throw Poco::RuntimeException, if connection gets aborded
+	* Constructs with a ItemID and stack size
+	* Throws Poco::RuntimeException if something is incorrect 
 
 	Parameter:
-	@1 : NetworkIO reference
+	@1 : A ItemInformationProvider instance
+	@2 : ItemID
+	@3 : stacksize
 	*/
-	ItemSlot(NetworkIn&);
+	ItemSlot(ItemInformationProvider*,ItemID,char);
 
 
 	/*
@@ -90,7 +77,7 @@ public:
 	*/
 	//void addEnchantment(Enchantment&);
 
-	
+
 	/*
 	* Removes a enchantment
 	* Will throw a Poco::RuntimeException if array index is out of bound
@@ -204,13 +191,21 @@ public:
 
 
 	/*
-	* Removes metadata from items that haven't any sub Items
-	* Rethrows all ItemInfoStorage errors
-
-	Parameter:
-	@1 : ItemID of item
+	* Returns true if stored item is a block
+	* Returns true if slot is empty
 	*/
-	static ItemID removeUnnecessarySubID(ItemID);
-	void removeUnnecessarySubID(); //Use function on itself
+	bool isBlock();
+
+
+	/*
+	* Returns the pointer to the item information cache 
+	*/
+	ItemEntry* getItemEntryCache();
+
+
+	/*
+	* Returns the pointer to the block information cache
+	*/
+	BlockEntry* getBlockEntryCache();
 };
 #endif
