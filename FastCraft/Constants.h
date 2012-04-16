@@ -16,6 +16,8 @@ GNU General Public License for more details.
 #ifndef _FASTCRAFTHEADER_CONSTANTS
 #define _FASTCRAFTHEADER_CONSTANTS
 #include <utility>
+#include <map>
+#include <string>
 
 //Core Constants
 #define FC_VERSION						"0.0.2 Alpha"
@@ -28,15 +30,6 @@ GNU General Public License for more details.
 #define FC_MAXLOGINTIME					10000 //10 Seconds to complete login procedure
 #define FC_EMPTYITEMID					std::make_pair(-1,-1)
 #define FC_WORLDHEIGHT					128
-
-//Properties
-#define FC_SERVMODE_SURVIVAL			0
-#define FC_SERVMODE_CREATIVE			1
-
-#define FC_DIFFICULTY_PEACEFUL			0
-#define FC_DIFFICULTY_EASY				1
-#define FC_DIFFICULTY_NORMAL			2
-#define FC_DIFFICULTY_HARD				3
 
 //Interval in milli seconds
 #define FC_INTERVAL_TIMESEND			5000
@@ -51,62 +44,39 @@ GNU General Public License for more details.
 #define FC_CHUNK_NIBBLECOUNT			16384
 #define FC_CHUNK_DATACOUNT              81920
 
-//Disconnect modes
-#define FC_LEAVE_KICK					1
-#define FC_LEAVE_QUIT					2
-#define FC_LEAVE_OTHER					3
+using std::string;
 
-//Animation ID's 
-#define FC_ANIM_NOANIM					0	//Send to remove all animations 
-#define FC_ANIM_SWINGARM				1   
-#define FC_ANIM_DAMAGE					2   //entity gets a red color
-#define FC_ANIM_LEAVEBED				3   
-#define FC_ANIM_EATFOOD					5   
-#define FC_ANIM_CROUCH					104
-#define FC_ANIM_UNCROUCH				105
+class Constants {
+private:
+	static std::map<string,char> _Map;
+public:
+	/*
+	* Inits all maps
+	*/
+	static void init();
 
-//Actions
-#define FC_ACTION_CROUCH				1
-#define FC_ACTION_UNCROUCH				2
-#define FC_ACTION_LEAVEBED				3
-#define FC_ACTION_STARTSPRINTING		4
-#define FC_ACTION_STOPSPRINTING			5
 
-//Entity Type ID's
-#define FC_ENTITY_PLAYER				1
-#define FC_ENTITY_PICKUP				2
-#define FC_ENTITY_MOB					3
-#define FC_ENITIY_DRIVEABLE				4 //minecarts, boats..
+	/*
+	* Returns value of given key
+	* For all valid pathes, look into Constants.cpp
+	* Throws Poco::RuntimeException if key doesn't exists
 
-//Queue Types
-#define FC_QUEUE_LOW					1
-#define FC_QUEUE_HIGH					2
+	Parameter:
+	@1 : Key name
+	*/
+	static char get(string);
 
-//Entity Status Codes
-#define FC_ENTITYSTATUS_HURT			2	
-#define FC_ENTITYSTATUS_DEAD			3
-#define FC_ENTITYSTATUS_WOLF_TAMING		6
-#define FC_ENTITYSTATUS_WOLF_TAMED		7
-#define FC_ENTITYSTATUS_WOLF_SHAKE		8
-#define FC_ENTITYSTATUS_ACCEPTEATING	9
 
-//Thread status
-#define FC_THREADSTATUS_DEAD			1
-#define FC_THREADSTATUS_RUNNING			2
-#define FC_THREADSTATUS_TERMINATING		3
+	/*
+	* Returns true if a node contains an element with the given value
+	* False otherwise
 
-#define FC_ENTITYTYPE_BOAT				1
-#define FC_ENTITYTYPE_MINECART			10
-#define FC_ENTITYTYPE_MINECART_STORAGE	11
-#define FC_ENTITYTYPE_MINECART_POWERED	12
-#define FC_ENTITYTYPE_PRIMEDTNT			50
-#define FC_ENTITYTYPE_ENDERCRYSTAL		51
-#define FC_ENTITYTYPE_ARROW				60
-#define FC_ENTITYTYPE_SNOWBALL			61
-#define FC_ENTITYTYPE_EGG				62
-#define FC_ENTITYTYPE_FALLINGSAND		70
-#define FC_ENTITYTYPE_FALLINGGRAVEL		71
-#define FC_ENTITYTYPE_ENDEREYE			72
-#define FC_ENTITYTYPE_FALLINGDRAGONEGG	74
-#define FC_ENTITYTYPE_FISHINGFLOAT		90	
+	Parameter:
+	@1 : Value
+	@2 : Node to search in
+	*/
+	static bool isDefined(char,string);
+private:
+	static string cutOffEndElement(string);
+}; 
 #endif
