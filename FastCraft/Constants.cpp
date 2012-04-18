@@ -28,9 +28,9 @@ void Constants::init() {
 
 	_Map["/Entity/Status/Hurt"]					= 2;
 	_Map["/Entity/Status/Dead"]					= 3;
-	_Map["/Entity/Status/Wolf/Taming"]			= 6;
-	_Map["/Entity/Status/Wolf/Tamed"]			= 7;
-	_Map["/Entity/Status/Wolf/Shake"]			= 8;
+	_Map["/Entity/Status/WolfTaming"]			= 6;
+	_Map["/Entity/Status/WolfTamed"]			= 7;
+	_Map["/Entity/Status/WolfShake"]			= 8;
 	_Map["/Entity/Status/AcceptEating"]			= 9;
 
 	_Map["/Entity/Action/Crouch"]				= 1;
@@ -85,10 +85,6 @@ void Constants::init() {
 	_Map["/Entity/ObjectID/DragonEgg"]			= 74;
 	_Map["/Entity/ObjectID/FishingFloat"]		= 90;
 
-	_Map["/Entity/UnknownID"]					= -1;
-
-
-
 	_Map["/Color/White"]						= 0;
 	_Map["/Color/Orange"]						= 1;
 	_Map["/Color/Magenta"]						= 2;
@@ -113,19 +109,6 @@ void Constants::init() {
 	_Map["/Difficulty/Easy"]					= 1;
 	_Map["/Difficulty/Normal"]					= 2;
 	_Map["/Difficulty/Hard"]					= 3;
-
-
-
-	_Map["/Leave/Kick"]							= 1;
-	_Map["/Leave/Quit"]							= 2;
-	_Map["/Leave/Other"]						= 3;
-
-	_Map["/ThreadStatus/Dead"]					= 1;
-	_Map["/ThreadStatus/Running"]				= 2;
-	_Map["/ThreadStatus/Terminating"]			= 3;
-
-	_Map["/Queue/Low"]							= 1;
-	_Map["/Queue/High"]							= 2;
 }
 
 char Constants::get(std::string str) {

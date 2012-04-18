@@ -30,6 +30,7 @@ GNU General Public License for more details.
 #define FC_MAXLOGINTIME					10000 //10 Seconds to complete login procedure
 #define FC_EMPTYITEMID					std::make_pair(-1,-1)
 #define FC_WORLDHEIGHT					128
+#define FC_UNKNOWNEID					-1
 
 //Interval in milli seconds
 #define FC_INTERVAL_TIMESEND			5000
@@ -43,6 +44,20 @@ GNU General Public License for more details.
 #define FC_CHUNK_BLOCKCOUNT				32768
 #define FC_CHUNK_NIBBLECOUNT			16384
 #define FC_CHUNK_DATACOUNT              81920
+
+//Thread status
+#define FC_THREADSTATUS_DEAD			1
+#define FC_THREADSTATUS_RUNNING			2
+#define FC_THREADSTATUS_TERMINATING		3
+
+//Queue types
+#define FC_QUEUE_LOW					1
+#define FC_QUEUE_HIGH					2
+
+//Leave reasons
+#define FC_LEAVE_KICK				    1
+#define FC_LEAVE_QUIT					2
+#define FC_LEAVE_OTHER					3
 
 using std::string;
 
