@@ -33,5 +33,5 @@ GNU General Public License for more details.
 #define FC_NBT_INPUT_RAW					false
 #define FC_NBT_INPUT_GZIP					true
 
-#define FC_NBT_FLAG_HEADERLESS			true
+#define FC_NBT_FLAG_HEADERLESS				true
 #endif

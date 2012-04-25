@@ -125,7 +125,7 @@ bool Constants::isDefined(char iVal,std::string sPath) {
 	if (sPath[sPath.length()-1] == '/') {
 		auto it = sPath.rbegin();
 		int x=0;
-
+		
 		while(*it == '/'){it++;x++;}
 		if (x>0) {sPath.resize(sPath.size()-x);}
 	}
