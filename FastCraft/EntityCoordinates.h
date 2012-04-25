@@ -41,6 +41,7 @@ public:
 	double Stance;
 	float Yaw;
 	float Pitch;
+	float HeadYaw;
 	bool OnGround;
 
 	/*
