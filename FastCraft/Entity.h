@@ -31,8 +31,6 @@ class Entity {
 protected:
 	MinecraftServer* _pMCServer;
 	int _iEntityID;
-	EntityCoordinates Coordinates;
-	EntityCoordinates lastCoordinates;
 public:
 	/*
 	* Constructor
@@ -61,29 +59,17 @@ public:
 	/*
 	* Coordintes
 	*/
-	double getX();
-	double getY();
-	double getZ();
-	float getYaw();
-	float getPitch();
-	float getHeadYaw();
-	EntityCoordinates getCoordinates();
-
-	void setX(double);
-	void setY(double);
-	void setZ(double);
-	void setYaw(float);
-	void setPitch(float);
-	void setHeadYaw(float);
-	void setCoordinates(EntityCoordinates&);
-	
-	EntityCoordinates getLastCoordinates();
+	EntityCoordinates Coordinates;
 
 
 	/*
 	* Syncs coordinates with client
+
+	Parameter:
+	@1 : NetworkOut instance
+	@2 : old Coordiantes
 	*/
-	void syncCoordinates(NetworkOut&);
+	void syncCoordinates(NetworkOut&,EntityCoordinates&);
 
 
 	/*

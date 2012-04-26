@@ -67,74 +67,7 @@ void Entity::spawn(NetworkOut& rOut) {
 }
 
 
-double Entity::getX() {
-	return Coordinates.X;
-}
-
-double Entity::getY() {
-	return Coordinates.Y;
-}
-
-double Entity::getZ() {
-	return Coordinates.Z;
-}
-
-float Entity::getYaw() {
-	return Coordinates.Yaw;
-}
-
-float Entity::getPitch() {
-	return Coordinates.Pitch;
-}
-
-float Entity::getHeadYaw() {
-	return Coordinates.HeadYaw;
-}
-
-EntityCoordinates Entity::getCoordinates() {
-	return Coordinates;
-}
-
-void Entity::setX(double n) {
-	lastCoordinates.X = Coordinates.X;
-	Coordinates.X = n;
-}
-
-void Entity::setY(double n) {
-	lastCoordinates.Y = Coordinates.Y;
-	Coordinates.Y = n;
-}
-
-void Entity::setZ(double n) {
-	lastCoordinates.Z = Coordinates.Z;
-	Coordinates.Z = n;
-}
-
-void Entity::setYaw(float n) {
-	lastCoordinates.Yaw = Coordinates.Yaw;
-	Coordinates.Yaw = n;
-}
-
-void Entity::setPitch(float n) {
-	lastCoordinates.Pitch = Coordinates.Pitch;
-	Coordinates.Pitch = n;
-}
-
-void Entity::setHeadYaw(float n) {
-	lastCoordinates.HeadYaw = Coordinates.HeadYaw;
-	Coordinates.HeadYaw = n;
-}
-
-void Entity::setCoordinates(EntityCoordinates& c) {
-	lastCoordinates = Coordinates;
-	Coordinates = c;
-}
-
-EntityCoordinates Entity::getLastCoordinates() {
-	return lastCoordinates;
-}
-
-void Entity::syncCoordinates(NetworkOut& rOut) {
+void Entity::syncCoordinates(NetworkOut& rOut,EntityCoordinates& lastCoordinates) {
 	double dX =  Coordinates.X - lastCoordinates.X;
 	double dY =  Coordinates.Y - lastCoordinates.Y;
 	double dZ =  Coordinates.Z - lastCoordinates.Z;
