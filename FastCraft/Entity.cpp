@@ -17,6 +17,7 @@ GNU General Public License for more details.
 #include "World.h"
 #include "NetworkOut.h"
 #include "Constants.h"
+#include <cmath>
 
 Entity::Entity(MinecraftServer* pServer,World* pWorld) {
 	if (pServer == NULL || _pWorld == NULL) {throw Poco::RuntimeException("Nullpointer are not allowed");}
