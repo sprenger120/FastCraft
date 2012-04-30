@@ -21,7 +21,6 @@ GNU General Public License for more details.
 #include "EntityPlayer.h"
 #include "MathHelper.h"
 #include "ChunkMath.h"
-#include "SettingsHandler.h"
 
 /*
 * Con/Destructors
@@ -184,31 +183,31 @@ void ChatEvent::Execute(vector<PlayerThread*>& rvPlayers,PlayerPool* pPlayerPool
 }
 
 void PlayerJoinEvent::Execute(vector<PlayerThread*>& rvPlayers,PlayerPool* pPlayerPool) {
-	if (rvPlayers.empty()) {return;}
+	//if (rvPlayers.empty()) {return;}
 
-	//Write join message to chat
-	pPlayerPool->sendMessageToAll( _pSourcePlayer->getUsername() + " joined game" );
+	////Write join message to chat
+	//pPlayerPool->sendMessageToAll( _pSourcePlayer->getUsername() + " joined game" );
 
 
-	int TargetPlayerID,SourcePlayerID;
-	EntityPlayer SourcePlayer,TargetPlayer;
+	//int TargetPlayerID,SourcePlayerID;
+	//EntityPlayer SourcePlayer,TargetPlayer;
 
-	SourcePlayerID = _pSourcePlayer->getEntityID();
-	SourcePlayer = PlayerPool::buildEntityPlayerFromPlayerPtr(_pSourcePlayer);
+	//SourcePlayerID = _pSourcePlayer->getEntityID();
+	//SourcePlayer = PlayerPool::buildEntityPlayerFromPlayerPtr(_pSourcePlayer);
 
-	for (int x=0;x<=rvPlayers.size()-1;x++) {
-		if (!(rvPlayers[x]->isAssigned() && rvPlayers[x]->isSpawned())) {continue;}
-		if (rvPlayers[x] == _pSourcePlayer) {continue;} //Event Source filter
-		rvPlayers[x]->PlayerInfoList(true,_pSourcePlayer->getUsername()); //Spawn name to playerlist
-		if (MathHelper::distance2D(rvPlayers[x]->getCoordinates(),SourcePlayer._Coordinates) > 100.0) {continue;}//Too distant members filter
+	//for (int x=0;x<=rvPlayers.size()-1;x++) {
+	//	if (!(rvPlayers[x]->isAssigned() && rvPlayers[x]->isSpawned())) {continue;}
+	//	if (rvPlayers[x] == _pSourcePlayer) {continue;} //Event Source filter
+	//	rvPlayers[x]->PlayerInfoList(true,_pSourcePlayer->getUsername()); //Spawn name to playerlist
+	//	if (MathHelper::distance2D(rvPlayers[x]->getCoordinates(),SourcePlayer._Coordinates) > 100.0) {continue;}//Too distant members filter
 
-		rvPlayers[x]->spawnPlayer(SourcePlayerID,SourcePlayer); //Spawn event source to others
-		
-		//Spawn other players to event source
-		TargetPlayer = PlayerPool::buildEntityPlayerFromPlayerPtr(rvPlayers[x]); 
-		TargetPlayerID = rvPlayers[x]->getEntityID();
-		_pSourcePlayer->spawnPlayer(TargetPlayerID,TargetPlayer);
-	}
+	//	rvPlayers[x]->spawnPlayer(SourcePlayerID,SourcePlayer); //Spawn event source to others
+	//	
+	//	//Spawn other players to event source
+	//	TargetPlayer = PlayerPool::buildEntityPlayerFromPlayerPtr(rvPlayers[x]); 
+	//	TargetPlayerID = rvPlayers[x]->getEntityID();
+	//	_pSourcePlayer->spawnPlayer(TargetPlayerID,TargetPlayer);
+	//}
 }
 
 void PlayerDisconnectEvent::Execute(vector<PlayerThread*>& rvPlayers,PlayerPool* pPlayerPool) {
@@ -245,75 +244,75 @@ void PlayerAnimationEvent::Execute(vector<PlayerThread*>& rvPlayers,PlayerPool* 
 }
 
 void PlayerUpdateFlagsEvent::Execute(vector<PlayerThread*>& rvPlayers,PlayerPool* pPlayerPool) {
-	if (rvPlayers.empty()) {return;}
-	int iEID = _pSourcePlayer->getEntityID();
+	//if (rvPlayers.empty()) {return;}
+	//int iEID = _pSourcePlayer->getEntityID();
 
-	for (int x=0;x<=rvPlayers.size()-1;x++) {
-		if (!(rvPlayers[x]->isAssigned() && rvPlayers[x]->isSpawned())) {continue;}
-		if (rvPlayers[x] == _pSourcePlayer) {continue;}
+	//for (int x=0;x<=rvPlayers.size()-1;x++) {
+	//	if (!(rvPlayers[x]->isAssigned() && rvPlayers[x]->isSpawned())) {continue;}
+	//	if (rvPlayers[x] == _pSourcePlayer) {continue;}
 
-		if (rvPlayers[x]->isEntitySpawned(iEID)) {
-			rvPlayers[x]->updateEntityMetadata(iEID,_Flags);
-		}
-	}
+	//	if (rvPlayers[x]->isEntitySpawned(iEID)) {
+	//		rvPlayers[x]->updateEntityMetadata(iEID,_Flags);
+	//	}
+	//}
 }
 
 void PlayerMoveEvent::Execute(vector<PlayerThread*>& rvPlayers,PlayerPool* pPlayerPool) {
-	if (rvPlayers.empty()) {return;}
+	//if (rvPlayers.empty()) {return;}
 
-	//Build EntityPlayer instance of event source
-	int iEID = _pSourcePlayer->getEntityID();
-	EntityPlayer SourcePlayer = PlayerPool::buildEntityPlayerFromPlayerPtr(_pSourcePlayer);
-	SourcePlayer._Coordinates = _newCoordinates;
+	////Build EntityPlayer instance of event source
+	//int iEID = _pSourcePlayer->getEntityID();
+	//EntityPlayer SourcePlayer = PlayerPool::buildEntityPlayerFromPlayerPtr(_pSourcePlayer);
+	//SourcePlayer._Coordinates = _newCoordinates;
 
-	for (int x=0;x<=rvPlayers.size()-1;x++) {
-		if (!(rvPlayers[x]->isAssigned() && rvPlayers[x]->isSpawned())) {continue;}
-		if (rvPlayers[x] == _pSourcePlayer) {continue;}
-		if (MathHelper::distance2D(rvPlayers[x]->getCoordinates(),_newCoordinates) > 100.0) {//Too distant->dont update
-			if (rvPlayers[x]->isEntitySpawned(iEID)) {
-				rvPlayers[x]->despawnEntity(iEID);
-			}
-			continue; 
-		}
+	//for (int x=0;x<=rvPlayers.size()-1;x++) {
+	//	if (!(rvPlayers[x]->isAssigned() && rvPlayers[x]->isSpawned())) {continue;}
+	//	if (rvPlayers[x] == _pSourcePlayer) {continue;}
+	//	if (MathHelper::distance2D(rvPlayers[x]->getCoordinates(),_newCoordinates) > 100.0) {//Too distant->dont update
+	//		if (rvPlayers[x]->isEntitySpawned(iEID)) {
+	//			rvPlayers[x]->despawnEntity(iEID);
+	//		}
+	//		continue; 
+	//	}
 
-		if (!rvPlayers[x]->isEntitySpawned(iEID)) { //Spawn into players view circle
-			rvPlayers[x]->spawnPlayer(iEID,SourcePlayer);
-		}else{ //Already spawned -> update position
-			rvPlayers[x]->updateEntityPosition(iEID,_newCoordinates);	  	
-		}
-	}
+	//	if (!rvPlayers[x]->isEntitySpawned(iEID)) { //Spawn into players view circle
+	//		rvPlayers[x]->spawnPlayer(iEID,SourcePlayer);
+	//	}else{ //Already spawned -> update position
+	//		rvPlayers[x]->updateEntityPosition(iEID,_newCoordinates);	  	
+	//	}
+	//}
 }
 
 void PlayerChangeHeldEvent::Execute(vector<PlayerThread*>& rvPlayers,PlayerPool* pPlayerPool) {
-		if (rvPlayers.empty()) {return;}
-		if (_fIgnore) {return;}
+	//	if (rvPlayers.empty()) {return;}
+	//	if (_fIgnore) {return;}
 
-		int iEID = _pSourcePlayer->getEntityID();
+	//	int iEID = _pSourcePlayer->getEntityID();
 
-	for (int x=0;x<=rvPlayers.size()-1;x++) {
-		if (!(rvPlayers[x]->isAssigned() && rvPlayers[x]->isSpawned())) {continue;}
-		if (rvPlayers[x] == _pSourcePlayer) {continue;}
+	//for (int x=0;x<=rvPlayers.size()-1;x++) {
+	//	if (!(rvPlayers[x]->isAssigned() && rvPlayers[x]->isSpawned())) {continue;}
+	//	if (rvPlayers[x] == _pSourcePlayer) {continue;}
 
-		if (rvPlayers[x]->isEntitySpawned(iEID)) {
-			rvPlayers[x]->updateEntityEquipment(iEID,_iSlot,_Item);
-		}
-	}
+	//	if (rvPlayers[x]->isEntitySpawned(iEID)) {
+	//		rvPlayers[x]->updateEntityEquipment(iEID,_iSlot,_Item);
+	//	}
+	//}
 }
 
 void PlayerSetBlockEvent::Execute(vector<PlayerThread*>& rvPlayers,PlayerPool* pPlayerPool) {
-	if (rvPlayers.empty()) {return;}
-	if (_fIgnore) {return;}
+	//if (rvPlayers.empty()) {return;}
+	//if (_fIgnore) {return;}
 
-	ChunkCoordinates PlayerChkCoords;
-	ChunkCoordinates BlockChkCoords = ChunkMath::toChunkCoords(_Coordinates);
+	//ChunkCoordinates PlayerChkCoords;
+	//ChunkCoordinates BlockChkCoords = ChunkMath::toChunkCoords(_Coordinates);
 
-	for (int x=0;x<=rvPlayers.size()-1;x++) {
-		if (!(rvPlayers[x]->isAssigned() && rvPlayers[x]->isSpawned())) {continue;}
-		if (rvPlayers[x]->getWorldWhoIn().compare(_sWorldName) != 0) { continue;} //Don't accept spawn block events from other worlds
+	//for (int x=0;x<=rvPlayers.size()-1;x++) {
+	//	if (!(rvPlayers[x]->isAssigned() && rvPlayers[x]->isSpawned())) {continue;}
+	//	if (rvPlayers[x]->getWorldWhoIn().compare(_sWorldName) != 0) { continue;} //Don't accept spawn block events from other worlds
 
-		PlayerChkCoords = ChunkMath::toChunkCoords(rvPlayers[x]->getCoordinates());
-		if (int(MathHelper::distance2D(PlayerChkCoords,BlockChkCoords)) <= SettingsHandler::getViewDistance()) {
-			rvPlayers[x]->spawnBlock(_Coordinates,_Item);
-		}
-	}
+	//	PlayerChkCoords = ChunkMath::toChunkCoords(rvPlayers[x]->getCoordinates());
+	//	if (int(MathHelper::distance2D(PlayerChkCoords,BlockChkCoords)) <= SettingsHandler::getViewDistance()) {
+	//		rvPlayers[x]->spawnBlock(_Coordinates,_Item);
+	//	}
+	//}
 }

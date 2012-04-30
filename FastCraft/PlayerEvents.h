@@ -18,7 +18,7 @@ GNU General Public License for more details.
 #include "PlayerEventBase.h"
 #include "EntityCoordinates.h"
 #include "EntityFlags.h"
-#include "ItemInfoStorage.h"
+#include "ItemInformationProvider.h"
 #include "Structs.h"
 #include <string>
 
