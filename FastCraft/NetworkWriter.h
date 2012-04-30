@@ -14,30 +14,43 @@ GNU General Public License for more details.
 */
 #ifndef _FASTCRAFTHEADER_NETWORKWRITER
 #define _FASTCRAFTHEADER_NETWORKWRITER
-#include <Poco/Runnable.h>
 #include <Poco/Net/StreamSocket.h>
 #include <string>
 #include "ThreadSafeQueue.h"
+#include "ServerThreadBase.h"
 
 
 class PlayerThread;
 using std::string;
 
-class NetworkWriter : public Poco::Runnable { 
+class NetworkWriter : public ServerThreadBase { 
 private:
-	ThreadSafeQueue<string>& _rlowQ;
-	ThreadSafeQueue<string>& _rhighQ;
+	ThreadSafeQueue<string>& _rLowQueue;
+	ThreadSafeQueue<string>& _rHighQueue;
 	Poco::Net::StreamSocket& _rStrm;
 	PlayerThread* _pPlayer;
 
-	void waitTillDisconnected(); //Waits till fSpawned is false
 	bool _fClear;
-	bool _fRunning;
 public:
 	/*
-	* Con/Destructor
+	* Constructor
+
+	Parameter:
+	@1 : Reference to a queue that will contain chunks and multi block changes
+	@2 : Reference to a queue that will contain all other packets
+	@3 : Reference to the StreamSocket instance of the player
+	@4 : this pointer of PlayerThread class this class
 	*/
-	NetworkWriter(ThreadSafeQueue<string>&,ThreadSafeQueue<string>&,Poco::Net::StreamSocket&,PlayerThread*);
+	NetworkWriter(	ThreadSafeQueue<string>&,
+					ThreadSafeQueue<string>&,
+					Poco::Net::StreamSocket&,
+					PlayerThread*
+				 );
+
+
+	/*
+	* Destructor
+	*/
 	~NetworkWriter();
 
 	
@@ -51,11 +64,7 @@ public:
 	* Exception preventing method for clearing the write queues
 	*/
 	void clearQueues();
-
-
-	/*
-	* Forces thread to shutdown
-	*/
-	void shutdown();
+private:
+	void waitTillDisconnected();
 };
 #endif

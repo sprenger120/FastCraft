@@ -22,36 +22,29 @@ GNU General Public License for more details.
 using Poco::Thread;
 
 NetworkWriter::NetworkWriter(ThreadSafeQueue<string>& lowQ,ThreadSafeQueue<string>& highQ,Poco::Net::StreamSocket& s,PlayerThread* p) :
-_rlowQ(lowQ),
-	_rhighQ(highQ),
+_rLowQueue(lowQ),
+	_rHighQueue(highQ),
 	_rStrm(s),
 	_pPlayer(p),
-	_fClear(false)
+	ServerThreadBase("NetworkWriter")
 {
-	_fRunning=false;
+	_fClear = false;
+	startThread(this);
 }
 
 NetworkWriter::~NetworkWriter() {
-	if (_fRunning) {shutdown();}
-	if (!_rhighQ.empty()) {
-		_rhighQ.clear();
-	}
-	if(!_rlowQ.empty()) {
-		_rlowQ.clear();
-	}
+	killThread();
+	if (!_rLowQueue.empty()) {_rLowQueue.clear();}
+	if (!_rHighQueue.empty()) {_rHighQueue.clear();}
 }
 
 void NetworkWriter::run() {
-	_fRunning=true;
-	while (_fRunning) {
+	_iThreadStatus = FC_THREADSTATUS_RUNNING;
+	while (_iThreadStatus == FC_THREADSTATUS_RUNNING) {
 		if (_fClear) {
-			_fClear=false;
-			if (!_rhighQ.empty()) {
-				_rhighQ.clear();
-			}
-			if(!_rlowQ.empty()) {
-				_rlowQ.clear();
-			}
+			_fClear = false;
+			if (!_rLowQueue.empty()) {_rLowQueue.clear();}
+			if (!_rHighQueue.empty()) {_rHighQueue.clear();}
 		}
 
 		if (!_pPlayer->isSpawned()) {
@@ -61,73 +54,73 @@ void NetworkWriter::run() {
 
 		try{
 			//Process high level queue
-			while (!_rhighQ.empty()) {
-				string & rStr = _rhighQ.front();
+			while (!_rHighQueue.empty()) {
+				string & rStr = _rHighQueue.front();
 				try {
 					_rStrm.sendBytes(rStr.c_str(),rStr.length()); //Send
 				}catch(Poco::Net::ConnectionAbortedException) {
-					_rhighQ.pop();
+					_rHighQueue.pop();
 					waitTillDisconnected();
 					continue;
 				}catch(Poco::Net::InvalidSocketException) {
-					_rhighQ.pop();
+					_rHighQueue.pop();
 					waitTillDisconnected();
 					continue;
 				}catch(Poco::TimeoutException) {
-					_rhighQ.pop();
+					_rHighQueue.pop();
 					waitTillDisconnected();
 					continue;
 				}catch(Poco::Net::ConnectionResetException) {
-					_rhighQ.pop();
+					_rHighQueue.pop();
 					waitTillDisconnected();
 					continue;
 				}catch(Poco::IOException) {
-					_rhighQ.pop();
+					_rHighQueue.pop();
 					waitTillDisconnected();
 					continue;
 				}
 
-				_rhighQ.pop();
+				_rHighQueue.pop();
 			}
 
-			if (_rlowQ.empty()) {
+			if (_rLowQueue.empty()) {
 				Thread::sleep(10);
 				continue;
 			}
-			string & rStr = _rlowQ.front();
+			string & rStr = _rLowQueue.front();
 			try {
 				_rStrm.sendBytes(rStr.c_str(),rStr.length()); //Send
 			}catch(Poco::Net::ConnectionAbortedException) {
-				_rlowQ.pop();
+				_rLowQueue.pop();
 				waitTillDisconnected();
 				continue;
 			}catch(Poco::Net::InvalidSocketException) {
-				_rlowQ.pop();
+				_rLowQueue.pop();
 				waitTillDisconnected();
 				continue;
 			}catch(Poco::TimeoutException) {
-				_rlowQ.pop();
+				_rLowQueue.pop();
 				waitTillDisconnected();
 				continue;
 			}catch(Poco::Net::ConnectionResetException) {
-				_rlowQ.pop();
+				_rLowQueue.pop();
 				waitTillDisconnected();
 				continue;
 			}catch(Poco::IOException) {
-				_rlowQ.pop();
+				_rLowQueue.pop();
 				waitTillDisconnected();
 				continue;
 			}
 
 
-			_rlowQ.pop();
+			_rLowQueue.pop();
 		}catch(Poco::RuntimeException& ex) {
 			std::cout<<"NetworkWriter::run exception:"<<ex.message()<<"\n";
 			waitTillDisconnected();
 			continue; //Queue exception
 		}
 	}
-	_fRunning=true;
+	_iThreadStatus = FC_THREADSTATUS_DEAD;
 }
 
 void NetworkWriter::waitTillDisconnected() {
@@ -137,13 +130,5 @@ void NetworkWriter::waitTillDisconnected() {
 }
 
 void NetworkWriter::clearQueues() {
-	_fClear=true;
-}
-
-void NetworkWriter::shutdown() {
-	if (!_fRunning) {return;}
-	_fRunning=false;
-	while(!_fRunning){ //Wait till _fRunning turns true
-	}
-	_fRunning=false;
+	_fClear = true;
 }
