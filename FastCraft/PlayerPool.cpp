@@ -15,7 +15,6 @@ GNU General Public License for more details.
 
 #include "PlayerPool.h"
 #include "PlayerThread.h"
-#include "SettingsHandler.h"
 #include "PackingThread.h"
 #include "EntityFlags.h"
 #include "MathHelper.h"
@@ -27,48 +26,44 @@ GNU General Public License for more details.
 #include <cmath>
 #include <Poco/String.h>
 #include "ChunkMath.h"
-#include "WorldStorage.h"
 #include "PlayerEventBase.h"
 #include "PlayerEvents.h"
+#include "MinecraftServer.h"
 
 using Poco::Thread;
 using std::cout;
 
-bool PlayerPool::_fReady = false;
 
-PlayerPool::PlayerPool(PackingThread& rPackingThread):
-_vPlayerThreads(0),
-	_ThreadPool("PlayerThreads",1,SettingsHandler::getPlayerSlotCount()),
+PlayerPool::PlayerPool(MinecraftServer* pServer) :
+_vPlayerThreads(pServer->getPlayerSlotCount()),
+	ServerThreadBase("PlayerPool"),
 	_qEvents(),
-	_PackingThread(rPackingThread) 
+	_PackingThread()
 {	
-	int iSlotCount = SettingsHandler::getPlayerSlotCount();
+	_pMinecraftServer = pServer;
 
-	_vPlayerThreads.resize(iSlotCount); //Resize to slot count
 	for (int x=0;x<=_vPlayerThreads.size()-1;x++) {
-		_vPlayerThreads[x] = NULL;
-	}
-	_fRunning=false;
+		_vPlayerThreads[x] = new PlayerThread(_PackingThread,pServer);
+	}	
+	startThread(this);
 }
 
 PlayerPool::~PlayerPool() {
-	if (_fRunning) {shutdown();}
+	killThread();
+
+	if (!_vPlayerThreads.empty()) {
+		for (int x=0;x<=_vPlayerThreads.size()-1;x++) {
+			delete _vPlayerThreads[x];
+		}
+	}
 }
 
 
 void PlayerPool::run() {
-	//Create Player Threads
-	for (int x=0;x<=_vPlayerThreads.size()-1;x++) {
-		_vPlayerThreads[x] = new PlayerThread(this,_PackingThread);
-
-		_ThreadPool.defaultPool().start(*_vPlayerThreads[x]);
-	}
-	_fReady=true;
-
-	_fRunning=true;
+	_iThreadStatus = FC_THREADSTATUS_RUNNING;
 	PlayerEventBase* p;
 
-	while (_fRunning) {		
+	while (_iThreadStatus==FC_THREADSTATUS_RUNNING) {		
 		if (_qEvents.empty()) {
 			Thread::sleep(50);
 			continue;
@@ -84,7 +79,7 @@ void PlayerPool::run() {
 			_qEvents.pop();
 		}
 	}
-	_fRunning=true;
+	_iThreadStatus = FC_THREADSTATUS_DEAD;
 }
 
 
@@ -128,44 +123,9 @@ void PlayerPool::sendMessageToAll(string str) {
 	}
 }
 
-vector<string> PlayerPool::ListPlayers(int iMax) {
-	int iElements = 0;
-	vector<string> vNames(0);
-
-	if (iMax <= 0) {
-		return vNames;
-	}
-
-	for (int x=0;x<=_vPlayerThreads.size()-1;x++) {
-		if( _vPlayerThreads[x]->isAssigned() && _vPlayerThreads[x]->isSpawned()) {
-			vNames.push_back(_vPlayerThreads[x]->getUsername());
-			iElements++;
-			if (iElements == iMax) {
-				break;
-			}
-		}
-	}
-
-	return vNames;
+vector<PlayerThread*>&  PlayerPool::ListPlayers(int iMax) {
+	return _vPlayerThreads;
 }
-
-EntityPlayer PlayerPool::buildEntityPlayerFromPlayerPtr(PlayerThread* pPlayer) {
-	EntityPlayer Player;
-
-	Player._Coordinates = pPlayer->getCoordinates();
-	Player._sName = pPlayer->getUsername();
-	Player._Flags = pPlayer->getFlags();
-
-	PlayerInventory & Inventory =  pPlayer->getInventory();
-
-	Player._aHeldItems[0] = Inventory.getSlot(36 + Inventory.getSlotSelection());
-	Player._aHeldItems[1] = Inventory.getSlot(8);
-	Player._aHeldItems[2] = Inventory.getSlot(7);
-	Player._aHeldItems[3] = Inventory.getSlot(6);
-	Player._aHeldItems[4] = Inventory.getSlot(5);
-	return Player;
-}
-
 
 PlayerThread* PlayerPool::getPlayerByName(string Name,PlayerThread* pCaller) {
 	if (_vPlayerThreads.empty()) { return NULL; }
@@ -198,30 +158,4 @@ bool PlayerPool::willHurtOther(BlockCoordinates blockCoord,PlayerThread* pPlayer
 		}
 	}
 	return false;
-}
-
-void PlayerPool::shutdown() {
-	if (!_fRunning) {return;}
-	_fRunning=false;
-	while(!_fRunning){ //Wait till _fRunning turns true
-	}
-	_fRunning=false;
-
-	cout<<"\tShutting down PlayerThreads\n";
-	
-	for (int x=0;x<=_vPlayerThreads.size()-1;x++) { //Release objects
-		if (_vPlayerThreads[x] != NULL) {
-			
-			cout<<"\t\t#:"<<x<<"...";
-			_vPlayerThreads[x]->shutdown();
-			delete _vPlayerThreads[x];;
-			cout<<"Done"<<"\n";
-		}
-	}
-
-	cout<<"\tDone\n"<<std::flush;
-}
-
-bool PlayerPool::isReady() {
-	return _fReady;
 }

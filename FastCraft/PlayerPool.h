@@ -27,29 +27,38 @@ GNU General Public License for more details.
 #include "EntityCoordinates.h"
 #include "ThreadSafeQueue.h"
 #include "EntityPlayer.h"
+#include "ServerThreadBase.h"
+#include "PackingThread.h"
 
 class PlayerThread;
 class PackingThread;
 class PlayerEventBase;
+class MinecraftServer;
 
 using std::vector;
 using std::string;
 
-class PlayerPool : public Poco::Runnable {
+class PlayerPool : public ServerThreadBase {
 private:
-	Poco::ThreadPool _ThreadPool;
+	MinecraftServer* _pMinecraftServer;
 	vector<PlayerThread*> _vPlayerThreads;
 	ThreadSafeQueue<PlayerEventBase*> _qEvents;
 	
-	PackingThread& _PackingThread;
-	bool _fRunning;
-	static bool _fReady;
+	PackingThread _PackingThread;
 public:
 	/*
-	* De/constructor
+	* Constructor
+
+	Parameter:
+	@1 : MinecraftServer instance that run this PlayerPool
 	*/
-	PlayerPool(PackingThread&); //Constructor
-	~PlayerPool(); //Destructor
+	PlayerPool(MinecraftServer*); //Constructor
+
+
+	/*
+	* Destructor
+	*/
+	~PlayerPool();
 
 
 	/*
@@ -91,7 +100,7 @@ public:
 	Parameter:
 	@1 : Maxiaml size of vector
 	*/
-	vector<string> ListPlayers(int);
+	vector<PlayerThread*>& ListPlayers(int);
 
 
 	/*
@@ -101,35 +110,19 @@ public:
 	Parameter:
 	@1 : Pointer to a spawned PlayerThread
 	*/
-	static EntityPlayer buildEntityPlayerFromPlayerPtr(PlayerThread*);
+	//static EntityPlayer buildEntityPlayerFromPlayerPtr(PlayerThread*);
 
 
 	/*
-	* Look for PlayerThread thats name fits into given and return it's pointer
+	* Searchesr PlayerThread thats name fits into given and return it's pointer
 	* Returns NULL if nothing found
-	* This is a cas insensitive search
+	* This is a case insensitive search
 
 	Parameter:
 	@1 : Players name
-	@2 : this pointer of class that calls this function
+	@2 : PlayerThread class that had called this function
 	*/
 	PlayerThread* getPlayerByName(string,PlayerThread*);
-
-
-	/*
-	* Returns true if your setBlock action will hurt others
-
-	Parameter:
-	@1 : Affected BlockCoordiantes 
-	@2 : this pointer of class that calls this function
-	*/
-	bool willHurtOther(BlockCoordinates,PlayerThread*);
-
-
-	/*
-	* Forces PlayerPool thread to stop
-	*/
-	void shutdown();
 
 
 	/*
@@ -137,11 +130,7 @@ public:
 	*/
 	void sendMessageToAll(string);
 
-
-	/*
-	* Returns true if PlayerPool is ready
-	*/
-	static bool isReady();
+	bool willHurtOther(BlockCoordinates,PlayerThread*);
 private:
 	int getFreeSlot(); //Returns -1 if there is no free slot
 };
