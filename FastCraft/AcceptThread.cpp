@@ -36,18 +36,18 @@ _preparedServerFullMsg("")
 	NetworkOut::addString(_preparedServerFullMsg,pServer->getServerFullMessage());
 
 	startThread(this);
+
+	_ServerSock.setReusePort(false);
+
 }catch(Poco::IOException& ex) {
-	cout<<"Unable to bind 0.0.0.0:"<<pServer->getPort()<<" ("<<ex.message()<<")\n"
-		<<"Is there another Minecraft server, running on this port?\n";
+	cout<<"Unable to bind 0.0.0.0:"<<pServer->getPort()<<" ("<<ex.message()<<")\n";
 	throw Poco::RuntimeException("Unable to start AcceptThread");
 }
 
 
 AcceptThread::~AcceptThread() {
 	_ServerSock.close();
-	while(_iThreadStatus == FC_THREADSTATUS_RUNNING) {
-		Thread::sleep(100);
-	}
+	killThread();
 }
 
 void AcceptThread::run() {
@@ -62,14 +62,13 @@ void AcceptThread::run() {
 
 			if (!_pMinecraftServer->getPlayerPool()->isAnySlotFree()) { //There is no free slot
 				StrmSock.sendBytes(_preparedServerFullMsg.c_str(),_preparedServerFullMsg.length());
-				Thread::sleep(100); //Wait a moment 
 				StrmSock.close();
 				continue;
 			}
 
 			_pMinecraftServer->getPlayerPool()->Assign(StrmSock);
 		}catch(...) {       /* Only happen if socket become closed */
-			_iThreadStatus = FC_THREADSTATUS_TERMINATING;
+			_iThreadStatus = FC_THREADSTATUS_DEAD;
 			return;
 		}
 	}
