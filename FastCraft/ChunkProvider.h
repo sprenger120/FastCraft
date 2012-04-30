@@ -15,7 +15,6 @@ GNU General Public License for more details.
 
 #ifndef _FASTCRAFTHEADER_CHUNKPROVIDER
 #define _FASTCRAFTHEADER_CHUNKPROVIDER
-
 #include "Structs.h"
 #include "EntityCoordinates.h"
 #include "PackingThread.h"
@@ -24,6 +23,7 @@ GNU General Public License for more details.
 class NetworkOutRoot;
 class World;
 class PlayerThread;
+class MinecraftServer;
 
 using std::vector;
 
@@ -38,8 +38,9 @@ private:
 	NetworkOutRoot& _rNetwork;
 	PackingThread& _rPackingThread;
 	PlayerThread* _pPlayer;
+	MinecraftServer* _pMCServer;
 public:
-	ChunkProvider(NetworkOutRoot&,PackingThread&,PlayerThread*);
+	ChunkProvider(NetworkOutRoot&,PackingThread&,PlayerThread*,MinecraftServer*);
 	~ChunkProvider();
 
 	void HandleNewPlayer();
@@ -47,7 +48,7 @@ public:
 
 	void HandleMovement(const EntityCoordinates&);
 	void NextChunk();
-public: 
+
 	bool CheckChunkCircle();
 	void CheckSpawnedChunkList();
 	void sendDespawn(int,int);

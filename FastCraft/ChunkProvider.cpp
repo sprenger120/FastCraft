@@ -23,9 +23,8 @@ GNU General Public License for more details.
 #include "PlayerThread.h"
 #include "ChunkMath.h"
 #include "World.h"
-#include "SettingsHandler.h"
 #include "Constants.h"
-#include "WorldStorage.h"
+#include "MinecraftServer.h"
 
 using std::cout;
 using std::endl;
@@ -34,22 +33,24 @@ using std::stringstream;
 using Poco::DeflatingOutputStream;
 
 
-ChunkProvider::ChunkProvider(NetworkOutRoot& rNetwork,PackingThread& rPackingThread,PlayerThread* pPlayer) :
+ChunkProvider::ChunkProvider(NetworkOutRoot& rNetwork,
+                             PackingThread& rPackingThread,
+                             PlayerThread* pPlayer,
+                             MinecraftServer* pServer
+                            ) :
 	_rNetwork(rNetwork),
-	_rPackingThread(rPackingThread),
-	_vSpawnedChunks(0)
+	_rPackingThread(rPackingThread)
 {
 	_pPlayer = pPlayer;
 	_pWorld = NULL;
+	_pMCServer = pServer;
 }
 
 ChunkProvider::~ChunkProvider() {
-	_vSpawnedChunks.clear();
-	_vToBeSendChunks.clear();
 }
 
 void ChunkProvider::HandleNewPlayer() {
-	_pWorld = WorldStorage::getWorldByName(_pPlayer->getWorldWhoIn());
+	_pWorld = _pPlayer->getWorld();
 }
 
 void ChunkProvider::HandleDisconnect() {
@@ -123,7 +124,7 @@ bool ChunkProvider::CheckChunkCircle() {
 	MapChunk* pChunk;
 	ChunkCoordinates CircleRoot,Temp;
 	PackJob Job;
-	int iViewDistance = SettingsHandler::getViewDistance();
+	char iViewDistance = _pMCServer->getViewDistance();
 
 	Job.pNetwork = &(_rNetwork);
 	Job.pPlayer = _pPlayer;
@@ -240,7 +241,7 @@ void ChunkProvider::CheckSpawnedChunkList() {
 	if (_vSpawnedChunks.empty()) { return; }
 
 	bool fDespawn=false; 
-	int iViewDistance = SettingsHandler::getViewDistance(),x;
+	int iViewDistance = _pMCServer->getViewDistance(),x;
 
 	for (x=_vSpawnedChunks.size()-1;x>=0;x--) {
 		if (_vSpawnedChunks[x].X < _PlayerCoordinates.X - iViewDistance) {fDespawn=true;}
