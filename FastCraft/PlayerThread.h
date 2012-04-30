@@ -20,7 +20,6 @@ GNU General Public License for more details.
 #include <Poco/Net/HTTPRequest.h>
 #include <Poco/Net/HTTPResponse.h>
 #include <Poco/Net/StreamSocket.h>
-#include <Poco/Runnable.h>
 #include <Poco/NumberFormatter.h>
 #include <Poco/Thread.h>
 #include <Poco/Random.h>
@@ -38,13 +37,13 @@ GNU General Public License for more details.
 #include "EntityCoordinates.h"
 #include "EntityPlayer.h"
 #include <utility>
-#include "ItemInfoStorage.h"
 #include "ThreadTickSpan.h"
+#include "ServerThreadBase.h"
+#include "Heap.h"
 
-class EntityProvider;
-class PlayerPool;
 class World;
 class PackingThread;
+class MinecraftServer;
 
 using std::string;
 using std::stringstream;
@@ -54,61 +53,67 @@ using std::pair;
 struct EntityListEntry {
 	int EntityID;
 	char Type;
-	EntityCoordinates oldPosition;
+	EntityCoordinates Position;
+	vector<ItemSlot*> vEquip; 
 };
 
-class PlayerThread : public Poco::Runnable {
+class PlayerThread : public ServerThreadBase {
 private:
-	//Player specific data
-	EntityFlags _Flags; //Burning,eating...
-	EntityCoordinates _Coordinates; //Coordinates
-	EntityCoordinates _lastCoordinates;
-	ChunkCoordinates _lastChunkCoordinates;
-	string _sName; //Minecraft.net Username
-	string _sIP; //IP
+	/* Client data */
+	string _sName;
 	string _sLeaveMessage;
+
 	int _iEntityID;
 	short _iHealth;
 	short _iFood;
 	float _nSaturation;
-    bool _fSpawned;
-	bool _fHandshakeSent;
-	int _Spawned_PlayerInfoList;
-	PlayerInventory _Inventory;
-	double _dRunnedMeters;
-	string _WorldWhoIn;
 
-	//TCP stuff
+	EntityFlags _Flags; 
+	EntityCoordinates _Coordinates;
+	EntityCoordinates _lastCoordinates;
+	ChunkCoordinates _lastChunkCoordinates;
+
+	int _Spawned_PlayerInfoList;
+	double _dRunnedMeters;
+
+
+	/* System */
+	bool _fSpawned;
+	bool _fHandshakeSent;
+	bool _fAssigned;
+
+
+	/* Network */
+	string _sIP;
 	string _sTemp;
 	Poco::Net::StreamSocket _Connection;
 	NetworkOutRoot _NetworkOutRoot;
 	NetworkIn _NetworkInRoot;
+	long long _iPlayerPing;
 
-	NetworkWriter _NetworkWriter;
-	Poco::Thread _threadNetworkWriter;
 
-	//Needed Classes
-	PlayerPool* _pPoolMaster;
+	/* Data delivering */
+	PackingThread& _rPackingThread;
 	ChunkProvider _ChunkProvider;
-	World* _pWorld;
+	NetworkWriter _NetworkWriter;
 
-	//Thread specific
-	bool _fAssigned;
-	bool _fRunning;
-	long long _iThreadTicks;
-	static int _PlayerCount;
 
-	//Verification
+	/* Premium verification */
+	string _sConnectionHash;
 	Poco::Net::HTTPClientSession _Web_Session;
 	Poco::Net::HTTPResponse _Web_Response;
-	string _sConnectionHash;
 	Poco::Random _Rand;
 
-	//Entities
-	vector<EntityListEntry> _vSpawnedEntities;
 
-	//Thread Tick spans
-	ThreadTickSpan _timespanSendTime;
+	/* Other classes */
+	PlayerInventory _Inventory;
+	MinecraftServer* _pMinecraftServer;
+	World* _pActualWorld;
+	Heap<EntityListEntry,int> _heapSpawnedEntities;
+
+
+	/* Tickspan objects */
+	/*ThreadTickSpan _timespanSendTime;
 	ThreadTickSpan _timespanSendKeepAlive;
 	ThreadTickSpan _timespanHandleMovement;
 	ThreadTickSpan _timespanMovementSent;
@@ -119,23 +124,33 @@ private:
 	ThreadTickSpan _timerStartedEating;
 	ThreadTickSpan _timerStartedDigging;
 	ThreadTickSpan _timerLastAlivePacketSent;
-	long long _iPlayerPing;
+	*/
 public:
 	/*
-	* De- / constructor
+	* Constructor
+
+	Parameter:
+	@1 : PackingThread of this Minecraft Server instance
+	@2 : MinecraftServer instance that runs this class
 	*/
-	PlayerThread(PlayerPool*,PackingThread&);
+	PlayerThread(PackingThread&,MinecraftServer*);
+
+
+	/* 
+	* Destructor
+	*/
 	~PlayerThread();
 
 
 	/*
 	* Thread  Main
 	*/
-	virtual void run(); // Thread Main
+	void run();
 
 
 	/*
-	* Connect a TCP player connection for server <-> interchange
+	* Sets the actual connection
+	* Disconnects the old player
 	*/
 	void Connect(Poco::Net::StreamSocket&);
 
@@ -180,12 +195,6 @@ public:
 	* Returns Players coordinates and look
 	*/
 	EntityCoordinates getCoordinates();
-	
-
-	/*
-	* Returns count of actual connected players
-	*/
-	static int getConnectedPlayers();
 
 
 	/*
@@ -214,10 +223,9 @@ public:
 	* Will throw Poco::RuntimeException if ID is already spawned
 
 	Parameter:
-	@1 : EntityID
-	@2 : Reference to EntityPlayer object
+	@1 : Valid pointer to a Entity-derived class
 	*/
-	void spawnPlayer(int,EntityPlayer&);
+	void spawnEntity(Entity*);
 
 
 	/*
@@ -231,18 +239,18 @@ public:
 	
 	/*
 	* Updates entitys position
-	* Will throw Poco::RuntimeException if entity wasn't spawned so far
+	* Will throw Poco::RuntimeException if entity isn't spawned so far
+	* Throws Poco::RuntimeException if pointer is NULL
 
 	Parameter:
-	@1 : EntityID
-	@2 : new Coordinates
+	@1 : Valid pointer to an entity-derived class
 	*/
-	void updateEntityPosition(int,EntityCoordinates);
+	void updateEntityPosition(Entity*);
 
 
 	/*
 	* Despawns entity
-	* Will throw Poco::RuntimeException if entity wasn't spawned so far
+	* Will throw Poco::RuntimeException if entity isn't spawned so far
 
 	Parameter:
 	@1 : EntityID
@@ -251,16 +259,16 @@ public:
 
 
 	/*
-	* Returns EntityID of player
+	* Returns player's entity ID
 	* Will throw Poco::RuntimeExcpetion if player isn't spawned so far
 	*/
 	int getEntityID();
 
 
 	/*
-	* Make the given entity do a animation 
+	* Makes the given entity do a animation 
 	* Will throw Poco::RuntimeException if Entity isn't spawned 
-	* Will not check animation id existance - please use FC_ANIM constants
+	* Throws Poco::RuntimeException if animation ID doesn't exists
 	* Use only for swing arm!
 
 	Parameter:
@@ -271,16 +279,15 @@ public:
 
 
 	/*
-	* Make the given entity do a action
+	* Makes the given entity do an action
 	* Will throw Poco::RuntimeException if Entity isn't spawned 
-	* Will not check action id existance - please use FC_ACTION constants
-	* Use only for crouching, leaving a bed, or sprinting!
 
 	Parameter:
 	@1 : EntityID
-	@2 : EntityFlags reference
+	@2 : new EntityFlags
 	*/
-	void updateEntityMetadata(int,EntityFlags);
+	void updateEntityMetadata(EntityLiving*);
+
 
 	/*
 	* Returns a reference to player's inventory
@@ -299,10 +306,8 @@ public:
 
 	Parameter:
 	@1 : EntityID
-	@2 : SlotID (0=held, 4=helmet,3=chestplate,2=pants,1=boots)
-	@3 : Item informations
 	*/
-	void updateEntityEquipment(int,short,ItemID);
+	void updateEntityEquipment(EntityLiving*);
 
 
 	/*
@@ -318,32 +323,27 @@ public:
 
 	Parameter:
 	@1 : Coordiantes of block
-	@2 : Block information
+	@2 : Block ID
 	*/
 	void spawnBlock(BlockCoordinates,ItemID);
 
 
 	/*
-	* Returns Worldname who player is actual in
+	* Returns pointer to world who player is actually in
+	* Throws Poco::RuntimeException if player isn't logged in
 	*/
-	string getWorldWhoIn();
+	World* getWorld();
 
 
 	/*
-	* Forces the thread to exit
-	*/
-	void shutdown();
-
-
-	/*
-	* Sets the statuscode of a entity
+	* Sets the statuscode of an entity
 
 	Parameter:
 	@1 : Entity ID
 	@2 : Status code (Constants.h FC_ENTITYSTATUS_)
 	*/
 	void setEntityStatus(int,char);
-	void setEntityStatus(char); //Sets status on player's id
+	void setEntityStatus(char);     //Sets status on player's id
 private:
 	//Interval functions
 	void Interval_KeepAlive();
