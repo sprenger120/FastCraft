@@ -174,7 +174,7 @@ Heap<tDataType,tAdressType>::Heap() {
 	_pEndBitsMaskArray   = new tAdressType[sizeof(tAdressType)*8];
 	for(char i = 0; i <= sizeof(tAdressType)*8-1;i++) {
 		_pSingleBitMaskArray[i] = tAdressType(1)<<i;
-		_pEndBitsMaskArray[i]   = tAdressType(~0)<<i+1;
+		_pEndBitsMaskArray[i]   = tAdressType(~0)<<(i+1);
 	} 
 }
 
