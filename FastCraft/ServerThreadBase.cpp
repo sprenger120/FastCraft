@@ -37,6 +37,7 @@ bool ServerThreadBase::isRunning() {
 
 void ServerThreadBase::startThread(Poco::Runnable* p){
 	_Thread.start(*p);
+	while(_iThreadStatus != FC_THREADSTATUS_RUNNING) {Poco::Thread::sleep(10);}
 }
 
 void ServerThreadBase::killThread() {
