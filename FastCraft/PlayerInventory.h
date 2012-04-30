@@ -23,14 +23,16 @@ class NetworkOutRoot;
 class NetworkIn;
 class PlayerThread;
 class PlayerPool;
+class ItemInformationProvider;
 
 class PlayerInventory {
 private:
-	vector<ItemSlot> _vItemStack;
+	vector<ItemSlot*> _vItemStack;
 	ItemSlot _ItemInHand;
 	short _iSlotSelection;
 	NetworkOutRoot& _rNetwork;
 	NetworkIn& _rNetworkIn;
+	ItemInformationProvider* _pItemInfoProvider;
 public:
 	/*
 	* Constructor
@@ -38,8 +40,9 @@ public:
 	Parameter:
 	@1 : Refernce to player's NetworkOutRoot
 	@2 : Reference to player's NetworkIn
+	@3 : A valid ItemInformationProvider instance
 	*/
-	PlayerInventory(NetworkOutRoot&,NetworkIn&);
+	PlayerInventory(NetworkOutRoot&,NetworkIn&,ItemInformationProvider*);
 
 
 	/*

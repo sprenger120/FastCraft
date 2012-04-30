@@ -17,24 +17,26 @@ GNU General Public License for more details.
 #include "NetworkOut.h"
 #include "NetworkIn.h"
 #include "PlayerThread.h"
-#include "ItemInfoStorage.h"
-#include "ItemSlot.h"
-//#include "NBT.h"
+#include "ItemInformationProvider.h"
+
 #include <iostream>
 
 using std::cout;
 
-PlayerInventory::PlayerInventory(NetworkOutRoot& rNtwk,NetworkIn& rIn) :
-_vItemStack(45),
+PlayerInventory::PlayerInventory(NetworkOutRoot& rNtwk,NetworkIn& rIn,ItemInformationProvider* pIIP) :
+_vItemStack(0),
 	_rNetwork(rNtwk),
-	_ItemInHand(),
+	_ItemInHand(pIIP),
 	_rNetworkIn(rIn)
 {
+	for(char i=0;i<=44;i++) {_vItemStack.push_back(new ItemSlot(pIIP));}
+	_pItemInfoProvider = pIIP;
 	_iSlotSelection = 0;
 	clear();
 }
 
 PlayerInventory::~PlayerInventory() {
+	for(char i=0;i<=44;i++) {delete _vItemStack[i];}
 	_vItemStack.clear();
 }
 
@@ -45,24 +47,8 @@ void PlayerInventory::synchronizeInventory() {
 	Out.addByte(0);
 	Out.addShort(45); //Slots in inventory
 
-	//Build payload
-	ItemID Item;
-	for (int x=0;x<=_vItemStack.size()-1;x++){
-		Item = _vItemStack[x].getItem();
-
-		if (Item.first==0) { //Slot is empty
-			Out.addShort(-1);
-		}else{
-			Out.addShort(Item.first);
-			Out.addByte(_vItemStack[x].getStackSize());
-			
-			if (ItemInfoStorage::isDamageable(Item)) { //Item has a usage bar
-				Out.addShort(_vItemStack[x].getUsage());
-				Out.addShort(-1);
-			}else {
-				Out.addShort(Item.second);
-			}
-		}
+	for (char x=0;x<=_vItemStack.size()-1;x++){
+		_vItemStack[x]->writeToNetwork(Out);
 	}
 
 	Out.Finalize(FC_QUEUE_HIGH);
@@ -73,8 +59,8 @@ void PlayerInventory::clear() {
 		std::cout<<"Invalid inventory array!"<<"\n";
 		throw Poco::RuntimeException("Invalid inventory array!");
 	}
-	for(int x=0;x<=_vItemStack.size()-1;x++) {
-		_vItemStack[x].clear();
+	for(char x=0;x<=_vItemStack.size()-1;x++) {
+		_vItemStack[x]->clear();
 	}
 	_iSlotSelection = 0;
 }
@@ -92,7 +78,8 @@ void PlayerInventory::setSlot(short iSlot,ItemSlot& rItem) {
 	rItem.writeToNetwork(Out);
 	Out.Finalize(FC_QUEUE_HIGH);
 
-	_vItemStack[iSlot] = rItem;
+	delete _vItemStack[iSlot];
+	_vItemStack[iSlot] = new ItemSlot(rItem);
 }
 
 ItemSlot PlayerInventory::getSlot(short iSlot) {
@@ -100,7 +87,7 @@ ItemSlot PlayerInventory::getSlot(short iSlot) {
 		std::cout<<"PlayerInventory::getSlot illegal slot id"<<"\n";
 		throw Poco::RuntimeException("Invalid slot ID");
 	}
-	return _vItemStack[iSlot];
+	return *_vItemStack[iSlot];
 }
 
 void PlayerInventory::clearSlot(short iSlot) {
@@ -108,7 +95,7 @@ void PlayerInventory::clearSlot(short iSlot) {
 		std::cout<<"PlayerInventory::clearSlot: illegal slot id"<<"\n";
 		throw Poco::RuntimeException("Invalid slot ID");
 	}
-	_vItemStack[iSlot].clear();
+	_vItemStack[iSlot]->clear();
 }
 
 short PlayerInventory::getSlotSelection() {
@@ -120,7 +107,7 @@ void PlayerInventory::HandleWindowClick(PlayerThread* pPlayer) {
 	char iWindowID;
 	short iSlot,iActionNumber;
 	bool fShift,fRightClick;
-	ItemSlot Item;
+	ItemSlot Item(_pItemInfoProvider);
 
 	try{
 		iWindowID = _rNetworkIn.readByte();
@@ -131,136 +118,138 @@ void PlayerInventory::HandleWindowClick(PlayerThread* pPlayer) {
 
 		Item.readFromNetwork(_rNetworkIn);
 
-		//Check data
-		if (iWindowID != 0) {
-			pPlayer->Disconnect("Unsupported window type");
-			return;
-		}
-		if (iSlot < 0 || iSlot > 45) { //Invalid slot id, caused by clicking out of inventory field
-			pPlayer->Disconnect("Invalid slot ID");
-			return;
-		}
+		////Check data
+		//if (iWindowID != 0) {
+		//	pPlayer->Disconnect("Unsupported window type");
+		//	return;
+		//}
+		//if (iSlot < 0 || iSlot > 45) { //Invalid slot id, caused by clicking out of inventory field
+		//	pPlayer->Disconnect("Invalid slot ID");
+		//	return;
+		//}
 
-		if (fShift) { //Shift was pressed
-			if (_vItemStack[iSlot].isEmpty()) { //Affected slot is empty
-				return; 
-			}
+		//if (fShift) { //Shift was pressed
+		//	if (_vItemStack[iSlot].isEmpty()) { //Affected slot is empty
+		//		return; 
+		//	}
 
-			char iMaxStackSize = ItemInfoStorage::getMaxStackSize(_vItemStack[iSlot].getItem());
-			short iFrom=0;
-			short iTo=0;
+		//	char iMaxStackSize = (_vItemStack[iSlot].isBlock() ? _vItemStack[iSlot].getBlockEntryCache()->MaxStackSize : _vItemStack[iSlot].getItemEntryCache()->MaxStackSize);
+		//	short iFrom=0;
+		//	short iTo=0;
 
-			if (iSlot < 9) {//Crafting and amor slots -> Main inventory
-				iFrom = 9;
-				iTo = 35;
-			}
-			if (iSlot >= 9 && iSlot <= 35) { //Main inventory -> action bar
-				iFrom = 36;
-				iTo = 44;
-			}
-			if (iSlot >= 36 && iSlot <= 44) {//Action bar -> main inventory
-				iFrom = 9;
-				iTo = 35;
-			}
 
-			if (iTo==0 && iFrom==0) {
-				std::cout<<"logical error"<<"\n";
-			}
 
-			//Merge same item stacks
-			for (int x=iFrom;x<=iTo;x++) { 
-				if(_vItemStack[x].getItem()==_vItemStack[iSlot].getItem()) {
-					short iSum = _vItemStack[x].getStackSize() + _vItemStack[iSlot].getStackSize();
+		//	if (iSlot < 9) {//Crafting and amor slots -> Main inventory
+		//		iFrom = 9;
+		//		iTo = 35;
+		//	}
+		//	if (iSlot >= 9 && iSlot <= 35) { //Main inventory -> action bar
+		//		iFrom = 36;
+		//		iTo = 44;
+		//	}
+		//	if (iSlot >= 36 && iSlot <= 44) {//Action bar -> main inventory
+		//		iFrom = 9;
+		//		iTo = 35;
+		//	}
 
-					if (iSum < iMaxStackSize) { //Stacks fit in each other
-						_vItemStack[x].setStackSize((char)iSum);
-						_vItemStack[iSlot].clear();
-					}else{ //Stack size reached
-						_vItemStack[x].setStackSize(iMaxStackSize); //set to maximal
-						_vItemStack[iSlot].setStackSize(iSum-iMaxStackSize); //leave rest in slot
-					}
-				}
-			}
-			
-			//If there are still some items in the affected slot
-			if (_vItemStack[iSlot].getStackSize() > 0) { //Look for a free slot
-				for (int x=iFrom;x<=iTo;x++) {
-					if(_vItemStack[x].isEmpty()) {
-						_vItemStack[x] = _vItemStack[iSlot];
-						_vItemStack[iSlot].clear();
-						break;
-					}
-				}
-			}
-			return;
-		}
+		//	if (iTo==0 && iFrom==0) {
+		//		std::cout<<"logical error"<<"\n";
+		//	}
 
-		switch(fRightClick) {
-		case false: //Left klick
-			if (_ItemInHand.isEmpty()) { //Player took item to cursor
-				_ItemInHand = Item;
-				clearSlot(iSlot);
-			}else{ //Player put it into a new slot
-				if (_vItemStack[iSlot].isEmpty()) { //Slot is empty
-					_vItemStack[iSlot] = _ItemInHand;
-					_ItemInHand.clear();
-				}else{ //Not empty 
-					if (_vItemStack[iSlot].getItem() ==  _ItemInHand.getItem()) { // Merge stacks
-						short iItemMaxStackSize = ItemInfoStorage::getMaxStackSize(_ItemInHand.getItem());
-						short iItemSum = _vItemStack[iSlot].getStackSize() +  _ItemInHand.getStackSize();
+		//	//Merge same item stacks
+		//	for (int x=iFrom;x<=iTo;x++) { 
+		//		if(_vItemStack[x].getItem()==_vItemStack[iSlot].getItem()) {
+		//			short iSum = _vItemStack[x].getStackSize() + _vItemStack[iSlot].getStackSize();
 
-						if (iItemSum <= iItemMaxStackSize) {//Merge stacks into one slot
-							_vItemStack[iSlot].setStackSize((char)iItemSum);
-							_ItemInHand.clear(); //Hand is empty now
-						}else{//Slot size is excessed
-							iItemSum -= iItemMaxStackSize;
-							_vItemStack[iSlot].setStackSize((char)iItemMaxStackSize); //Stack in inventory is full
-							_ItemInHand.setStackSize((char)iItemSum); //Subtract items from in hand stack
-						}
-					}else{ //Switch stacks
-						ItemSlot Temp = _ItemInHand;
-						_ItemInHand = _vItemStack[iSlot];
-						_vItemStack[iSlot] = Temp;
-					}
-				}
-			}
-			break;
-		case true: //right klick
-			if (_ItemInHand.isEmpty()) { //Hand is empty -> stack split action
-				if(_vItemStack[iSlot].getStackSize() == 1) { //Single item stacks can not splited -> items in hand get transfered to slot
-					return;
-				}
+		//			if (iSum < iMaxStackSize) { //Stacks fit in each other
+		//				_vItemStack[x].setStackSize((char)iSum);
+		//				_vItemStack[iSlot].clear();
+		//			}else{ //Stack size reached
+		//				_vItemStack[x].setStackSize(iMaxStackSize); //set to maximal
+		//				_vItemStack[iSlot].setStackSize(iSum-iMaxStackSize); //leave rest in slot
+		//			}
+		//		}
+		//	}
+		//	
+		//	//If there are still some items in the affected slot
+		//	if (_vItemStack[iSlot].getStackSize() > 0) { //Look for a free slot
+		//		for (int x=iFrom;x<=iTo;x++) {
+		//			if(_vItemStack[x].isEmpty()) {
+		//				_vItemStack[x] = _vItemStack[iSlot];
+		//				_vItemStack[iSlot].clear();
+		//				break;
+		//			}
+		//		}
+		//	}
+		//	return;
+		//}
 
-				char iFullStackSize = _vItemStack[iSlot].getStackSize();
-				_ItemInHand = _vItemStack[iSlot]; //Copy informations
+		//switch(fRightClick) {
+		//case false: //Left klick
+		//	if (_ItemInHand.isEmpty()) { //Player took item to cursor
+		//		_ItemInHand = Item;
+		//		clearSlot(iSlot);
+		//	}else{ //Player put it into a new slot
+		//		if (_vItemStack[iSlot].isEmpty()) { //Slot is empty
+		//			_vItemStack[iSlot] = _ItemInHand;
+		//			_ItemInHand.clear();
+		//		}else{ //Not empty 
+		//			if (_vItemStack[iSlot].getItem() ==  _ItemInHand.getItem()) { // Merge stacks
+		//				short iItemMaxStackSize = _ItemInHand.isBlock() ? _ItemInHand.getBlockEntryCache()->MaxStackSize : _ItemInHand.getItemEntryCache()->MaxStackSize;
+		//				short iItemSum = _vItemStack[iSlot].getStackSize() +  _ItemInHand.getStackSize();
 
-				_vItemStack[iSlot].setStackSize(iFullStackSize/2);//Interger division - without decimal places
-				_ItemInHand.setStackSize(iFullStackSize/2  +  ( iFullStackSize%2 ? 1 : 0 ) ); //if stack size odd: bigger part is in players hand
-			}else{//item in hand -> put one item into other stack
-				if (_vItemStack[iSlot].isEmpty()) { //Put one item into an empty slot
+		//				if (iItemSum <= iItemMaxStackSize) {//Merge stacks into one slot
+		//					_vItemStack[iSlot].setStackSize((char)iItemSum);
+		//					_ItemInHand.clear(); //Hand is empty now
+		//				}else{//Slot size is excessed
+		//					iItemSum -= iItemMaxStackSize;
+		//					_vItemStack[iSlot].setStackSize((char)iItemMaxStackSize); //Stack in inventory is full
+		//					_ItemInHand.setStackSize((char)iItemSum); //Subtract items from in hand stack
+		//				}
+		//			}else{ //Switch stacks
+		//				ItemSlot Temp = _ItemInHand;
+		//				_ItemInHand = _vItemStack[iSlot];
+		//				_vItemStack[iSlot] = Temp;
+		//			}
+		//		}
+		//	}
+		//	break;
+		//case true: //right klick
+		//	if (_ItemInHand.isEmpty()) { //Hand is empty -> stack split action
+		//		if(_vItemStack[iSlot].getStackSize() == 1) { //Single item stacks can not splited -> items in hand get transfered to slot
+		//			return;
+		//		}
 
-					_vItemStack[iSlot].setItem(_ItemInHand.getItem());
-					_vItemStack[iSlot].setStackSize(1);
+		//		char iFullStackSize = _vItemStack[iSlot].getStackSize();
+		//		_ItemInHand = _vItemStack[iSlot]; //Copy informations
 
-					_ItemInHand.setStackSize(_ItemInHand.getStackSize()-1);
-					return;
-				}
-				if (_vItemStack[iSlot].getItem() == _ItemInHand.getItem()) { //If stack types are equal
-					if(ItemInfoStorage::getMaxStackSize(_vItemStack[iSlot].getItem()) ==  _vItemStack[iSlot].getStackSize() ) {
-						return; //max stack size reached
-					}
+		//		_vItemStack[iSlot].setStackSize(iFullStackSize/2);//Interger division - without decimal places
+		//		_ItemInHand.setStackSize(iFullStackSize/2  +  ( iFullStackSize%2 ? 1 : 0 ) ); //if stack size odd: bigger part is in players hand
+		//	}else{//item in hand -> put one item into other stack
+		//		if (_vItemStack[iSlot].isEmpty()) { //Put one item into an empty slot
 
-					_vItemStack[iSlot].setStackSize(_vItemStack[iSlot].getStackSize()+1);
-					_ItemInHand.setStackSize(_ItemInHand.getStackSize()-1);
-				}else{//Switch stacks
-					ItemSlot Temp = _ItemInHand;
-					_ItemInHand = _vItemStack[iSlot];
-					_vItemStack[iSlot] = Temp;
-				}
+		//			_vItemStack[iSlot].setItem(_ItemInHand.getItem());
+		//			_vItemStack[iSlot].setStackSize(1);
 
-			}
-			break;
-		}
+		//			_ItemInHand.setStackSize(_ItemInHand.getStackSize()-1);
+		//			return;
+		//		}
+		//		if (_vItemStack[iSlot].getItem() == _ItemInHand.getItem()) { //If stack types are equal
+		//			if((_vItemStack[iSlot].isBlock() ? _vItemStack[iSlot].getBlockEntryCache()->MaxStackSize : _vItemStack[iSlot].getItemEntryCache()->MaxStackSize) ==  _vItemStack[iSlot].getStackSize() ) {
+		//				return; //max stack size reached
+		//			}
+
+		//			_vItemStack[iSlot].setStackSize(_vItemStack[iSlot].getStackSize()+1);
+		//			_ItemInHand.setStackSize(_ItemInHand.getStackSize()-1);
+		//		}else{//Switch stacks
+		//			ItemSlot Temp = _ItemInHand;
+		//			_ItemInHand = _vItemStack[iSlot];
+		//			_vItemStack[iSlot] = Temp;
+		//		}
+
+		//	}
+		//	break;
+		//}
 	} catch(Poco::RuntimeException& ex) {
 		std::cout<<"PlayerInventory::HandleWindowClick exception:"<<ex.message()<<"\n";
 		pPlayer->Disconnect(FC_LEAVE_OTHER);
@@ -284,7 +273,7 @@ void PlayerInventory::HandleSelectionChange(short iSel) {
 }
 
 ItemSlot& PlayerInventory::getSelectedSlot() {
-	return _vItemStack[36 + _iSlotSelection];
+	return *_vItemStack[36 + _iSlotSelection];
 }
 
 void PlayerInventory::DecreaseInHandStack() {
