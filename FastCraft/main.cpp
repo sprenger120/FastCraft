@@ -13,133 +13,102 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 */
 #define BUILD_VERSION ""
+//#include <vld.h>
 #include <iostream>
-#include <sstream>
 #include <Poco/Thread.h>
 #include <Poco/Exception.h>
-#include "AcceptThread.h"
-#include "SettingsHandler.h"
-#include "PlayerPool.h"
-#include "PackingThread.h"
-#include "ServerTime.h"
-#include "ItemInfoStorage.h"
-#include "Structs.h"
-#include "WorldStorage.h"
 #include <Poco/Path.h>
 #include <Poco/File.h>
 #include <Poco/Data/SQLite/Connector.h>
+#include <vector>
+#include "Constants.h"
+#include "MinecraftServer.h"
+#include <Poco/Timestamp.h>
+
 using std::cout;
-using std::stringstream;
 using Poco::Thread;
 
 int main(int argc, char *argv[]) {
-	string BuildVer(BUILD_VERSION);
-	Poco::Data::SQLite::Connector::registerConnector();
-
+	std::string BuildVer(BUILD_VERSION);
+	
 	cout<<"FastCraft Minecraft Server"<<"\n";
-	cout<<"Version "<<BUILD_VERSION<<(BuildVer.compare("") == 0 ? "" : "-")<<SettingsHandler::getFastCraftVersion()<<" for Minecraft "<<SettingsHandler::getSupportedMCVersion()<<"\n"<<std::endl;
+	cout<<"Version "<<BUILD_VERSION<<(BuildVer.compare("") == 0 ? "" : "-")<<FC_VERSION<<" for Minecraft "<<FC_SUPPORTED_MINCRAFTVERSION<<"\n"<<std::endl;
 
-	/* 
-	* Creating files / directorys
-	*/
-	Poco::Path FCPath(argv[0]); 
-	FCPath.setFileName(""); //Remove filename
+	Poco::Path pathRoot(argv[0]); 
+	pathRoot.setFileName(""); //Remove filename
 
-
-	//Main directory
-	FCPath.pushDirectory("Data");
-	Poco::File settingsDirectory(FCPath.toString());
-	if (!settingsDirectory.exists()) {settingsDirectory.createDirectories();}
-
-	//Config
-	cout<<"Loading settings... "<<"\n";
-	
-	FCPath.setFileName("settings.xml");
-	SettingsHandler::readConfiguration(FCPath);
-	FCPath.setFileName("");
-	
-	cout<<"Done."<<"\n\n";
-
-
-	//Item databases
-	FCPath.pushDirectory("ItemDatabases");
-	Poco::File itemDatabasesDirectory(FCPath.toString());
-	if (!itemDatabasesDirectory.exists()) {itemDatabasesDirectory.createDirectories();}
-	
-	ItemInfoStorage::loadDatabases(FCPath);
-	cout<<"\n";
-	
-	
-	//Worlds directory
-	FCPath.popDirectory();
-	FCPath.pushDirectory("Worlds");
-	Poco::File worldDirectory(FCPath.toString());
-	if (!worldDirectory.exists()) {worldDirectory.createDirectories();}
-
-
-	/*
-	* Create threads 
-	*/
-
-	//Creating Threads & Classes
-	Thread threadPackingThread("Chunk Packer");
-	Thread threadPlayerPool("PlayerPool");
-	Thread threadAcceptThread("Network Acceptor");
-
-	PackingThread Packer;
-	PlayerPool PPool(Packer);	
-	AcceptThread* pAcceptor;
-
-	try {
-		pAcceptor = new AcceptThread(PPool);
-	}catch(Poco::IOException) {
-		cout<<"\n***ERROR: Unable to bind 0.0.0.0:"<<SettingsHandler::getPort()<<"\n"
-			<<"Perhaps another Minecraft server is running on this port.";
-		Thread::sleep(3000);
-		return 1;
+	pathRoot.pushDirectory("Server");
+	Poco::File fileRootDirectory(pathRoot.toString());
+	if (!fileRootDirectory.exists()) {
+		try {
+			fileRootDirectory.createDirectories();
+		}catch(Poco::FileException& ex) {
+			cout<<"Unable to create server directory ("<<ex.message()<<")"<<std::endl;
+		}
+	}else{
+		if ((!fileRootDirectory.canRead()) || (!fileRootDirectory.canWrite())) {
+			cout<<"Unable to read or write FastCraft root directory"<<std::endl;
+			Thread::sleep(3000);
+			return 0;
+		}
 	}
-	
-	
-	/*
-	* Loading world
-	*/
-	cout<<"Loading maps..."<<"\n";
-	WorldStorage worldStorage(PPool,FCPath);
-	worldStorage.loadAllWorlds();
-	cout<<"Done.\n\n";
+	std::vector<MinecraftServer*> vpServer(0);
+	std::vector<Poco::File>		  vFileList(0);
 
+	fileRootDirectory.list(vFileList);
+	if (vFileList.empty()) {
+		cout<<"No server configurations found!"<<std::endl;
+		Thread::sleep(3000);
+		return 0;
+	}
 
-	/*
-	* Start Threads
-	*/
-	threadPackingThread.start(Packer);
-	threadPlayerPool.start(PPool);
-	threadAcceptThread.start(*pAcceptor);
-	
+	Poco::Data::SQLite::Connector::registerConnector(); //Startup sqlite engine
+	Constants::init(); //load constants
 
-	//Init Done!
-	cout<<"Running on *:"<<SettingsHandler::getPort()<<" with "<<SettingsHandler::getPlayerSlotCount()<<" player slots"<<std::endl;
-	cout<<"Ready."<<"\n"<<std::endl;
+	MinecraftServer* pServer;
+	Poco::Path pathTemp;
+	int x;
 
+	//Start all server
+	for (x=0;x<=vFileList.size()-1;x++) {
+		if (!vFileList[x].isDirectory()) {continue;} //Skip files
+
+		if(!pathTemp.tryParse(vFileList[x].path())) {
+			cout<<"Illegal path!"<<std::endl;
+			Thread::sleep(3000);
+			return 0;
+		}
+
+		try {
+			cout<<"Starting "<<pathTemp[pathTemp.depth()]<<"\n";
+			pathTemp.pushDirectory(pathTemp[pathTemp.depth()]);
+			pathTemp.setFileName("");
+			pServer = new MinecraftServer(pathTemp[pathTemp.depth()-1],pathTemp);
+		}catch(Poco::RuntimeException& ex) {
+			cout<<"Unable to start server ("<<ex.message()<<")"<<std::endl;
+			Thread::sleep(3000);
+			return 0;
+		}
+		vpServer.push_back(pServer);
+		pathTemp.clear();
+	}
+
+	cout<<"Loading done!\n";
+
+	bool fSomethingRuns = false;	
 	while(1) {
 		Thread::sleep(1000);
-		ServerTime::tick();
-		cout<<std::flush;
+
+		//Check if there is at least one server that runs
+		fSomethingRuns=false;
+		for (x=0;x<=vpServer.size()-1;x++) {
+			if (vpServer[x]->isRunning()) {
+				fSomethingRuns=true;
+				break;
+			}
+		}
+		if (!fSomethingRuns) {break;}
 	}
-
-	cout<<"Shutting down server!\n\n";
-
-	cout<<"Stopping Accept thread...\n";
-	pAcceptor->shutdown();
-	cout<<"Done.\n";
-
-	cout<<"Stopping ChunkPacking thread...\n";
-	Packer.shutdown();
-	cout<<"Done.\n";
-
-	cout<<"Stopping PlayerPool thread...\n";
-	PPool.shutdown();
-	cout<<"Done.\n";
 
 	Poco::Data::SQLite::Connector::unregisterConnector();
 	return 1;
