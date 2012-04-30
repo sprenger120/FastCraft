@@ -18,7 +18,7 @@ GNU General Public License for more details.
 #include <Poco/Thread.h>
 #include "MinecraftServer.h"
 #include "NetworkOut.h"
-
+#include "PlayerPool.h"
 
 using Poco::Net::StreamSocket;
 using std::cout;
@@ -35,7 +35,7 @@ _preparedServerFullMsg("")
 	_preparedServerFullMsg.append<unsigned char>(1,0xFF);
 	NetworkOut::addString(_preparedServerFullMsg,pServer->getServerFullMessage());
 
-	_Thread.start(*this);
+	startThread(this);
 }catch(Poco::IOException& ex) {
 	cout<<"Unable to bind 0.0.0.0:"<<pServer->getPort()<<" ("<<ex.message()<<")\n"
 		<<"Is there another Minecraft server, running on this port?\n";
