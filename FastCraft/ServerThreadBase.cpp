@@ -15,17 +15,34 @@ GNU General Public License for more details.
 
 #include "ServerThreadBase.h"
 #include "Constants.h"
+#include <iostream>
 
 ServerThreadBase::ServerThreadBase(std::string sName) : 
-_Thread(sName)
+    _Thread(sName),
+	_sName(sName)
 {
 	_iThreadStatus = FC_THREADSTATUS_DEAD;
-	std::cout<<"Creating thread:"<<sName<<"\n";
 }
 
 ServerThreadBase::~ServerThreadBase(){
+	if (_iThreadStatus == FC_THREADSTATUS_RUNNING) {
+		std::cout<<"Thread: "<<_sName<<" wasn't shut down via ServerThreadBase::killThread!\n";
+		killThread();
+	}
 }
 
 bool ServerThreadBase::isRunning() {
 	return (_iThreadStatus != FC_THREADSTATUS_DEAD);
+}
+
+void ServerThreadBase::startThread(Poco::Runnable* p){
+	_Thread.start(*p);
+}
+
+void ServerThreadBase::killThread() {
+	_iThreadStatus = FC_THREADSTATUS_TERMINATING;
+	while(_iThreadStatus == FC_THREADSTATUS_TERMINATING){
+		Poco::Thread::sleep(50);
+	}
+	_iThreadStatus = FC_THREADSTATUS_DEAD;
 }

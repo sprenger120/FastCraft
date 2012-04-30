@@ -20,9 +20,10 @@ GNU General Public License for more details.
 #include <string>
 
 class ServerThreadBase : public Poco::Runnable {
+	Poco::Thread _Thread;
+	std::string _sName;
 protected:
 	char _iThreadStatus;
-	Poco::Thread _Thread;
 public:
 	/* 
 	* Constructor
@@ -35,6 +36,7 @@ public:
 
 	/*
 	* Destructor
+	* Stops the thread if it runs
 	*/
 	virtual ~ServerThreadBase();
 
@@ -43,5 +45,17 @@ public:
 	* Returns true if thread runs
 	*/
 	bool isRunning();
+
+	
+	/*
+	* Starts the thread
+	*/
+	void startThread(Poco::Runnable*);
+
+
+	/*
+	* Forces the thread to exit
+	*/
+	void killThread();
 };
 #endif
