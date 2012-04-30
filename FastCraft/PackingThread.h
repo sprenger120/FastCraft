@@ -15,12 +15,10 @@ GNU General Public License for more details.
 
 #ifndef _FASTCRAFTHEADER_PACKINGTHREAD
 #define _FASTCRAFTHEADER_PACKINGTHREAD
-#include <Poco/Runnable.h>
-#include <sstream>
 #include <vector>
-#include <Poco/DeflatingStream.h>
 #include "Structs.h"
 #include "ThreadSafeQueue.h"
+#include "ServerThreadBase.h"
 
 class NetworkOutRoot;
 class PlayerThread;
@@ -35,19 +33,38 @@ struct PackJob {
 
 using std::queue;
 
-class PackingThread : public Poco::Runnable{
+class PackingThread : public ServerThreadBase{
 private:
 	ThreadSafeQueue<PackJob> _vPackJobs;
-	bool _fRunning;
 public:
+	/*
+	* Constructor
+	*/
 	PackingThread();
+
+
+	/*
+	* Destructor
+	*/
 	~PackingThread();
 
+
+	/*
+	* Thread main
+	*/
 	virtual void run();
 
+
+	/*
+	* Adds a vector of new job to the queue
+	*/
 	void AddJobs(std::vector<PackJob>&);
+
+
+	/*
+	* adds a new job to the queue
+	*/
 	void AddJob(PackJob&);
-	void shutdown();
 private:
 	void ProcessJob(PackJob&);
 };

@@ -19,23 +19,27 @@ GNU General Public License for more details.
 #include "NetworkOut.h"
 #include "PlayerThread.h"
 #include "Constants.h"
-#include "SettingsHandler.h"
 #include <iostream>
+#include <Poco/DeflatingStream.h>
+#include <sstream>
+
 using Poco::Thread;
 
 PackingThread::PackingThread() : 
-	_vPackJobs()
+	_vPackJobs(),
+ServerThreadBase("PackingThread")
 {
-	_fRunning=false;
+	startThread(this);
 }
 
 
 PackingThread::~PackingThread() {
+	killThread();
 }
 
 void PackingThread::run() {
-	_fRunning=true;
-	while (_fRunning) { 
+	_iThreadStatus=FC_THREADSTATUS_RUNNING;
+	while (_iThreadStatus==FC_THREADSTATUS_RUNNING) { 
 		if (_vPackJobs.empty()){
 			Thread::sleep(10);
 			continue;
@@ -45,7 +49,7 @@ void PackingThread::run() {
 			_vPackJobs.pop();
 		}
 	}
-	_fRunning=true;
+	_iThreadStatus=FC_THREADSTATUS_DEAD;
 }
 
 void PackingThread::ProcessJob(PackJob& rJob) {	
@@ -67,7 +71,7 @@ void PackingThread::ProcessJob(PackJob& rJob) {
 	Out.addShort(0);
 	Out.addInt((rJob.Z)<<4);
 	Out.addByte(15);
-	Out.addByte(SettingsHandler::getWorldHeight()-1);
+	Out.addByte(FC_WORLDHEIGHT-1);
 	Out.addByte(15);
 
 	//deflate
@@ -94,12 +98,4 @@ void PackingThread::AddJobs(std::vector<PackJob> & rvJob) {
 
 void PackingThread::AddJob(PackJob& rJob) {
 	_vPackJobs.push(rJob);
-}
-
-void PackingThread::shutdown() {
-	if (!_fRunning) {return;}
-	_fRunning=false;
-	while(!_fRunning){ //Wait till _fRunning turns true
-	}
-	_fRunning=false;
 }
