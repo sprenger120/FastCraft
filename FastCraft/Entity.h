@@ -37,11 +37,10 @@ public:
 	* Throws Poco::RuntimeException if EntityID/pointers/entity type is invalid
 	
 	Parameter:
-	@1 : EntityID
-	@2 : a valid MinecraftServer instance
-	@3 : pointer to a World class that the entity is in
+	@1 : a valid MinecraftServer instance
+	@2 : pointer to a World class that the entity is in
 	*/
-	Entity(int,MinecraftServer*,World*);
+	Entity(MinecraftServer*,World*);
 
 
 	/*

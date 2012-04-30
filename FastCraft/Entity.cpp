@@ -18,11 +18,10 @@ GNU General Public License for more details.
 #include "NetworkOut.h"
 #include "Constants.h"
 
-Entity::Entity(int iEID,MinecraftServer* pServer,World* pWorld) {
-	if (iEID < 0) {throw Poco::RuntimeException("Invalid EID");}
+Entity::Entity(MinecraftServer* pServer,World* pWorld) {
 	if (pServer == NULL || _pWorld == NULL) {throw Poco::RuntimeException("Nullpointer are not allowed");}
 	
-	_iEntityID = iEID;
+	_iEntityID = pServer->generateID();
 	_iCreation = pServer->getInGameTime();
 	_pWorld = pWorld;
 	_pMCServer = pServer;
