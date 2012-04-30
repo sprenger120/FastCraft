@@ -14,6 +14,7 @@ GNU General Public License for more details.
 */
 #include "Constants.h"
 #include <Poco/Exception.h>
+#include <iostream>
 
 std::map<std::string,char> Constants::_Map;
 
