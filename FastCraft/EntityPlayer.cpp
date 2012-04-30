@@ -18,7 +18,7 @@ GNU General Public License for more details.
 #include "NetworkOut.h"
 #include "ItemSlot.h"
 #include <bitset>
-
+#include <cmath>
 
 EntityPlayer::EntityPlayer(MinecraftServer* pServer,World* pWorld,string sName) try :
 EntityLiving		(Constants::get("/Entity/Alive/TypeID/Player"),pServer,pWorld),
