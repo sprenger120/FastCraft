@@ -16,6 +16,7 @@ GNU General Public License for more details.
 #include "Constants.h"
 #include "NetworkOut.h"
 #include "ItemSlot.h"
+#include <cmath>
 
 using std::vector;
 
