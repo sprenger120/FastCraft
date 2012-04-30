@@ -27,32 +27,20 @@ using std::string;
 using std::vector;
 
 class EntityPlayer : public EntityLiving {
-	EntityFlags _Flags;
 	string _sName;
-	vector<ItemSlot*> _vpHeld;
 public:
 	/*
 	* Constructor
-	* Throws Poco::RuntimeException if EntityID is invalid
 	* Throws Poco::RuntimeException if held array size is invalid
 	* Throws Poco::RuntimeException if username is empty
 
 	Parameter:
-	@1 : EntityID
-	@2 : a valid MinecraftServer instance
-	@3 : pointer to a World class that the entity is in
-	@4 : EntityFlags instance of player
-	@5 : Username
-	@6 : Held items (0=in hand, 1=helmet,2=chestplate,3=leggins,4=boots) 
+	@1 : a valid MinecraftServer instance
+	@2 : pointer to a World class that the entity is in
+	@3 : Username
 	*/
-	EntityPlayer(	int,
-					MinecraftServer*,
-					World*,
-					EntityFlags,
-					string,
-					vector<ItemSlot*>
-				);
-
+	EntityPlayer(MinecraftServer*,World*,string);
+					
 
 	/*
 	* Destructor

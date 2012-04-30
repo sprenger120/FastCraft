@@ -20,18 +20,11 @@ GNU General Public License for more details.
 #include <bitset>
 
 
-EntityPlayer::EntityPlayer(int iEID,MinecraftServer* pServer,World* pWorld,EntityFlags Flags,string sName,vector<ItemSlot*> vItems) try :
-EntityLiving		(Constants::get("/Entity/Alive/TypeID/Player"),iEID,pServer,pWorld),
-_sName				(""),
-_vpHeld				(vItems),
-_Flags				(Flags)
+EntityPlayer::EntityPlayer(MinecraftServer* pServer,World* pWorld,string sName) try :
+EntityLiving		(Constants::get("/Entity/Alive/TypeID/Player"),pServer,pWorld),
+_sName				("")
 {
 	if (sName.compare("") == 0) {throw Poco::RuntimeException("Illegal name");}
-	if (_vpHeld.size() != 5) {throw Poco::RuntimeException("Illegal vector size");}
-	for(int x=0;x<=4;x++) {
-		if (_vpHeld[x] == NULL) {throw Poco::RuntimeException("Nullpointer exception");}
-	}
-
 	_sName.assign(sName);
 }catch(Poco::RuntimeException & ex) {
 	ex.rethrow();
@@ -69,21 +62,7 @@ void EntityPlayer::spawn(NetworkOut& rOut) {
 	appendMetadata(rOut);
 	rOut.Finalize(FC_QUEUE_HIGH);
 
-
-	/* Equipment */
-	for (int x=0;x<=4;x++) {
-		rOut.addByte(0x5);
-		rOut.addInt(_iEntityID);
-		rOut.addShort(x);
-		if(_vpHeld[x]->isEmpty()) { //empty slot
-			rOut.addShort(-1);
-			rOut.addShort(0);
-		}else{
-			rOut.addShort(_vpHeld[x]->getItem().first);
-			rOut.addShort(_vpHeld[x]->getItem().second);
-		}
-		rOut.Finalize(FC_QUEUE_HIGH);
-	}
+	sendEquipment(rOut);
 }
 
 

@@ -16,28 +16,41 @@ GNU General Public License for more details.
 #ifndef _FASTCRAFTHEADER_ENTITYLIVING
 #define _FASTCRAFTHEADER_ENTITYLIVING
 #include "Entity.h"
+#include "EntityFlags.h"
+#include <vector>
+#include "ItemInformationProvider.h"
+
+class ItemSlot;
+
+/* 
+* It have to be a vector of 5 elements
+* Indexes:  0 = item in hand
+            1 = helmet
+            2 = chestplate
+            3 = leggins
+            4 = boots
+* If a slot should be empty, set it to NULL
+*/
+typedef std::vector<ItemSlot*> EquipmentArray;
 
 
 class EntityLiving : public Entity {
 protected:
-	/* Health */
-	short _iHealth;
-	short _iMaxHealth;
-
 	char _iType;
+	short _iHealth;
+	EquipmentArray _vpHeld;
+	EntityFlags _Flags;
 public:
 	/*
 	* Constructor
-	* Throws Poco::RuntimeException if EntityID is invalid
 	* Throws Poco::RuntimeException if typeID is invalid
 	
 	Parameter:
 	@1 : Type of entity (/Entity/Alive/TypeID/)
-	@2 : EntityID
-	@3 : a valid MinecraftServer instance
-	@4 : pointer to a World class that the entity is in
+	@2 : a valid MinecraftServer instance
+	@3 : pointer to a World class that the entity is in
 	*/
-	EntityLiving(char,int,MinecraftServer*,World*);
+	EntityLiving(char,MinecraftServer*,World*);
 
 
 	/*
@@ -92,5 +105,48 @@ public:
 	* Returns maximal health points
 	*/
 	virtual short getMaxHealth();
+
+
+	/*
+	* Writes equipment packages to network
+
+	Parameter:
+	@1 : NetworkOut instance
+	*/
+	void sendEquipment(NetworkOut&);
+
+
+	/*
+	* Sends update equip packages if actual and given is different
+	* Throws Poco::RuntimeException if array hasn't the coorect size
+
+	Parameter:
+	@1 : a NetworkOut instance
+	@2 : old equipment
+	*/
+	void updateEquipment(NetworkOut&,EquipmentArray&);
+
+
+	/*
+	* Sets the equipment
+	* Throws Poco::RuntimeException if index is out of bound
+	* Rethrows all ItemSlot exception
+
+	Parameter:
+	@1 : index      (see EquipmentArray definition)
+	@2 : new ItemID (FC_EMPTYITEMID for empty slots)
+	*/
+	void setEquipment(char,ItemID);
+
+
+	/*
+	* Returns the slot's itemID
+	* Throws Poco::RuntimeException if index is out of bound
+	* Returns FC_EMPTYITEMID if slot is empty
+
+	Parameter:
+	@1 : index      (see EquipmentArray definition)
+	*/
+	ItemID getEquipment(char);
 };
 #endif

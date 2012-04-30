@@ -15,15 +15,20 @@ GNU General Public License for more details.
 #include "EntityLiving.h"
 #include "Constants.h"
 #include "NetworkOut.h"
+#include "ItemSlot.h"
 
-EntityLiving::EntityLiving(char iType,int iEID,MinecraftServer* pServer,World* pWorld) try :
-Entity			(iEID,pServer,pWorld)
+using std::vector;
+
+EntityLiving::EntityLiving(char iType,MinecraftServer* pServer,World* pWorld) try :
+Entity			(pServer,pWorld),
+	_vpHeld			(5)
 {
 	if (!Constants::isDefined(iType,"/Entity/Alive/TypeID")) {throw Poco::RuntimeException("Entity type not defined!");}
 
 	_iHealth = 0;
-	_iMaxHealth = 0;
 	_iType = iType;
+
+	for(char x=0;x<=4;x++) {_vpHeld[x] = NULL;}
 }catch(Poco::RuntimeException& ex) {
 	ex.rethrow();
 }
@@ -59,6 +64,8 @@ void EntityLiving::spawn(NetworkOut& rOut) {
 	//rOut.addByte(char((Coordinates.HeadYaw * 256.0F) / 360.0F));
 	appendMetadata(rOut);
 	rOut.Finalize(FC_QUEUE_HIGH);
+
+	sendEquipment(rOut);
 }
 
 
@@ -72,4 +79,83 @@ short EntityLiving::getHealth() {
 
 short EntityLiving::getMaxHealth() {
 	return 0;
+}
+
+void EntityLiving::sendEquipment(NetworkOut& rOut) {
+	for (char x=0;x<=4;x++) {
+		if (_vpHeld[x] == NULL) {continue;}
+		rOut.addByte(0x5);
+		rOut.addInt(_iEntityID);
+		rOut.addShort(x);
+		if(_vpHeld[x]->isEmpty()) { //empty slot
+			rOut.addShort(-1);
+			rOut.addShort(0);
+		}else{
+			rOut.addShort(_vpHeld[x]->getItem().first);
+			rOut.addShort(_vpHeld[x]->getItem().second);
+		}
+		rOut.Finalize(FC_QUEUE_HIGH);
+	}
+}
+
+void EntityLiving::updateEquipment(NetworkOut& rOut,EquipmentArray& rOldEquip) {
+	if (rOldEquip.size() != 5) {throw Poco::RuntimeException("Illegal size");}
+
+	for (char x=0;x<=4;x++) {
+		if (_vpHeld[x] == NULL && rOldEquip[x] == NULL) {continue;}
+		if (_vpHeld[x] == NULL && rOldEquip[x] != NULL) {
+			rOut.addByte(0x5);
+			rOut.addInt(_iEntityID);
+			rOut.addShort(x);
+			rOut.addShort(-1);
+			rOut.addShort(0);
+			rOut.Finalize(FC_QUEUE_HIGH);
+			continue;
+		}
+
+		if ( (_vpHeld[x] != NULL && rOldEquip[x] == NULL) || (_vpHeld[x]->getItem().first != rOldEquip[x]->getItem().first)) {
+			rOut.addByte(0x5);
+			rOut.addInt(_iEntityID);
+			rOut.addShort(x);
+			if(_vpHeld[x]->isEmpty()) { //empty slot
+				rOut.addShort(-1);
+				rOut.addShort(0);
+			}else{
+				rOut.addShort(_vpHeld[x]->getItem().first);
+				rOut.addShort(_vpHeld[x]->getItem().second);
+			}
+			rOut.Finalize(FC_QUEUE_HIGH);
+			continue;
+		}
+	}
+}
+
+
+void EntityLiving::setEquipment(char index,ItemID id) {
+	if (index < 0 || index > 4) {throw Poco::RuntimeException("Illegal index");}
+
+	if (id.first == -1 && id.second == -1) {
+		if (_vpHeld[index] == NULL) {return;}
+
+		delete _vpHeld[index];
+		_vpHeld[index] = NULL;
+
+		return;
+	}
+
+	try {
+		if (_vpHeld[index] == NULL) {
+			_vpHeld[index] = new ItemSlot(_pMCServer->getItemInfoProvider(),id,1);
+		}else{
+			_vpHeld[index]->setItem(id);
+			_vpHeld[index]->setStackSize(1);
+		}
+	}catch(Poco::RuntimeException & ex) {
+		ex.rethrow();
+	}
+}
+
+ItemID EntityLiving::getEquipment(char index) {
+	if (index < 0 || index > 4) {throw Poco::RuntimeException("Illegal index");}
+	return (_vpHeld[index] == NULL ? FC_EMPTYITEMID : _vpHeld[index]->getItem());
 }
