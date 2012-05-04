@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 
 <settings>
-  <DocVer>1</DocVer>
+  <DocVer>2</DocVer>
   <Network>
     <Port>25565</Port>
     <Slots>16</Slots>
@@ -15,6 +15,7 @@
     <Whitelist>0</Whitelist>
     <ServerMode>0</ServerMode>
     <Difficulty>1</Difficulty>
+	<Active>1</Active>
   </Server>
 
   <Map>

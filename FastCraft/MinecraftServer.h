@@ -254,6 +254,6 @@ private:
 	bool parseNodeInt(Poco::AutoPtr<Poco::XML::Document>,string,int&,int,int);
 	bool parseNodeDouble(Poco::AutoPtr<Poco::XML::Document>,string,double&,double,double);
 	bool parseNodeString(Poco::AutoPtr<Poco::XML::Document>,string,string&);
-	void readConfiguration(Poco::Path&);
+	char readConfiguration(Poco::Path&);
 };
 #endif

@@ -22,7 +22,7 @@ GNU General Public License for more details.
 //Core Constants
 #define FC_VERSION						"0.0.2 Alpha"
 #define FC_SUPPORTED_MINCRAFTVERSION	"1.1"
-#define FC_SUPPORTED_DOCVER				1
+#define FC_SUPPORTED_DOCVER				2
 #define FC_SUPPORTED_PROTOCOLVERSION	23
 
 //Various Constants
@@ -58,6 +58,10 @@ GNU General Public License for more details.
 #define FC_LEAVE_KICK				    1
 #define FC_LEAVE_QUIT					2
 #define FC_LEAVE_OTHER					3
+
+#define FC_VSERVERERROR_OK				0
+#define FC_VSERVERERROR_INACTIVE		1
+#define FC_VSERVERERROR_ERROR			2
 
 using std::string;
 

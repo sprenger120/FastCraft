@@ -100,15 +100,20 @@ int main(int argc, char *argv[]) {
 
 		//Check if there is at least one server that runs
 		fSomethingRuns=false;
-		for (x=0;x<=vpServer.size()-1;x++) {
-			if (vpServer[x]->isRunning()) {
-				fSomethingRuns=true;
-				break;
+		if (!vpServer.empty()) {
+			for (x=0;x<=vpServer.size()-1;x++) {
+				if (vpServer[x]->isRunning()) {
+					fSomethingRuns=true;
+					break;
+				}
 			}
+		}else {
+			break;
 		}
 		if (!fSomethingRuns) {break;}
 	}
 
+	Thread::sleep(3000);
 	Poco::Data::SQLite::Connector::unregisterConnector();
 	return 1;
 }

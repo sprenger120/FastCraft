@@ -56,6 +56,9 @@ _sServerName(""),
 	_fPVP						= true;
 	_fAllowFlyMod				= false;
 	_dMaxPlayerSpeed			= 7.5;
+	_pAcceptThread				= NULL;
+	_pPlayerPool				= NULL;
+	_pItemInformationProvider	= NULL;
 
 	_clockCreation.start();
 	_iID = 100;
@@ -76,7 +79,12 @@ _sServerName(""),
 		}else if(!(ckeckExistanceFile.canRead() && ckeckExistanceFile.canWrite())){
 			cout<<"Unable to read/write settings file. Starting with standart configuration.\n";
 		}else{
-			readConfiguration(sRootPath);
+			switch (readConfiguration(sRootPath)) {
+			case FC_VSERVERERROR_INACTIVE:
+				throw Poco::RuntimeException("Inactive");
+			case FC_VSERVERERROR_ERROR:
+				throw Poco::RuntimeException("Unable to read configuration");
+			}
 		}
 	}
 
@@ -141,10 +149,10 @@ _sServerName(""),
 }
 
 MinecraftServer::~MinecraftServer() {
-	cout<<"Shutting down server "<<_sServerName<<"...\n";
-	delete _pAcceptThread;
-	delete _pPlayerPool;
-	delete _pItemInformationProvider;
+	if (isRunning()) {cout<<"Shutting down server "<<_sServerName<<"...\n";}
+	if (_pAcceptThread != NULL)	{delete _pAcceptThread;}
+	if (_pPlayerPool != NULL)	{delete _pPlayerPool;}
+	if (_pItemInformationProvider != NULL)	{delete _pItemInformationProvider;}
 	if (!_vpWorlds.empty()) {
 		for(int x=0;x<=_vpWorlds.size()-1;x++) {
 			delete _vpWorlds[x];
@@ -170,12 +178,12 @@ void MinecraftServer::run() {
 	_iThreadStatus = FC_THREADSTATUS_DEAD;
 }
 
-void MinecraftServer::readConfiguration(Poco::Path& path) {
+char MinecraftServer::readConfiguration(Poco::Path& path) {
 	std::ifstream Input(path.toString());
 
 	if (!Input.good()) {
 		cout<<"***Error: Configuration path invalid!"<<"\n";
-		return;
+		return FC_VSERVERERROR_ERROR;
 	}
 
 	Poco::XML::InputSource ISource(Input);
@@ -184,9 +192,9 @@ void MinecraftServer::readConfiguration(Poco::Path& path) {
 
 	try {
 		pDoc = parser.parse(&ISource);
-	}catch(Poco::XML::XMLException& ex) {
+	}catch(Poco::XML::SAXException& ex) {
 		cout<<"***Error while parsing settings: "<<ex.message()<<"\n";
-		return;
+		return FC_VSERVERERROR_ERROR;
 	}
 
 
@@ -196,8 +204,16 @@ void MinecraftServer::readConfiguration(Poco::Path& path) {
 	int iData;
 	if (!parseNodeInt(pDoc,"/settings/DocVer",iData,FC_SUPPORTED_DOCVER,FC_SUPPORTED_DOCVER)) {
 		cout<<"***Invalid settings DocVer\n";
+		return FC_VSERVERERROR_ERROR;
 	}else{
 		string sTemp("");
+
+		if (parseNodeInt(pDoc,"/settings/Server/Active",iData,0,1)) {
+			if (iData==0) {return FC_VSERVERERROR_INACTIVE;}
+		}else{
+			return FC_VSERVERERROR_ERROR;
+		}
+
 		if(parseNodeInt(pDoc,"/settings/Network/Port",iData,0,65535)) {_iPort = short(iData);} 
 		if(parseNodeInt(pDoc,"/settings/Network/Slots",iData,1,255)) {_iPlayerSlotCount = short(iData);}
 		parseNodeString(pDoc,"/settings/Server/Description",_sServerDescription);
@@ -238,6 +254,7 @@ void MinecraftServer::readConfiguration(Poco::Path& path) {
 			cout<<"***Solution: Set OnlineMode in your fastcraft.properties to true."<<"\n";
 		}
 	}
+	return FC_VSERVERERROR_OK;
 }
 
 unsigned short MinecraftServer::getPort() {
