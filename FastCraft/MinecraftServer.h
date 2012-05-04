@@ -86,8 +86,9 @@ public:
 	Parameter:
 	@1 : Name of server instance
 	@2 : Path to FastCraft root directory
+	@3 : A reference to a vector of the already used ports
 	*/
-	MinecraftServer(string,Poco::Path);
+	MinecraftServer(string,Poco::Path,vector<unsigned short>&);
 
 
 	/*

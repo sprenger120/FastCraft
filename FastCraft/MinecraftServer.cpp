@@ -31,7 +31,7 @@ GNU General Public License for more details.
 #include <Poco/ScopedLock.h>
 using std::cout;
 
-MinecraftServer::MinecraftServer(string sName,Poco::Path sRootPath) :
+MinecraftServer::MinecraftServer(string sName,Poco::Path sRootPath,vector<unsigned short>& rvUsedPorts) :
 _sServerName(""),
 	_sServerDescription		("FastCraft Minecraft server"),
 	_sMOTD					("§dWelcome to FastCraft 0.0.2 Alpha server."),
@@ -80,6 +80,14 @@ _sServerName(""),
 		}
 	}
 
+	//Check port availability
+	if (!rvUsedPorts.empty()) {
+		for(int x = 0; x<= rvUsedPorts.size()-1;x++) {
+			if (rvUsedPorts[x] == _iPort) {throw Poco::RuntimeException("Port already in use!");}
+		}
+	}
+		
+
 	{
 		//Reading items.db
 		cout<<"Reading item database...\n";
@@ -100,6 +108,7 @@ _sServerName(""),
 	
 
 	//load words
+	cout<<"Loading worlds...\n";
 	_vpWorlds.push_back(new World(_sMainMapName,0,this));
 	if (!_vsAdditionalWorlds.empty()) {
 		for(int x=0;x<=_vsAdditionalWorlds.size()-1;x++) {
@@ -107,21 +116,28 @@ _sServerName(""),
 		}
 	}
 
+
 	//start playerpool
+	cout<<"Init player factory...\n";
 	_pPlayerPool = new PlayerPool(this);
 
 
 	//start accept thread
 	try{
+		cout<<"Init network...\n";
 		_pAcceptThread = new AcceptThread(this);
+		rvUsedPorts.push_back(_iPort);
 	}catch(Poco::RuntimeException& ex) { 
 		cout<<"Unable to start server: "<< ex.message()<<"\n"<<std::endl;
 		return;
 	}
 
 	startThread(this);
-
-	cout<<sName<<" started successfully! (Port:"<<_iPort<<")\n"<<std::endl;
+	cout<<sName<<" started successfully! (Startup time:"
+		<<_clockCreation.elapsed()/1000000<<"s "
+		<<(_clockCreation.elapsed()/1000)%1000<<"ms"
+		<<" ;  Port:"<<_iPort<<")\n"
+		<<std::endl;
 }
 
 MinecraftServer::~MinecraftServer() {

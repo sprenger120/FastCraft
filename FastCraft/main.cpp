@@ -67,27 +67,26 @@ int main(int argc, char *argv[]) {
 
 	MinecraftServer* pServer;
 	Poco::Path pathTemp;
+	vector<unsigned short> vUsedPorts(0);
 	int x;
 
-	//Start all server
+	//Start all servers
 	for (x=0;x<=vFileList.size()-1;x++) {
 		if (!vFileList[x].isDirectory()) {continue;} //Skip files
 
 		if(!pathTemp.tryParse(vFileList[x].path())) {
-			cout<<"Illegal path!"<<std::endl;
-			Thread::sleep(3000);
-			return 0;
+			cout<<"Illegal path!\n"<<std::endl;
+			continue;
 		}
 
 		try {
 			cout<<"Starting "<<pathTemp[pathTemp.depth()]<<"\n";
 			pathTemp.pushDirectory(pathTemp[pathTemp.depth()]);
 			pathTemp.setFileName("");
-			pServer = new MinecraftServer(pathTemp[pathTemp.depth()-1],pathTemp);
+			pServer = new MinecraftServer(pathTemp[pathTemp.depth()-1],pathTemp,vUsedPorts);
 		}catch(Poco::RuntimeException& ex) {
-			cout<<"Unable to start server ("<<ex.message()<<")"<<std::endl;
-			Thread::sleep(3000);
-			return 0;
+			cout<<"Unable to start server ("<<ex.message()<<")\n"<<std::endl;
+			continue;
 		}
 		vpServer.push_back(pServer);
 		pathTemp.clear();
