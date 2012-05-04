@@ -58,8 +58,8 @@ void EntityPlayer::spawn(NetworkOut& rOut) {
 	rOut.addInt(int(floor(Coordinates.Z * 32.0)));
 	rOut.addByte(char((Coordinates.Yaw * 256.0F) / 360.0F));
 	rOut.addByte(char((Coordinates.Pitch * 256.0F) / 360.0F));
-	rOut.addShort(_vpHeld[0]->isEmpty() ? 0 : _vpHeld[0]->getItem().first);
-	appendMetadata(rOut);
+	
+	rOut.addShort(_vpHeld[0] == NULL || _vpHeld[0]->isEmpty() ? 0 : _vpHeld[0]->getItem().first);
 	rOut.Finalize(FC_QUEUE_HIGH);
 
 	sendEquipment(rOut);
