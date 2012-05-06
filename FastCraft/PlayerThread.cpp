@@ -53,17 +53,6 @@ PlayerThread::PlayerThread(PackingThread& rPackingThread,MinecraftServer* pServe
 	_Inventory(_NetworkOutRoot,_NetworkInRoot,pServer->getItemInfoProvider()),
 	
 	_timeJobServer(this)
-	/*_timespanSendTime(&_iThreadTicks,FC_INTERVAL_TIMESEND),
-	_timespanSendKeepAlive(&_iThreadTicks,FC_INTERVAL_KEEPALIVE),
-	_timespanHandleMovement(&_iThreadTicks,FC_INTERVAL_HANDLEMOVEMENT),
-	_timespanMovementSent(&_iThreadTicks,FC_INTERVAL_MOVEMENT),
-	_timespanSpeedCalculation(&_iThreadTicks,FC_INTERVAL_CALCULATESPEED),
-	_timespanPositionCheck(&_iThreadTicks,FC_INTERVAL_CHECKPOSITION),
-
-	_timerLastBlockPlace(&_iThreadTicks,0L),
-	_timerStartedEating(&_iThreadTicks,0L),
-	_timerStartedDigging(&_iThreadTicks,0L),
-	_timerLastAlivePacketSent(&_iThreadTicks,0L)*/
 {
 	_iEntityID = FC_UNKNOWNEID;
 	_iHealth = 0;
@@ -97,6 +86,7 @@ PlayerThread::PlayerThread(PackingThread& rPackingThread,MinecraftServer* pServe
 
 
 PlayerThread::~PlayerThread() {
+	Disconnect("Server shutdown",false);
 	killThread();
 }
 
@@ -345,14 +335,6 @@ string PlayerThread::generateConnectionHash() {
 	StringStream<<std::hex<<iVal;
 	_sConnectionHash.assign(StringStream.str());
 	return _sConnectionHash;
-}
-
-void PlayerThread::Interval_Time() {
-	/*if (!isSpawned()) {return;}
-	if (_timespanSendTime.isGone()) {
-		_timespanSendTime.reset();
-		sendTime();
-	}*/
 }
 
 void PlayerThread::Interval_HandleMovement() {
@@ -663,6 +645,11 @@ void PlayerThread::Packet3_Chat() {
 		}
 	} catch(Poco::RuntimeException) {
 		Disconnect(FC_LEAVE_OTHER);
+	}
+
+	if (Message.compare("/stop") == 0) {
+		_pMinecraftServer->shutdown();
+		return;
 	}
 
 	_sTemp.assign("<§c");

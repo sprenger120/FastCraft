@@ -334,7 +334,6 @@ public:
 private:
 	//Interval functions
 	void Interval_KeepAlive();
-	void Interval_Time();
 	void Interval_HandleMovement();
 	void Interval_Movement();
 	void Interval_CalculateSpeed();
