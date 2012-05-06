@@ -37,7 +37,7 @@ GNU General Public License for more details.
 #include "EntityCoordinates.h"
 #include "EntityPlayer.h"
 #include <utility>
-#include "ThreadTickSpan.h"
+#include "TimeJobServer.h"
 #include "ServerThreadBase.h"
 #include "Heap.h"
 
@@ -111,20 +111,7 @@ private:
 	World* _pActualWorld;
 	Heap<EntityListEntry,int> _heapSpawnedEntities;
 
-
-	/* Tickspan objects */
-	/*ThreadTickSpan _timespanSendTime;
-	ThreadTickSpan _timespanSendKeepAlive;
-	ThreadTickSpan _timespanHandleMovement;
-	ThreadTickSpan _timespanMovementSent;
-	ThreadTickSpan _timespanSpeedCalculation;
-	ThreadTickSpan _timespanPositionCheck;
-
-	ThreadTickSpan _timerLastBlockPlace;
-	ThreadTickSpan _timerStartedEating;
-	ThreadTickSpan _timerStartedDigging;
-	ThreadTickSpan _timerLastAlivePacketSent;
-	*/
+	TimeJobServer<PlayerThread> _timeJobServer;
 public:
 	/*
 	* Constructor

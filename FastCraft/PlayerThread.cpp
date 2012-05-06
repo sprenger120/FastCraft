@@ -50,10 +50,9 @@ PlayerThread::PlayerThread(PackingThread& rPackingThread,MinecraftServer* pServe
 
 
 	_ChunkProvider(_NetworkOutRoot,rPackingThread,this,pServer),
-	_Inventory(_NetworkOutRoot,_NetworkInRoot,pServer->getItemInfoProvider())
+	_Inventory(_NetworkOutRoot,_NetworkInRoot,pServer->getItemInfoProvider()),
 	
-
-
+	_timeJobServer(this)
 	/*_timespanSendTime(&_iThreadTicks,FC_INTERVAL_TIMESEND),
 	_timespanSendKeepAlive(&_iThreadTicks,FC_INTERVAL_KEEPALIVE),
 	_timespanHandleMovement(&_iThreadTicks,FC_INTERVAL_HANDLEMOVEMENT),
@@ -79,6 +78,19 @@ PlayerThread::PlayerThread(PackingThread& rPackingThread,MinecraftServer* pServe
 
 	_pMinecraftServer = pServer;
 	_pActualWorld = NULL;
+
+
+	_timeJobServer.addJob(&PlayerThread::Interval_KeepAlive,15000);
+
+	/*
+		//Interval in milli seconds
+		#define FC_INTERVAL_TIMESEND			5000
+		#define FC_INTERVAL_KEEPALIVE			
+		#define FC_INTERVAL_HANDLEMOVEMENT		500
+		#define FC_INTERVAL_MOVEMENT			50
+		#define FC_INTERVAL_CALCULATESPEED		1000
+		#define FC_INTERVAL_CHECKPOSITION		1000
+	*/
 
 	startThread(this);
 }
@@ -136,6 +148,8 @@ void PlayerThread::run() {
 			Interval_CheckPosition();
 			Interval_CheckEating();
 			*/
+
+			_timeJobServer.doJobs();
 
 			iPacket = _NetworkInRoot.readByte();
 
@@ -382,11 +396,8 @@ void PlayerThread::sendClientPosition() {
 }
 
 void PlayerThread::Interval_KeepAlive() {
-	/*if (!isSpawned()){return;}
-	if (_timespanSendKeepAlive.isGone()) { //Send new keep alive
-		_timespanSendKeepAlive.reset();
-		sendKeepAlive();
-	}*/
+	if (!isSpawned()){return;}
+	sendKeepAlive();
 }
 
 void PlayerThread::syncHealth() {
@@ -525,9 +536,9 @@ void PlayerThread::Packet1_Login() {
 		}
 
 		//Set start coordinates
-		_Coordinates.X = 10.0;
-		_Coordinates.Y = 0.0;
-		_Coordinates.Z = 0.0;
+		_Coordinates.X = 50.0;
+		_Coordinates.Y = 100.0;
+		_Coordinates.Z = 50.0;
 		_Coordinates.Stance = 0.0;
 		_Coordinates.OnGround = false;
 		_Coordinates.Pitch = 0.0F;
@@ -1189,7 +1200,7 @@ void PlayerThread::updateEntityEquipment(EntityLiving*) {
 }
 
 void PlayerThread::CheckPosition(bool fSynchronize) {
-	if (_pActualWorld->isSuffocating(_Coordinates)) {
+	/*if (_pActualWorld->isSuffocating(_Coordinates)) {
 		char iHeight = -1;
 		BlockCoordinates blockCoords = ChunkMath::toBlockCoords(_Coordinates);
 		while(iHeight == -1) {
@@ -1204,7 +1215,7 @@ void PlayerThread::CheckPosition(bool fSynchronize) {
 
 		_Coordinates.Y = ((double) iHeight) + 1.0;
 		if (fSynchronize) {sendClientPosition();}
-	}
+	}*/
 }
 
 void PlayerThread::Interval_CheckPosition() {
