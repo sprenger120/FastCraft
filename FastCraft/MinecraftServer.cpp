@@ -59,6 +59,7 @@ _sServerName(""),
 	_pAcceptThread				= NULL;
 	_pPlayerPool				= NULL;
 	_pItemInformationProvider	= NULL;
+	_fMarkedForShutdown			= false;
 
 	_clockCreation.start();
 	_iID = 100;
@@ -437,4 +438,12 @@ int MinecraftServer::generateID(){
 	Poco::ScopedLock<Poco::Mutex> scopeLock(_idMutex);
 	_iID++;
 	return _iID;
+}
+
+void MinecraftServer::shutdown() {
+	_fMarkedForShutdown = true;
+}
+
+bool MinecraftServer::isMarkedForShutdown() {
+	return _fMarkedForShutdown;
 }

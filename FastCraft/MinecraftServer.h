@@ -78,6 +78,10 @@ private:
 	/* Time stuff */
 	Poco::Stopwatch _clockCreation;
 	Tick   _iInGameTime;
+
+
+	/* Other */
+	bool _fMarkedForShutdown;
 public:
 	/*
 	* Constructor
@@ -109,6 +113,11 @@ public:
 	*/
 	void shutdown();
 
+
+	/*
+	* Returns true if server is marked for shutdown
+	*/
+	bool isMarkedForShutdown();
 
 	/*
 	* Returns a pointer to the internal PlayerPool instance
