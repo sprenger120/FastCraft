@@ -32,13 +32,6 @@ GNU General Public License for more details.
 #define FC_WORLDHEIGHT					128
 #define FC_UNKNOWNEID					-1
 
-//Interval in milli seconds
-#define FC_INTERVAL_TIMESEND			5000
-#define FC_INTERVAL_KEEPALIVE			15000
-#define FC_INTERVAL_HANDLEMOVEMENT		500
-#define FC_INTERVAL_MOVEMENT			50
-#define FC_INTERVAL_CALCULATESPEED		1000
-#define FC_INTERVAL_CHECKPOSITION		1000
 
 //Chunk Constants
 #define FC_CHUNK_BLOCKCOUNT				32768
