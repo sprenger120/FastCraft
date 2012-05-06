@@ -96,15 +96,16 @@ int main(int argc, char *argv[]) {
 
 	bool fSomethingRuns = false;	
 	while(1) {
-		Thread::sleep(1000);
+		Thread::sleep(100);
 
 		//Check if there is at least one server that runs
 		fSomethingRuns=false;
 		if (!vpServer.empty()) {
-			for (x=0;x<=vpServer.size()-1;x++) {
-				if (vpServer[x]->isRunning()) {
-					fSomethingRuns=true;
-					break;
+			for (x=vpServer.size()-1;x>=0;x--) {
+				if (vpServer[x]->isRunning()) {fSomethingRuns=true;}
+				if (vpServer[x]->isMarkedForShutdown()) {
+					delete vpServer[x];
+					vpServer.erase(vpServer.begin()+x);
 				}
 			}
 		}else {
