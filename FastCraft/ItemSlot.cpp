@@ -107,10 +107,9 @@ void ItemSlot::setStackSize(char size) {
 	}
 	char maxSize;
 
-	switch(_pItemCache_Item == NULL) {
-	case true:
+	if(_pItemCache_Item == NULL) {
 		maxSize = _pItemCache_Block->MaxStackSize;
-	case false:
+	}else{
 		maxSize = _pItemCache_Item->MaxStackSize;
 	}
 
@@ -194,7 +193,7 @@ void ItemSlot::readFromNetwork(NetworkIn& rNetwork) {
 			
 			switch (_pItemInfoProvider->isBlock(iItemID)) {
 			case true:
-				_Item = std::make_pair(iItemID,Usage);
+				_Item = std::make_pair<short,char>(iItemID,char(Usage));
 				_iUsage = 0;
 
 				//Check registration state
@@ -232,9 +231,9 @@ void ItemSlot::readFromNetwork(NetworkIn& rNetwork) {
 						//Rewrite Item cache
 						_pItemCache_Block = NULL;
 						_pItemCache_Item = pItem;
-						_Item = std::make_pair(iItemID,0);
+						_Item = std::make_pair<short,char>(iItemID,0);
 					}else{
-						_Item = std::make_pair(iItemID,Usage);
+						_Item = std::make_pair<short,char>(iItemID,char(Usage));
 
 						//Check registration state
 						if(!_pItemInfoProvider->isRegistered(_Item)) {
@@ -249,7 +248,7 @@ void ItemSlot::readFromNetwork(NetworkIn& rNetwork) {
 				}
 			}
 		}else{
-			_Item = std::make_pair(0,0);
+			_Item = FC_EMPTYITEMID;
 			_iStackSize = 0;
 			_iUsage = 0;
 			return;
@@ -309,7 +308,7 @@ bool ItemSlot::isBlock() {
 	if (_pItemCache_Item == NULL) {
 		return true;
 	}else{
-		false;
+		return false;
 	}
 }
 
