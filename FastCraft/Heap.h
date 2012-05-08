@@ -31,10 +31,9 @@ class Heap {
 		HeapElement* pNextRowElement;
 
 		HeapElement();
-		~HeapElement();
 	};
-
 	string toBinary(tAdressType);
+
 
 	HeapElement* _Root;
 	HeapElement* _pLastAddedEntry;
@@ -46,47 +45,49 @@ class Heap {
 
 	Poco::Mutex _Mutex;
 public:
-	class HeapInterator {
+	class HeapIterator {
 		HeapElement* _pBegin;
 		HeapElement* _pActual;
+		bool _fEnd;
 	public:
 		/*
 		* Constructor
 		*/
-		HeapInterator(HeapElement*);
+		HeapIterator(HeapElement*);
 
 
 		/*
-		* Destructor
-		*/
-		~HeapInterator();
-
-
-		/*
-		* Moves interator to next element
+		* Moves Iterator to next element
 		*/
 		void operator++();
 
+
 		/*
 		* Access operator
+		* Returns last element if Iterator reaches the end
+		* Throws Poco::RuntimeException if heap doesn't contains any elements
 		*/
 		tDataType* operator->();
 
 
 		/*
+		* Returns pointer of actual element
+		* Returns last element if Iterator reaches the end
+		* Throws Poco::RuntimeException if heap doesn't contains any elements
+		*/
+		tDataType* getPtr();
+
+
+		/*
 		* Access operator
+		* Returns last element if Iterator reaches the end
+		* Throws Poco::RuntimeException if heap doesn't contains any elements
 		*/
 		tDataType& operator*();
 
 
 		/*
-		* Returns pointer of start element
-		*/
-		tDataType* beg();
-
-
-		/*
-		* Returns true if interator has reached the end
+		* Returns true if Iterator has reached the end
 		*/
 		bool isEndReached();
 	};
@@ -156,11 +157,15 @@ public:
 
 
 	/*
-	* Returns interator to beginning
+	* Returns Iterator to beginning
 	*/
-	typename Heap<tDataType,tAdressType>::HeapInterator begin();	
+	typename Heap<tDataType,tAdressType>::HeapIterator begin();	
 };
 
+
+/*
+ * Heap
+ */
 template<typename tDataType,typename  tAdressType>
 Heap<tDataType,tAdressType>::Heap() {
 	/* Init variables */
@@ -183,7 +188,11 @@ Heap<tDataType,tAdressType>::~Heap() {
 	delete [] _pSingleBitMaskArray;
 	delete [] _pEndBitsMaskArray;
 
-	if (_iSize > 0) {cleanupNodes();}
+	if (_iSize > 0) {
+		cleanupNodes();
+	}else{
+		delete _Root;
+	}
 }
 
 
@@ -259,18 +268,6 @@ void Heap<tDataType,tAdressType>::add(tAdressType ID,tDataType& rElement) {
 
 
 template<typename tDataType,typename tAdressType>
-Heap<tDataType,tAdressType>::HeapElement::HeapElement() {
-	pElement = NULL;
-	pLow = NULL;
-	pHigh = NULL;
-	pNextRowElement = NULL;
-}
-
-template<typename tDataType,typename tAdressType>
-Heap<tDataType,tAdressType>::HeapElement::~HeapElement() {
-}
-
-template<typename tDataType,typename tAdressType>
 tDataType* Heap<tDataType,tAdressType>::operator[](tAdressType ID) {
 	HeapElement* pPath = _Root;
 	HeapElement* p;
@@ -302,46 +299,6 @@ tDataType* Heap<tDataType,tAdressType>::operator[](tAdressType ID) {
 template<typename tDataType,typename tAdressType>
 bool Heap<tDataType,tAdressType>::has(tAdressType ID) {
 	return (*this)[ID] != NULL;
-}
-
-
-template<typename tDataType,typename tAdressType>
-Heap<tDataType,tAdressType>::HeapInterator::HeapInterator(HeapElement* p) {
-	_pActual = _pBegin = p;
-}
-
-template<typename tDataType,typename tAdressType>
-Heap<tDataType,tAdressType>::HeapInterator::~HeapInterator() {
-}
-
-
-template<typename tDataType,typename tAdressType>
-void Heap<tDataType,tAdressType>::HeapInterator::operator++() {
-	if (_pActual == NULL) {return;}
-	//if (_pActual->pNextRowElement == NULL) {return;}
-
-	/* mode to next node with a allocated element */	
-	_pActual = _pActual->pNextRowElement;
-	while (1) {
-		if (_pActual == NULL) {break;}
-		if (_pActual->pElement != NULL) {break;}
-		_pActual = _pActual->pNextRowElement;
-	}
-}
-
-template<typename tDataType,typename tAdressType>
-tDataType* Heap<tDataType,tAdressType>::HeapInterator::operator->() {
-	return _pActual->pElement;
-}
-
-template<typename tDataType,typename tAdressType>
-tDataType& Heap<tDataType,tAdressType>::HeapInterator::operator*() {
-	return *(_pActual->pElement);
-}
-
-template<typename tDataType,typename tAdressType>
-tDataType* Heap<tDataType,tAdressType>::HeapInterator::beg() {
-	return _pBegin->pElement;
 }
 
 template<typename tDataType,typename tAdressType>
@@ -376,25 +333,83 @@ void Heap<tDataType,tAdressType>::cleanupNodes() {
 
 		pE = pNextE;
 	}while(pE != NULL);
-
 }
 
 template<typename tDataType,typename tAdressType>
-typename Heap<tDataType,tAdressType>::HeapInterator Heap<tDataType,tAdressType>::begin() {
-	HeapInterator interator(_Root->pNextRowElement);
-	return interator;
+typename Heap<tDataType,tAdressType>::HeapIterator Heap<tDataType,tAdressType>::begin() {
+	HeapIterator Iterator(_Root->pNextRowElement);
+	return Iterator;
 }
 
-template<typename tDataType,typename tAdressType>
-bool Heap<tDataType,tAdressType>::HeapInterator::isEndReached() {
-	if (_pActual == NULL)  {return true;}
 
-	HeapElement* p = _pActual;
-	while (1) {
-		if (p->pElement != NULL) {return false;}
-		if (p->pNextRowElement == NULL) {return true;}
-		p = p->pNextRowElement;
+
+/* 
+ * HeapElement
+ */
+template<typename tDataType,typename tAdressType>
+Heap<tDataType,tAdressType>::HeapElement::HeapElement() {
+	pElement = NULL;
+	pLow = NULL;
+	pHigh = NULL;
+	pNextRowElement = NULL;
+}
+
+
+
+/*
+ * HeapIterator
+ */
+template<typename tDataType,typename tAdressType>
+Heap<tDataType,tAdressType>::HeapIterator::HeapIterator(HeapElement* p) {
+	_pBegin = p;
+	_pActual = NULL;
+	_fEnd = false;
+
+	if(_pBegin == NULL) { 
+		_fEnd = true;
+	}else {
+		(*this)++;
 	}
-	return true;
+}
+
+template<typename tDataType,typename tAdressType>
+void Heap<tDataType,tAdressType>::HeapIterator::operator++() {
+	if (_fEnd) {return;}
+
+	HeapElement* pActual = (_pActual == NULL ? _pBegin : _pActual->pNextRowElement); //if _pActual == NULL -> first call of ++
+	while (1) {
+		if (pActual == NULL) { /* doesn't happen on first call */ /* returns if rows end has reached end */
+			_fEnd = true;
+			return;
+		} 
+		if (pActual->pElement != NULL) {break;} /* there is a node with a new element; break */
+		pActual = pActual->pNextRowElement; /* no element found:  next element */
+	}
+	if (pActual != NULL) {
+		_pActual = pActual;
+	}
+}
+
+template<typename tDataType,typename tAdressType>
+tDataType* Heap<tDataType,tAdressType>::HeapIterator::operator->() {
+	if (_pActual == NULL) {throw Poco::RuntimeException("Doesn't contain any elements");} /* constructor moves to a valid element; keeps NULL if heap is empty */
+	return _pActual->pElement;
+}
+
+template<typename tDataType,typename tAdressType>
+tDataType& Heap<tDataType,tAdressType>::HeapIterator::operator*() {
+	if (_pActual == NULL) {throw Poco::RuntimeException("Doesn't contain any elements");} 
+	return *(_pActual->pElement);
+}
+
+template<typename tDataType,typename tAdressType>
+bool Heap<tDataType,tAdressType>::HeapIterator::isEndReached() {
+	return _fEnd;
+}
+
+template<typename tDataType,typename tAdressType>
+tDataType* Heap<tDataType,tAdressType>::HeapIterator::getPtr() {
+	if (_pActual == NULL) {throw Poco::RuntimeException("Doesn't contain any elements");} 
+	return _pActual->pElement;
 }
 #endif
