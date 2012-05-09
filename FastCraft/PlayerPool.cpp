@@ -56,6 +56,13 @@ PlayerPool::~PlayerPool() {
 			delete _vPlayerThreads[x];
 		}
 	}
+	
+
+	if (!_qEvents.empty()) {
+		for(int x=0;x<=_qEvents.size()-1;x++) {
+			delete _qEvents.front();
+		}
+	}
 }
 
 
@@ -140,7 +147,7 @@ PlayerThread* PlayerPool::getPlayerByName(string Name,PlayerThread* pCaller) {
 	return NULL;
 }
 
-
+/*
 bool PlayerPool::willHurtOther(BlockCoordinates blockCoord,PlayerThread* pPlayer) {
 	if (_vPlayerThreads.empty()) {return false;}
 
@@ -158,4 +165,4 @@ bool PlayerPool::willHurtOther(BlockCoordinates blockCoord,PlayerThread* pPlayer
 		}
 	}
 	return false;
-}
+}*/
