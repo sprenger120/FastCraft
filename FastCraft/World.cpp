@@ -13,7 +13,6 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 */
 #include "World.h"
-#include "ChunkTerraEditor.h"
 #include "Constants.h"
 #include "MinecraftServer.h"
 #include "ChunkMath.h"
@@ -31,26 +30,17 @@ using std::cout;
 
 World::World(string Name,char iDimension,MinecraftServer* pServer) :
 _WorldName(Name),
-	_iDimension(iDimension),
-	_vChunks(0)
+	_iDimension(iDimension)
 {
 	_pMinecraftServer = pServer;
 	generateChunks(-10,-10,10,10);
 }
 
-
 World::~World() {
-	cout<<"destruct!"<<"\n";
-	//Free chunks
-	for (int x=0;x<=_vChunks.size()-1;x++) {
-		for(int z=0;z<=_vChunks[x].size()-1;z++) {
-			delete _vChunks[x][z].Chunk;
-		}
-	}
 }
 
 void World::generateChunks(int FromX,int FromZ,int ToX,int ToZ) {
-	try {
+	try {	
 		for (int x=FromX;x<=ToX;x++) {
 			for(int z=FromZ;z<=ToZ;z++) {
 				generateChunk(x,z);
@@ -62,120 +52,39 @@ void World::generateChunks(int FromX,int FromZ,int ToX,int ToZ) {
 }
 
 MapChunk* World::generateChunk(int X,int Z) {
-	bool fXRowExisting=false;
-	int XRow,ZRow; //Index of chunk in list
-	MapChunk* pAffectedChunk=NULL;
+	long long ChunkIndex = generateIndex(X,Z);
+	MapChunk* pChunk = NULL; 
 
-	Poco::Mutex::ScopedLock ScopedLock(_Mutex);
+	if (_heapChunks.get(ChunkIndex,pChunk)) {return pChunk;} /* Is this chunk already generated? */
+	
+	pChunk = new MapChunk;
+	
 
-	/*
-	Reserve a new place for chunk
-	*/
-	//Look for a existing x row 
-	if (_vChunks.size() > 0) {
-		for (int x=0;x<=_vChunks.size()-1;x++) {
-			if (_vChunks[x][0].X == X) {
-				//There is a existing row		
-				//Add a new chunk
-				ChunkInternal Chk;
+	std::memset(pChunk->Blocks,0x00,FC_CHUNK_DATACOUNT);
+	std::memset(pChunk->Metadata,0x00,FC_CHUNK_NIBBLECOUNT);
+	std::memset(pChunk->BlockLight,0x00,FC_CHUNK_NIBBLECOUNT);
+	std::memset(pChunk->SkyLight,0xFF,FC_CHUNK_NIBBLECOUNT);
 
-				Chk.X=X;
-				Chk.Z=Z;
-				Chk.Chunk = pAffectedChunk = new MapChunk; 
 
-				if (Chk.Chunk == NULL) {
-					std::cout<<"World::generateChunk unable to allocate memory"<<"\n";
-					throw Poco::RuntimeException("Generation failed!");
-				}
-
-				_vChunks[x].push_back(Chk);//Add to array
-
-				XRow=x;
-				ZRow=_vChunks[x].size()-1;
-				fXRowExisting=true;
+	for (short y=0;y<=60;y++) {
+		for (int x=0;x<=15;x++) {
+			for (int z=0;z<=15;z++) {
+				pChunk->Blocks[ChunkMath::toIndex(x,y,z)] = 12;
 			}
-		} 	
-	}
-
-	//Doesn't exist
-	if (!fXRowExisting) {
-		vector<ChunkInternal> vZRow(1); 
-
-		vZRow[0].Chunk = pAffectedChunk = new MapChunk;
-		vZRow[0].X=X;
-		vZRow[0].Z=Z;
-
-		if (vZRow[0].Chunk == NULL) {
-			std::cout<<"World::generateChunk unable to allocate memory"<<"\n";
-			throw Poco::RuntimeException("Generation failed!");
 		}
-
-		_vChunks.push_back(vZRow);
-		XRow = _vChunks.size()-1;
-		ZRow = 0;
 	}
 
 
-	/*
-	* Generate Chunk
-	*/
-	Block b;
-	b.BlockID = 7;
-
-	std::memset(pAffectedChunk->Blocks,0,FC_CHUNK_BLOCKCOUNT); //Clear blocks
-	try {
-		ChunkTerraEditor::setPlate(pAffectedChunk,0,b); //Bedrock 
-
-		b.BlockID = 35;
-
-		for (short y=1;y<=70;y++) {
-			ChunkTerraEditor::setPlate(pAffectedChunk,y,b);
-		}
-	} catch (Poco::RuntimeException& err) {
-		std::cout<<"World::generateChunk unable to generate chunk ("<<err.message()<<")"<<"\n";
-
-		//Erase chunk from list
-		_vChunks[XRow].erase(_vChunks[XRow].begin() + ZRow);
-		if (_vChunks[XRow].size() == 0) {
-			_vChunks.erase(_vChunks.begin() + XRow);
-		}
-
-		throw Poco::RuntimeException("Generation failed!");
-	}
-
-	//Light & Metadata
-	std::memset(pAffectedChunk->Metadata,0x00,FC_CHUNK_NIBBLECOUNT);
-	std::memset(pAffectedChunk->BlockLight,0x00,FC_CHUNK_NIBBLECOUNT);
-	std::memset(pAffectedChunk->SkyLight,0xFF,FC_CHUNK_NIBBLECOUNT);
-
-	return pAffectedChunk;
+	return pChunk;
 }
 
 
 MapChunk* World::getChunkByChunkCoordinates(int X,int Z) {
-	if (_vChunks.empty()) {
-		cout<<"***No chunks generated!"<<"\n";
-		return NULL;
-	}
-	for (int x=0;x<=_vChunks.size()-1;x++) { //Search in X rows
-		if (_vChunks[x].empty()) {continue;}
-		if (_vChunks[x][0].X == X) { //Row found
-			for (int z=0;z<=_vChunks[x].size()-1;z++) { //Search z entry
-				if (_vChunks[x][z].Z ==Z) { //found
-					if (_vChunks[x][z].Chunk == NULL) {
-						cout<<"World::getChunkByChunkCoordinates invalid ptr!"<<"\n";
-					}
-					return _vChunks[x][z].Chunk;
-				}
-			}
-			break; 
-		}
-	}
-
-
 	MapChunk* p;
+	long long Index = generateIndex(X,Z);
 
-	//Try to generate chunk
+	if (_heapChunks.get(Index,p)) {return p;} 
+	
 	try  {
 		p = generateChunk(X,Z);
 	} catch(Poco::RuntimeException& ex) {
@@ -436,4 +345,8 @@ void World::setBlockLight(BlockCoordinates Coords,char iLL) {
 
 void World::setBlock(BlockCoordinates Coords,ItemID Data) {
 	setBlock(Coords.X,Coords.Y,Coords.Z,Data);
+}
+
+long long World::generateIndex(int X,int Z) {
+	return  ((((long long)Z)<<32) & 0xFFFFFFFF00000000) & (((long long)X) & 0xFFFFFFFF);
 }

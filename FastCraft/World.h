@@ -16,30 +16,24 @@ GNU General Public License for more details.
 
 #ifndef _FASTCRAFTHEADER_WORLD
 #define _FASTCRAFTHEADER_WORLD
-#include <vector>
 #include <string>
 #include <utility>
 #include <Poco/Mutex.h>
 #include "Structs.h"
 #include "EntityCoordinates.h"
 #include "ItemInformationProvider.h"
+#include "Heap.h"
 
-using std::vector;
 using std::string;
 using std::pair;
 class MinecraftServer;
-
-struct ChunkInternal {
-	int X;
-	int Z;
-	MapChunk* Chunk;
-};
+struct MapChunk;
 
 class World {
 private:
 	string _WorldName;
 	char _iDimension;
-	vector<vector<ChunkInternal>> _vChunks; //[x][z]
+	Heap<MapChunk*,long long> _heapChunks;
 
 	Poco::Mutex _Mutex;
 	MinecraftServer* _pMinecraftServer;
@@ -185,6 +179,16 @@ public:
 	*/
 	void setBlockLight(int,short,int,char);
 	void setBlockLight(BlockCoordinates,char);
+
+
+	/*
+	* Generates the index out of the given X and Z coordinate
+
+	Parameter:
+	@1 : X coordinate
+	@2 : Z coordinate
+	*/
+	static long long generateIndex(int,int);
 private:
 	void generateChunks(int,int,int,int);
 	MapChunk* generateChunk(int,int);
