@@ -35,10 +35,6 @@ struct MapChunk {
 	char SkyLight[FC_CHUNK_NIBBLECOUNT];
 };
 
-struct Block {
-	char BlockID;
-	char Metadata;
-};
 
 struct Enchantment {
 	short EnchID;
