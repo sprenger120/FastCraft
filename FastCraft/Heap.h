@@ -116,19 +116,23 @@ public:
 
 
 	/*
+	* Gets element by ID operator
+	* Returns false if element wasn't found
+
+	Parameter:
+	@1 : Index of element
+	@2 : Reference to your local copy
+	*/
+	bool get(tAdressType,tDataType&);
+
+
+	/*
 	* Returns true if element with given ID exists
 
 	Parameter:
 	@1 : ID of element
 	*/
 	bool has(tAdressType);
-
-
-	/*
-	* Gets element by ID operator
-	* Returns NULL if element wasn'f found
-	*/
-	tDataType* operator[](tAdressType);
 
 
 	/*
@@ -268,7 +272,7 @@ void Heap<tDataType,tAdressType>::add(tAdressType ID,tDataType& rElement) {
 
 
 template<typename tDataType,typename tAdressType>
-tDataType* Heap<tDataType,tAdressType>::operator[](tAdressType ID) {
+bool Heap<tDataType,tAdressType>::get(tAdressType ID,tDataType& ref) {
 	HeapElement* pPath = _Root;
 	HeapElement* p;
 	bool fEnd;
@@ -288,18 +292,44 @@ tDataType* Heap<tDataType,tAdressType>::operator[](tAdressType ID) {
 		}
 
 		if (fEnd) {
-			return p->pElement;
+			ref = *(p->pElement);
+			return true;
 		}else{
 			pPath = p;
 		}
 	}
-	return NULL;
+	return false;
 }
 
 template<typename tDataType,typename tAdressType>
 bool Heap<tDataType,tAdressType>::has(tAdressType ID) {
-	return (*this)[ID] != NULL;
+	HeapElement* pPath = _Root;
+	HeapElement* p;
+	bool fEnd;
+
+	for (char i = 0;i<=sizeof(tAdressType)*8-1;i++) {
+		fEnd = (ID & _pEndBitsMaskArray[i]) == 0;
+
+		switch(ID & _pSingleBitMaskArray[i]) {
+		case 0:
+			if (pPath->pLow == NULL) { return false;}
+			p = pPath->pLow;
+			break;
+		default:
+			if (pPath->pHigh == NULL) { return false;}
+			p = pPath->pHigh;
+			break;
+		}
+
+		if (fEnd) {
+			return true;
+		}else{
+			pPath = p;
+		}
+	}
+	return false;
 }
+
 
 template<typename tDataType,typename tAdressType>
 void Heap<tDataType,tAdressType>::cleanupElements() {
