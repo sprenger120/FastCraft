@@ -13,8 +13,8 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 */
 #define BUILD_VERSION ""
-//#include <vld.h>
 #include <iostream>
+#include <vld.h>
 #include <Poco/Thread.h>
 #include <Poco/Exception.h>
 #include <Poco/Path.h>
@@ -23,7 +23,12 @@ GNU General Public License for more details.
 #include <vector>
 #include "Constants.h"
 #include "MinecraftServer.h"
-#include <Poco/Timestamp.h>
+
+#if defined(_WIN32)
+    #include <Windows.h>
+    #include <DbgHelp.h>
+#endif
+
 
 using std::cout;
 using Poco::Thread;
@@ -52,6 +57,16 @@ int main(int argc, char *argv[]) {
 			return 0;
 		}
 	}
+
+
+	Poco::Data::SQLite::Connector::registerConnector(); //Startup sqlite engine
+	Constants::init(); //load constants
+	
+	#if defined(_WIN32)
+		if (!SymInitialize(GetCurrentProcess(),NULL,true)) { std::cout<<"Unable to init Sym\n";}
+	#endif
+
+
 	std::vector<MinecraftServer*> vpServer(0);
 	std::vector<Poco::File>		  vFileList(0);
 
@@ -61,9 +76,6 @@ int main(int argc, char *argv[]) {
 		Thread::sleep(3000);
 		return 0;
 	}
-
-	Poco::Data::SQLite::Connector::registerConnector(); //Startup sqlite engine
-	Constants::init(); //load constants
 
 	MinecraftServer* pServer;
 	Poco::Path pathTemp;
@@ -114,7 +126,6 @@ int main(int argc, char *argv[]) {
 		if (!fSomethingRuns) {break;}
 	}
 
-	Thread::sleep(3000);
 	Poco::Data::SQLite::Connector::unregisterConnector();
 	return 1;
 }
