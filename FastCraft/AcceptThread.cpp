@@ -19,6 +19,7 @@ GNU General Public License for more details.
 #include "MinecraftServer.h"
 #include "NetworkOut.h"
 #include "PlayerPool.h"
+#include "FCRuntimeException.h"
 
 using Poco::Net::StreamSocket;
 using std::cout;
@@ -41,7 +42,7 @@ _preparedServerFullMsg("")
 
 }catch(Poco::IOException& ex) {
 	cout<<"Unable to bind 0.0.0.0:"<<pServer->getPort()<<" ("<<ex.message()<<")\n";
-	throw Poco::RuntimeException("Unable to start AcceptThread");
+	throw FCRuntimeException("Unable to start AcceptThread");
 }
 
 

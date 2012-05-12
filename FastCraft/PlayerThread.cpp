@@ -83,7 +83,6 @@ PlayerThread::PlayerThread(PackingThread& rPackingThread,MinecraftServer* pServe
 	*/
 
 	startThread(this);
-	throw FCRuntimeException("testexception");
 }
 
 
@@ -216,7 +215,7 @@ void PlayerThread::run() {
 				cout<<"Unknown packet received! 0x"<<std::hex<<int(iPacket)<<endl;
 				break;
 			}
-		} catch (Poco::RuntimeException) {
+		} catch (FCRuntimeException) {
 			Disconnect(FC_LEAVE_OTHER);
 		}
 	}
@@ -603,7 +602,7 @@ void PlayerThread::Packet1_Login() {
 				PlayerInfoList(true,vPlayers[x]->getUsername());
 			}
 		}
-	} catch(Poco::RuntimeException) {
+	} catch(FCRuntimeException) {
 		Disconnect(FC_LEAVE_OTHER);
 	}
 	cout<<_sName<<" joined ("<<_sIP<<") EID:"<<_iEntityID<<endl;  //Console log
@@ -612,7 +611,7 @@ void PlayerThread::Packet1_Login() {
 void PlayerThread::Packet2_Handshake() {
 	try {
 		_sName = _NetworkInRoot.readString();
-	} catch(Poco::RuntimeException) {
+	} catch(FCRuntimeException) {
 		Disconnect(FC_LEAVE_OTHER);
 	}
 
@@ -645,7 +644,7 @@ void PlayerThread::Packet3_Chat() {
 			Disconnect("Received string too long");
 			return;
 		}
-	} catch(Poco::RuntimeException) {
+	} catch(FCRuntimeException) {
 		Disconnect(FC_LEAVE_OTHER);
 	}
 
@@ -668,7 +667,7 @@ void PlayerThread::Packet10_Player() {
 	}
 	try {
 		_Coordinates.OnGround = _NetworkInRoot.readBool();
-	} catch(Poco::RuntimeException) {
+	} catch(FCRuntimeException) {
 		Disconnect(FC_LEAVE_OTHER);
 	}
 }
@@ -697,7 +696,7 @@ void PlayerThread::Packet11_Position() {
 			_Coordinates.Z = TmpCoord.Z;
 			_Coordinates.OnGround = TmpCoord.OnGround;
 		}
-	} catch(Poco::RuntimeException) {
+	} catch(FCRuntimeException) {
 		Disconnect(FC_LEAVE_OTHER);
 	}
 }
@@ -710,7 +709,7 @@ void PlayerThread::Packet12_Look() {
 		_Coordinates.Yaw = _NetworkInRoot.readFloat();
 		_Coordinates.Pitch = _NetworkInRoot.readFloat();
 		_Coordinates.OnGround = _NetworkInRoot.readBool();
-	} catch(Poco::RuntimeException) {
+	} catch(FCRuntimeException) {
 		Disconnect(FC_LEAVE_OTHER);
 	}
 }
@@ -739,7 +738,7 @@ void PlayerThread::Packet13_PosAndLook() {
 			_dRunnedMeters += MathHelper::distance2D(_Coordinates,TmpCoord);
 			_Coordinates = TmpCoord;
 		}
-	} catch(Poco::RuntimeException) {
+	} catch(FCRuntimeException) {
 		Disconnect(FC_LEAVE_OTHER);
 	}
 }
@@ -758,7 +757,7 @@ void PlayerThread::Packet254_ServerListPing() {
 void PlayerThread::Packet255_Disconnect() {
 	try {
 		_sLeaveMessage = _NetworkInRoot.readString();
-	} catch(Poco::RuntimeException) {
+	} catch(FCRuntimeException) {
 		Disconnect(FC_LEAVE_OTHER);
 	}
 	Disconnect(FC_LEAVE_QUIT);
@@ -798,7 +797,7 @@ void PlayerThread::Packet16_HoldingChange() {
 
 		PlayerEventBase* p = new PlayerChangeHeldEvent(this,_Inventory.getSlot(36+iSlot).getItem(),0);
 		_pMinecraftServer->getPlayerPool()->addEvent(p);
-	} catch(Poco::RuntimeException) {
+	} catch(FCRuntimeException) {
 		Disconnect(FC_LEAVE_OTHER);
 	}
 }
@@ -809,7 +808,7 @@ void PlayerThread::Packet101_CloseWindow() {
 		if (iWinID == 0) {
 			_Inventory.HandleWindowClose(_pMinecraftServer->getPlayerPool());
 		}
-	} catch(Poco::RuntimeException) {
+	} catch(FCRuntimeException) {
 		Disconnect(FC_LEAVE_OTHER);
 	}
 }
@@ -870,10 +869,10 @@ void PlayerThread::Interval_Movement() {
 
 void PlayerThread::spawnEntity(Entity* pEntity) {
 	//if (isEntitySpawned(ID)) {
-	//	throw Poco::RuntimeException("Already spawned!");
+	//	throw FCRuntimeException("Already spawned!");
 	//}
 	//if (ID == _iEntityID) {
-	//	throw Poco::RuntimeException("Own EntityID can't be spawned!");
+	//	throw FCRuntimeException("Own EntityID can't be spawned!");
 	//}
 
 	//EntityListEntry Entry;
@@ -938,10 +937,10 @@ void PlayerThread::updateEntityPosition(Entity* pEntity) {
 	//		}
 	//	}
 	//}else{
-	//	throw Poco::RuntimeException("Not spawned");
+	//	throw FCRuntimeException("Not spawned");
 	//}
 	//if(id==-1) {
-	//	throw Poco::RuntimeException("Not spawned");
+	//	throw FCRuntimeException("Not spawned");
 	//}
 
 
@@ -1026,10 +1025,10 @@ void PlayerThread::despawnEntity(int ID) {
 	//		}
 	//	}
 	//}else{
-	//	throw Poco::RuntimeException("Not spawned");
+	//	throw FCRuntimeException("Not spawned");
 	//}
 	//if(id==-1) {
-	//	throw Poco::RuntimeException("Not spawned");
+	//	throw FCRuntimeException("Not spawned");
 	//}
 
 	//_vSpawnedEntities.erase(_vSpawnedEntities.begin()+id);
@@ -1056,7 +1055,7 @@ void PlayerThread::Packet18_Animation() {
 
 		PlayerEventBase* p = new PlayerAnimationEvent(this,iAnimID);
 		_pMinecraftServer->getPlayerPool()->addEvent(p);
-	}catch(Poco::RuntimeException) {
+	}catch(FCRuntimeException) {
 		Disconnect(FC_LEAVE_OTHER);
 	}
 }
@@ -1097,14 +1096,14 @@ void PlayerThread::Packet19_EntityAction() {
 		}
 
 		syncFlagsWithPP();*/
-	}catch(Poco::RuntimeException) {
+	}catch(FCRuntimeException) {
 		Disconnect(FC_LEAVE_OTHER);
 	}
 }
 
 void PlayerThread::playAnimationOnEntity(int ID,char AnimID) {
 	if (!isEntitySpawned(ID)) {
-		throw Poco::RuntimeException("Not spawned!");
+		throw FCRuntimeException("Not spawned!");
 	}
 
 	NetworkOut Out(&_NetworkOutRoot);
@@ -1118,7 +1117,7 @@ void PlayerThread::playAnimationOnEntity(int ID,char AnimID) {
 
 void PlayerThread::updateEntityMetadata(EntityLiving*) {
 	//if (!isEntitySpawned(ID)) {
-	//	throw Poco::RuntimeException("Not spawned!");
+	//	throw FCRuntimeException("Not spawned!");
 	//}
 	//NetworkOut Out(&_NetworkOutRoot);
 
@@ -1169,10 +1168,10 @@ EntityFlags PlayerThread::getFlags() {
 
 void PlayerThread::updateEntityEquipment(EntityLiving*) {
 	//if (!isEntitySpawned(ID)) {
-	//	throw Poco::RuntimeException("Not spawned!");
+	//	throw FCRuntimeException("Not spawned!");
 	//}
 	//if (Slot < 0 || Slot > 4) {
-	//	throw Poco::RuntimeException("Invalid slot");
+	//	throw FCRuntimeException("Invalid slot");
 	//}
 
 	//NetworkOut Out(&_NetworkOutRoot);
@@ -1414,8 +1413,8 @@ void PlayerThread::Packet15_PlayerBlockPlacement() {
 
 		////Append to map + push block change event
 		//_pActualWorld->setBlock(blockCoordinates,iSelectedBlock);
-	} catch(Poco::RuntimeException& ex ) {
-		cout<<"Exception cateched: "<<ex.message()<<"\n";
+	} catch(FCRuntimeException& ex ) {
+		cout<<"Exception cateched: "<<ex.getMessage()<<"\n";
 		Disconnect(FC_LEAVE_OTHER);
 	}
 }
@@ -1426,7 +1425,7 @@ int PlayerThread::getChunksInQueue() {
 
 void PlayerThread::spawnBlock(BlockCoordinates blockCoords,ItemID Item) {
 	if (!_pMinecraftServer->getItemInfoProvider()->isRegistered(Item)) {
-		throw Poco::RuntimeException("Block not registered");
+		throw FCRuntimeException("Block not registered");
 	}
 
 	ChunkCoordinates Coords;
@@ -1483,14 +1482,14 @@ void PlayerThread::Packet14_Digging() {
 
 
 		cout<<"iStatus:"<<int(iStatus)<<"\tiFace:"<<int(iFace)<<"\n";
-	} catch(Poco::RuntimeException& ex ) {
-		cout<<"Exception cateched: "<<ex.message()<<"\n";
+	} catch(FCRuntimeException& ex ) {
+		cout<<"Exception cateched: "<<ex.getMessage()<<"\n";
 		Disconnect(FC_LEAVE_OTHER);
 	}
 }
 
 World* PlayerThread::getWorld() {
-	//if (!_fAssigned || _pActualWorld==NULL) {throw Poco::RuntimeException("Not logged in");}
+	//if (!_fAssigned || _pActualWorld==NULL) {throw FCRuntimeException("Not logged in");}
 	return _pActualWorld;
 }
 

@@ -66,9 +66,9 @@ void FCRuntimeException::printStacktrace() {
         symbol->SizeOfStruct = sizeof(SYMBOL_INFO);
         symbol->MaxNameLen = 254;
 
-        for (short x=0;x<=iCapuredFrames;x++) {
+        for (short x=2;x<=iCapuredFrames;x++) {
             f = SymFromAddr(process,(DWORD64)stack[x],0,symbol);
-			if (f) {
+			if(f){
 				std::cout<<"\t["<<x<<"] "<<symbol->Name<<"\n";
 			}else{
 				std::cout<<"\t["<<x<<"] "<<"Unable to fetch symbol!\n";
@@ -83,11 +83,15 @@ void FCRuntimeException::printStacktrace() {
         size = backtrace(array, 15);
         char** p = backtrace_symbols(array, size);
 
-        for (int x=0;x<=size-1;x++) {
+        for (int x=2;x<=size-1;x++) {
 			std::cout<<"\t["<<x<<"] "<<p[x]<<"\n";		
 		}
         delete p;
     #else
         cout<<"Not supported.\n";
     #endif
+}
+
+void FCRuntimeException::rethrow() {
+	throw *(this);
 }

@@ -18,6 +18,7 @@ GNU General Public License for more details.
 #include "NetworkIn.h"
 #include "PlayerThread.h"
 #include "ItemInformationProvider.h"
+#include "FCRuntimeException.h"
 
 #include <iostream>
 
@@ -57,7 +58,7 @@ void PlayerInventory::synchronizeInventory() {
 void PlayerInventory::clear() {
 	if (_vItemStack.size() != 45) {
 		std::cout<<"Invalid inventory array!"<<"\n";
-		throw Poco::RuntimeException("Invalid inventory array!");
+		throw FCRuntimeException("Invalid inventory array!");
 	}
 	for(char x=0;x<=_vItemStack.size()-1;x++) {
 		_vItemStack[x]->clear();
@@ -68,7 +69,7 @@ void PlayerInventory::clear() {
 void PlayerInventory::setSlot(short iSlot,ItemSlot& rItem) {
 	if (iSlot < 0 || iSlot > 44) {
 		std::cout<<"PlayerInventory::setSlot illegal slot id"<<"\n";
-		throw Poco::RuntimeException("Invalid slot ID");
+		throw FCRuntimeException("Invalid slot ID");
 	}
 
 	NetworkOut Out(&_rNetwork);
@@ -85,7 +86,7 @@ void PlayerInventory::setSlot(short iSlot,ItemSlot& rItem) {
 ItemSlot PlayerInventory::getSlot(short iSlot) {
 	if (iSlot < 0 || iSlot > 44) {
 		std::cout<<"PlayerInventory::getSlot illegal slot id"<<"\n";
-		throw Poco::RuntimeException("Invalid slot ID");
+		throw FCRuntimeException("Invalid slot ID");
 	}
 	return *_vItemStack[iSlot];
 }
@@ -93,7 +94,7 @@ ItemSlot PlayerInventory::getSlot(short iSlot) {
 void PlayerInventory::clearSlot(short iSlot) {
 	if (iSlot < 0 || iSlot > 44) {
 		std::cout<<"PlayerInventory::clearSlot: illegal slot id"<<"\n";
-		throw Poco::RuntimeException("Invalid slot ID");
+		throw FCRuntimeException("Invalid slot ID");
 	}
 	_vItemStack[iSlot]->clear();
 }
@@ -250,8 +251,8 @@ void PlayerInventory::HandleWindowClick(PlayerThread* pPlayer) {
 		//	}
 		//	break;
 		//}
-	} catch(Poco::RuntimeException& ex) {
-		std::cout<<"PlayerInventory::HandleWindowClick exception:"<<ex.message()<<"\n";
+	} catch(FCRuntimeException& ex) {
+		std::cout<<"PlayerInventory::HandleWindowClick exception:"<<ex.getMessage()<<"\n";
 		pPlayer->Disconnect(FC_LEAVE_OTHER);
 	}
 }
@@ -267,7 +268,7 @@ void PlayerInventory::HandleWindowClose(PlayerPool* pPool) {
 
 void PlayerInventory::HandleSelectionChange(short iSel) {
 	if (iSel < 0 || iSel > 8) {
-		throw Poco::RuntimeException("Illegal holding slotID");
+		throw FCRuntimeException("Illegal holding slotID");
 	}
 	_iSlotSelection = iSel;
 }

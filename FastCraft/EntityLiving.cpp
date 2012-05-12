@@ -17,6 +17,7 @@ GNU General Public License for more details.
 #include "NetworkOut.h"
 #include "ItemSlot.h"
 #include <cmath>
+#include "FCRuntimeException.h"
 
 using std::vector;
 
@@ -24,13 +25,13 @@ EntityLiving::EntityLiving(char iType,MinecraftServer* pServer,World* pWorld) tr
 Entity			(pServer,pWorld),
 	_vpHeld			(5)
 {
-	if (!Constants::isDefined(iType,"/Entity/Alive/TypeID")) {throw Poco::RuntimeException("Entity type not defined!");}
+	if (!Constants::isDefined(iType,"/Entity/Alive/TypeID")) {throw FCRuntimeException("Entity type not defined!");}
 
 	_iHealth = 0;
 	_iType = iType;
 
 	for(char x=0;x<=4;x++) {_vpHeld[x] = NULL;}
-}catch(Poco::RuntimeException& ex) {
+}catch(FCRuntimeException& ex) {
 	ex.rethrow();
 }
 
@@ -100,7 +101,7 @@ void EntityLiving::sendEquipment(NetworkOut& rOut) {
 }
 
 void EntityLiving::updateEquipment(NetworkOut& rOut,EquipmentArray& rOldEquip) {
-	if (rOldEquip.size() != 5) {throw Poco::RuntimeException("Illegal size");}
+	if (rOldEquip.size() != 5) {throw FCRuntimeException("Illegal size");}
 
 	for (char x=0;x<=4;x++) {
 		if (_vpHeld[x] == NULL && rOldEquip[x] == NULL) {continue;}
@@ -133,7 +134,7 @@ void EntityLiving::updateEquipment(NetworkOut& rOut,EquipmentArray& rOldEquip) {
 
 
 void EntityLiving::setEquipment(char index,ItemID id) {
-	if (index < 0 || index > 4) {throw Poco::RuntimeException("Illegal index");}
+	if (index < 0 || index > 4) {throw FCRuntimeException("Illegal index");}
 
 	if (id.first == -1 && id.second == -1) {
 		if (_vpHeld[index] == NULL) {return;}
@@ -151,12 +152,12 @@ void EntityLiving::setEquipment(char index,ItemID id) {
 			_vpHeld[index]->setItem(id);
 			_vpHeld[index]->setStackSize(1);
 		}
-	}catch(Poco::RuntimeException & ex) {
+	}catch(FCRuntimeException & ex) {
 		ex.rethrow();
 	}
 }
 
 ItemID EntityLiving::getEquipment(char index) {
-	if (index < 0 || index > 4) {throw Poco::RuntimeException("Illegal index");}
+	if (index < 0 || index > 4) {throw FCRuntimeException("Illegal index");}
 	return (_vpHeld[index] == NULL ? FC_EMPTYITEMID : _vpHeld[index]->getItem());
 }

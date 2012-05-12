@@ -15,6 +15,7 @@ GNU General Public License for more details.
 #include "NetworkOutRoot.h"
 #include "Constants.h"
 #include <iostream>
+#include "FCRuntimeException.h"
 
 NetworkOutRoot::NetworkOutRoot() :
 _lowQueue(),
@@ -52,6 +53,6 @@ void NetworkOutRoot::Add(char iType,string& rData) {
 		_highQueue.push(rData);
 		break;
 	default:
-		throw Poco::RuntimeException("Unknown queue type");
+		throw FCRuntimeException("Unknown queue type");
 	}
 }

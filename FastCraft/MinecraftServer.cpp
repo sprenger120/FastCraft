@@ -16,7 +16,7 @@ GNU General Public License for more details.
 #include <Poco/String.h>
 #include <Poco/File.h>
 #include <fstream>
-#include <Poco/Exception.h>
+#include "FCRuntimeException.h"
 #include <Poco/DOM/DOMParser.h>
 #include <Poco/SAX/InputSource.h>
 #include <Poco/XML/XMLException.h>
@@ -65,7 +65,7 @@ _sServerName(""),
 	_iID = 100;
 
 	//Check name
-	if (sName.compare("") == 0) {throw Poco::RuntimeException("Illegal name");}
+	if (sName.compare("") == 0) {throw FCRuntimeException("Illegal name");}
 
 	
 	{
@@ -82,9 +82,9 @@ _sServerName(""),
 		}else{
 			switch (readConfiguration(sRootPath)) {
 			case FC_VSERVERERROR_INACTIVE:
-				throw Poco::RuntimeException("Inactive");
+				throw FCRuntimeException("Inactive");
 			case FC_VSERVERERROR_ERROR:
-				throw Poco::RuntimeException("Unable to read configuration");
+				throw FCRuntimeException("Unable to read configuration");
 			}
 		}
 	}
@@ -92,7 +92,7 @@ _sServerName(""),
 	//Check port availability
 	if (!rvUsedPorts.empty()) {
 		for(int x = 0; x<= rvUsedPorts.size()-1;x++) {
-			if (rvUsedPorts[x] == _iPort) {throw Poco::RuntimeException("Port already in use!");}
+			if (rvUsedPorts[x] == _iPort) {throw FCRuntimeException("Port already in use!");}
 		}
 	}
 		
@@ -136,8 +136,8 @@ _sServerName(""),
 		cout<<"Init network...\n";
 		_pAcceptThread = new AcceptThread(this);
 		rvUsedPorts.push_back(_iPort);
-	}catch(Poco::RuntimeException& ex) { 
-		cout<<"Unable to start server: "<< ex.message()<<"\n"<<std::endl;
+	}catch(FCRuntimeException& ex) { 
+		cout<<"Unable to start server: "<< ex.getMessage()<<"\n"<<std::endl;
 		return;
 	}
 

@@ -18,9 +18,10 @@ GNU General Public License for more details.
 #include "NetworkOut.h"
 #include "Constants.h"
 #include <cmath>
+#include "FCRuntimeException.h"
 
 Entity::Entity(MinecraftServer* pServer,World* pWorld) {
-	if (pServer == NULL || _pWorld == NULL) {throw Poco::RuntimeException("Nullpointer are not allowed");}
+	if (pServer == NULL || _pWorld == NULL) {throw FCRuntimeException("Nullpointer are not allowed");}
 	
 	_iEntityID = pServer->generateID();
 	_iCreation = pServer->getInGameTime();

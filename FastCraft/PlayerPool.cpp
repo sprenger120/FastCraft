@@ -21,7 +21,7 @@ GNU General Public License for more details.
 #include "PlayerInventory.h"
 #include "EntityCoordinates.h"
 #include <Poco/Thread.h>
-#include <Poco/Exception.h>
+#include "FCRuntimeException.h"
 #include <iostream>
 #include <cmath>
 #include <Poco/String.h>
@@ -81,8 +81,8 @@ void PlayerPool::run() {
 			p->Execute(_vPlayerThreads,this);
 			delete p;
 			_qEvents.pop();
-		} catch(Poco::RuntimeException& ex) {
-			cout<<"PlayerPool::run exception:"<<ex.message()<<"\n";
+		} catch(FCRuntimeException& ex) {
+			cout<<"PlayerPool::run exception:"<<ex.getMessage()<<"\n";
 			_qEvents.pop();
 		}
 	}

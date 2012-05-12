@@ -17,6 +17,7 @@ GNU General Public License for more details.
 #include "Constants.h"
 #include <Poco/ByteOrder.h>
 #include <cstring>
+#include "FCRuntimeException.h"
 
 NetworkOut::NetworkOut(NetworkOutRoot* p) :
 _pMaster(p),
@@ -163,7 +164,7 @@ string& NetworkOut::getStr() {
 
 void NetworkOut::Finalize(char iType) {
 	if (iType != FC_QUEUE_LOW && iType != FC_QUEUE_HIGH) {
-		throw Poco::RuntimeException("Unknown queue type");
+		throw FCRuntimeException("Unknown queue type");
 	}
 	string & rStr = _sNetworkBuffer;
 	_pMaster->Add(iType,rStr);

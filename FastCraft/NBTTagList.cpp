@@ -15,14 +15,14 @@ GNU General Public License for more details.
 #include "NBTTagList.h"
 #include "NBTConstants.h"
 #include "NetworkOut.h"
-#include <Poco/Exception.h>
+#include "FCRuntimeException.h"
 
 NBTTagList::NBTTagList(string sName,char iListType) : 
 NBTTagBase(sName,FC_NBT_TYPE_LIST),
 	_iElementType(iListType),
 	_vpElements(0)
 {
-	if (iListType < 1 || iListType > 10) {throw Poco::RuntimeException("Invalid tag type"); }
+	if (iListType < 1 || iListType > 10) {throw FCRuntimeException("Invalid tag type"); }
 }
 
 NBTTagList::~NBTTagList(){
@@ -55,7 +55,7 @@ void NBTTagList::write(string& rTarget,bool fMode,bool fHeaderless) {
 
 NBTTagBase* NBTTagList::operator[] (int index) {
 	int iSize = _vpElements.size();
-	if (iSize == 0 || index < 0 || iSize-1 < index) { throw Poco::RuntimeException("Invalid index"); }
+	if (iSize == 0 || index < 0 || iSize-1 < index) { throw FCRuntimeException("Invalid index"); }
 	return _vpElements[index];
 }
 
@@ -69,14 +69,14 @@ bool NBTTagList::isEmpty() {
 
 void NBTTagList::erase(int index) {
 	int iSize = _vpElements.size();
-	if (iSize == 0 || index < 0 || iSize-1 < index) { throw Poco::RuntimeException("Invalid index"); }
+	if (iSize == 0 || index < 0 || iSize-1 < index) { throw FCRuntimeException("Invalid index"); }
 
 	_vpElements.erase(_vpElements.begin()+index);
 }
 
 void NBTTagList::addSubElement(NBTTagBase* pElement) {
 	if(pElement->getTagType() != _iElementType) {
-		throw Poco::RuntimeException("Type not supported");
+		throw FCRuntimeException("Type not supported");
 	}
 	_vpElements.push_back(pElement);
 }

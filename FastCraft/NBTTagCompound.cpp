@@ -14,7 +14,7 @@ GNU General Public License for more details.
 */
 #include "NBTTagCompound.h"
 #include "NBTConstants.h"
-#include <Poco/Exception.h>
+#include "FCRuntimeException.h"
 
 NBTTagCompound::NBTTagCompound(string sName) :
 	NBTTagBase(sName,FC_NBT_TYPE_COMPOUND),
@@ -32,14 +32,14 @@ NBTTagCompound::~NBTTagCompound(){
 }
 
 void NBTTagCompound::addSubElement(NBTTagBase* pNew) {
-	if(pNew->getName().compare("") == 0) {throw Poco::RuntimeException("Name is empty");}
-	if (getElementIndex(pNew->getName()) != -1) {throw Poco::RuntimeException("Name already taken!");}
+	if(pNew->getName().compare("") == 0) {throw FCRuntimeException("Name is empty");}
+	if (getElementIndex(pNew->getName()) != -1) {throw FCRuntimeException("Name already taken!");}
 	_vpElements.push_back(pNew);
 }
 
 void NBTTagCompound::removeSubElement(string sName) {
 	int index = getElementIndex(sName);
-	if (index == -1) {throw Poco::RuntimeException("Not found!");}
+	if (index == -1) {throw FCRuntimeException("Not found!");}
 	_vpElements.erase(_vpElements.begin()+index);
 }
 
@@ -75,8 +75,8 @@ int NBTTagCompound::getElementIndex(string sName) {
 }
 
 NBTTagBase* NBTTagCompound::search(string sPath, char iType) {
-	if (iType < 1 || iType > 10) {throw Poco::RuntimeException("Invalid tag type"); }
-	if (sPath.empty() || sPath[0] != '/') { throw Poco::RuntimeException("Invalid Path"); }
+	if (iType < 1 || iType > 10) {throw FCRuntimeException("Invalid tag type"); }
+	if (sPath.empty() || sPath[0] != '/') { throw FCRuntimeException("Invalid Path"); }
 	
 	vector<string> aPathElements(0);
 	string sTemp("");
@@ -107,14 +107,14 @@ NBTTagBase* NBTTagCompound::search(string sPath, char iType) {
 	
 	while (1) {
 		pLastElement = pLastCompound->getElementByName(aPathElements[iVecIndex]);
-		if (pLastElement==NULL) {throw Poco::RuntimeException("Not found");}
+		if (pLastElement==NULL) {throw FCRuntimeException("Not found");}
 
 
 		if (iVecIndex == aPathElements.size()-1) {
-			if (pLastElement->getTagType() != iType) {throw Poco::RuntimeException("Not found");}
+			if (pLastElement->getTagType() != iType) {throw FCRuntimeException("Not found");}
 			break;
 		}else{
-			if (pLastElement->getTagType() != FC_NBT_TYPE_COMPOUND) {throw Poco::RuntimeException("Not found");}
+			if (pLastElement->getTagType() != FC_NBT_TYPE_COMPOUND) {throw FCRuntimeException("Not found");}
 			pLastCompound = (NBTTagCompound*)pLastElement;
 			iVecIndex++;
 		}

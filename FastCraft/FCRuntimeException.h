@@ -64,6 +64,12 @@ public:
 	* Returns the error code
 	*/
 	int getErrorCode();
+
+
+	/*
+	* Rethrows exception
+	*/
+	void rethrow();
 private:
 	void printStacktrace();
 };

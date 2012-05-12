@@ -13,10 +13,9 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 */
 #include "NetworkIn.h"
-#include <Poco/Exception.h>
+#include "FCRuntimeException.h"
 #include <Poco/Net/NetException.h>
 
-using Poco::RuntimeException;
 
 NetworkIn::NetworkIn(StreamSocket& r) :
 _rSocket(r)
@@ -32,7 +31,7 @@ NetworkIn::~NetworkIn() {
 char NetworkIn::readByte() {
 	try {
 		read(1);
-	} catch(Poco::RuntimeException& ex) {
+	} catch(FCRuntimeException& ex) {
 		ex.rethrow();
 	}
 
@@ -44,7 +43,7 @@ bool NetworkIn::readBool() {
 
 	try {
 		iByte = readByte();
-	} catch(Poco::RuntimeException& ex) {
+	} catch(FCRuntimeException& ex) {
 		ex.rethrow();
 	}
 
@@ -59,7 +58,7 @@ bool NetworkIn::readBool() {
 short NetworkIn::readShort() {
 	try {
 		read(2);
-	} catch(Poco::RuntimeException& ex) {
+	} catch(FCRuntimeException& ex) {
 		ex.rethrow();
 	}
 
@@ -70,7 +69,7 @@ short NetworkIn::readShort() {
 int NetworkIn::readInt() {
 	try {
 		read(4);
-	} catch(Poco::RuntimeException& ex) {
+	} catch(FCRuntimeException& ex) {
 		ex.rethrow();
 	}
 
@@ -84,7 +83,7 @@ int NetworkIn::readInt() {
 long long NetworkIn::readInt64() {
 	try {
 		read(8);
-	} catch(Poco::RuntimeException& ex) {
+	} catch(FCRuntimeException& ex) {
 		ex.rethrow();
 	}
 
@@ -101,7 +100,7 @@ long long NetworkIn::readInt64() {
 float NetworkIn::readFloat() {
 	try {
 		_ItF.i = readInt();
-	} catch(Poco::RuntimeException& ex) {
+	} catch(FCRuntimeException& ex) {
 		ex.rethrow();
 	}
 
@@ -112,7 +111,7 @@ float NetworkIn::readFloat() {
 double NetworkIn::readDouble() {
 	try {
 		_ItD.i = readInt64();
-	} catch(Poco::RuntimeException& ex) {
+	} catch(FCRuntimeException& ex) {
 		ex.rethrow();
 	}
 	return _ItD.d;
@@ -129,7 +128,7 @@ string NetworkIn::readString() {
 			readByte();
 			sOutput.append(1,readByte());
 		}
-	} catch(Poco::RuntimeException& ex) {
+	} catch(FCRuntimeException& ex) {
 		ex.rethrow();
 	}
 
@@ -143,7 +142,7 @@ void NetworkIn::read(int iLenght) {
 	bool fUnderflow = false;
 
 	if (iLenght <= 0 || iLenght > 8) { 
-		throw Poco::RuntimeException("Invalid lenght");
+		throw FCRuntimeException("Invalid lenght");
 	}
 
 	while ( iReadedLenght < iLenght) {
@@ -153,24 +152,25 @@ void NetworkIn::read(int iLenght) {
 				iReadedLenght = _rSocket.receiveBytes(_sReadBuffer,iLenght);
 				break;
 			case true:
+				std::cout<<"underflow!!\n";
 				iReadedLenght += _rSocket.receiveBytes(&_sReadBuffer[iReadedLenght], iLenght - iReadedLenght);
 				break;
 			}
 		}catch(Poco::Net::ConnectionAbortedException) {
-			throw Poco::RuntimeException("Connection aborted");
+			throw FCRuntimeException("Connection aborted");
 		}catch(Poco::Net::InvalidSocketException) {
-			throw Poco::RuntimeException("Invalid socket");
+			throw FCRuntimeException("Invalid socket");
 		}catch(Poco::TimeoutException) {
-			throw Poco::RuntimeException("Timeout");
+			throw FCRuntimeException("Timeout");
 		}catch(Poco::Net::ConnectionResetException) {
-			throw Poco::RuntimeException("Connection reset");
+			throw FCRuntimeException("Connection reset");
 		}catch(Poco::IOException) {
-			throw Poco::RuntimeException("I/O Error");
+			throw FCRuntimeException("I/O Error");
 		}
 		if (iReadedLenght != iLenght) {
 			iUnderflowCount++;
 			if (iUnderflowCount > 10) {
-				throw Poco::RuntimeException("TCP Underflow");
+				throw FCRuntimeException("TCP Underflow");
 			}
 			fUnderflow = true;
 		}

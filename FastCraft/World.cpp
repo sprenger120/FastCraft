@@ -21,7 +21,7 @@ GNU General Public License for more details.
 #include <cstring>
 #include <cmath>
 #include <math.h>
-#include <Poco/Exception.h>
+#include "FCRuntimeException.h"
 #include <Poco/ScopedLock.h>
 #include "PlayerEvents.h"
 #include "PlayerPool.h"
@@ -46,7 +46,7 @@ void World::generateChunks(int FromX,int FromZ,int ToX,int ToZ) {
 				generateChunk(x,z);
 			}
 		}
-	} catch(Poco::RuntimeException) {
+	} catch(FCRuntimeException) {
 		std::cout<<"World::generateChunks Chunk generation aborted due a error"<<"\n";
 	}
 }
@@ -87,7 +87,7 @@ MapChunk* World::getChunkByChunkCoordinates(int X,int Z) {
 	
 	try  {
 		p = generateChunk(X,Z);
-	} catch(Poco::RuntimeException& ex) {
+	} catch(FCRuntimeException& ex) {
 		std::cout<<"World::getChunkByChunkCoordinates Chunk generation aborted due a error"<<"\n";
 		ex.rethrow();
 	}
@@ -100,7 +100,7 @@ pair<ChunkCoordinates,int> World::WorldCoordinateConverter(int X,short Y,int Z) 
 
 	if (Y < 0 || Y > FC_WORLDHEIGHT-1) {
 		std::cout<<"World::WorldCoordinateConverter  Y is invalid"<<"\n";
-		throw Poco::RuntimeException("Y is invalid");
+		throw FCRuntimeException("Y is invalid");
 	}
 
 	Coords.X = X>>4;
@@ -111,9 +111,9 @@ pair<ChunkCoordinates,int> World::WorldCoordinateConverter(int X,short Y,int Z) 
 
 	try {
 		Index = ChunkMath::toIndex(X,Y,Z);
-	}catch(Poco::RuntimeException) {
+	}catch(FCRuntimeException) {
 		std::cout<<"World::WorldCoordinateConverter index error"<<"\n";
-		throw Poco::RuntimeException("Index error");
+		throw FCRuntimeException("Index error");
 	}
 
 
@@ -128,7 +128,7 @@ char World::getFreeSpace(int X,int Z) {
 
 	try {
 		pChunk = getChunkByChunkCoordinates(ChunkX,ChunkZ);
-	}catch (Poco::RuntimeException& ex) {
+	}catch (FCRuntimeException& ex) {
 		std::cout<<"World::getFreeSpace chunk not found"<<"\n";
 		ex.rethrow();
 	}
@@ -141,7 +141,7 @@ char World::getFreeSpace(int X,int Z) {
 	unsigned char y;
 	if (iOffset==-1) {
 		std::cout<<"World::getFreeSpace could not calculate index"<<"\n";
-		throw Poco::RuntimeException("toIndex error");
+		throw FCRuntimeException("toIndex error");
 	}
 
 	//Get height
@@ -163,7 +163,7 @@ bool World::isSuffocating(EntityCoordinates Coords) {
 
 	try {
 		pChunk = getChunkByChunkCoordinates(int(Coords.X)>>4,int(Coords.Z)>>4);
-	}catch (Poco::RuntimeException& ex) {
+	}catch (FCRuntimeException& ex) {
 		std::cout<<"World::isSuffocating chunk not found"<<"\n";
 		ex.rethrow();
 	}
@@ -183,7 +183,7 @@ bool World::isSuffocating(EntityCoordinates Coords) {
 
 void World::setBlock(int X,short Y,int Z,ItemID Block) {
 	if (!_pMinecraftServer->getItemInfoProvider()->isRegistered(Block)) {
-		throw Poco::RuntimeException("Block not registered");
+		throw FCRuntimeException("Block not registered");
 	}
 
 	MapChunk* p;
@@ -209,7 +209,7 @@ void World::setBlock(int X,short Y,int Z,ItemID Block) {
 		
 		PlayerEventBase* p = new PlayerSetBlockEvent(BlockCoords,Block,_WorldName);
 		_pMinecraftServer->getPlayerPool()->addEvent(p);
-	} catch (Poco::RuntimeException& ex) {
+	} catch (FCRuntimeException& ex) {
 		ex.rethrow();
 	}
 }
@@ -234,7 +234,7 @@ ItemID World::getBlock(int X,short Y,int Z) {
 		}
 
 		return Data;
-	} catch (Poco::RuntimeException& ex) {
+	} catch (FCRuntimeException& ex) {
 		ex.rethrow();
 	}
 	return std::make_pair(0,0);
@@ -283,8 +283,8 @@ bool World::isSurroundedByAir(BlockCoordinates TargetBlock) {
 			}
 		}
 
-	}catch(Poco::RuntimeException& ex) {
-		cout<<"Exception World::isSurroundedByAir: "<<ex.message()<<"\n";
+	}catch(FCRuntimeException& ex) {
+		cout<<"Exception World::isSurroundedByAir: "<<ex.getMessage()<<"\n";
 	}
 	return true;
 }
@@ -318,11 +318,11 @@ void World::setBlockLight(int X,short Y,int Z,char iLightLevel) {
 		auto coord = WorldCoordinateConverter(X,Y,Z);
 		if (coord.second==-1) {
 			cout<<"World::setBlockLight invalid coordinates\n";
-			throw Poco::RuntimeException("Invalid coordinates");
+			throw FCRuntimeException("Invalid coordinates");
 		}
 		if (iLightLevel<0 || iLightLevel > 15) {
 			cout<<"World::setBlockLight invalid light level\n";
-			throw Poco::RuntimeException("Invalid light level");
+			throw FCRuntimeException("Invalid light level");
 		}
 
 		MapChunk* p = getChunkByChunkCoordinates(coord.first.X,coord.first.Z);
@@ -334,7 +334,7 @@ void World::setBlockLight(int X,short Y,int Z,char iLightLevel) {
 												p->BlockLight[iNibbleIndex],
 												iLightLevel
 												);
-	} catch (Poco::RuntimeException& ex) {
+	} catch (FCRuntimeException& ex) {
 		ex.rethrow();
 	}
 }

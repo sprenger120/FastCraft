@@ -19,14 +19,15 @@ GNU General Public License for more details.
 #include "ItemSlot.h"
 #include <bitset>
 #include <cmath>
+#include "FCRuntimeException.h"
 
 EntityPlayer::EntityPlayer(MinecraftServer* pServer,World* pWorld,string sName) try :
 EntityLiving		(Constants::get("/Entity/Alive/TypeID/Player"),pServer,pWorld),
 _sName				("")
 {
-	if (sName.compare("") == 0) {throw Poco::RuntimeException("Illegal name");}
+	if (sName.compare("") == 0) {throw FCRuntimeException("Illegal name");}
 	_sName.assign(sName);
-}catch(Poco::RuntimeException & ex) {
+}catch(FCRuntimeException & ex) {
 	ex.rethrow();
 }
 

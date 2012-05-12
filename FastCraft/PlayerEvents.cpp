@@ -14,7 +14,7 @@ GNU General Public License for more details.
 */
 #include "PlayerEvents.h"
 #include "Constants.h"
-#include <Poco/Exception.h>
+#include "FCRuntimeException.h"
 #include <iostream>
 #include "PlayerThread.h"
 #include "PlayerPool.h"

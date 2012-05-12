@@ -15,7 +15,7 @@ GNU General Public License for more details.
 #include "NBTAll.h"
 #include <sstream>
 #include <Poco/InflatingStream.h>
-#include <Poco/Exception.h>
+#include "FCRuntimeException.h"
 #include <Poco/ByteOrder.h>
 #include <stack>
 #include <cstring>
@@ -41,7 +41,7 @@ NBTTagCompound* NBTBinaryParser::parse(string& rStr, bool fType) {
 		inflator.close();
 		rStr.assign(ssOutput.str());
 	}
-	if (rStr[0] != 0xA) { throw Poco::RuntimeException("Start compound not found!");}
+	if (rStr[0] != 0xA) { throw FCRuntimeException("Start compound not found!");}
 
 	NBTTagCompound *pRootCompound;
 	stack<NBTTagBase*> storageStack;
@@ -54,11 +54,11 @@ NBTTagCompound* NBTBinaryParser::parse(string& rStr, bool fType) {
 		storageStack.push(pRootCompound);
 
 		while (1) {
-			if (byteIndex+1 > rStr.length()-1) {throw Poco::RuntimeException("End of file!");}
+			if (byteIndex+1 > rStr.length()-1) {throw FCRuntimeException("End of file!");}
 			nextElement(rStr,storageStack,byteIndex,rStr[byteIndex+1]);
 			if (storageStack.empty()) {return pRootCompound;}
 		}
-	}catch(Poco::RuntimeException& ex) {
+	}catch(FCRuntimeException& ex) {
 		ex.rethrow();
 	}
 	return NULL;
@@ -109,30 +109,30 @@ void NBTBinaryParser::nextElement(string& rTarget,stack<NBTTagBase*>& StorageSta
 			break;
 		case 0: //Compound end tag
 			//cout<<"compound end "<<StorageStack.top()->getName()<<"\n";
-			if (byteIndex + 1 > rTarget.length()-1) {throw Poco::RuntimeException("End of file!");}
-			if (StorageStack.top()->getTagType() != FC_NBT_TYPE_COMPOUND) {throw Poco::RuntimeException("Not a compound");}
+			if (byteIndex + 1 > rTarget.length()-1) {throw FCRuntimeException("End of file!");}
+			if (StorageStack.top()->getTagType() != FC_NBT_TYPE_COMPOUND) {throw FCRuntimeException("Not a compound");}
 			StorageStack.pop();
 			byteIndex++;
 			if (StorageStack.empty()) {return;  /*End reached */ } 
 			break;
 		default:
-			throw Poco::RuntimeException("Unknown TAG");
+			throw FCRuntimeException("Unknown TAG");
 		}
-	}catch(Poco::RuntimeException& ex) {
+	}catch(FCRuntimeException& ex) {
 		ex.rethrow();
 	}
 }
 
 
 void NBTBinaryParser::readName(string& rSource,int& iByteIndex,string& rTarget) {
-	if (iByteIndex + 2 > rSource.length()-1) {throw Poco::RuntimeException("End of file!");}
+	if (iByteIndex + 2 > rSource.length()-1) {throw FCRuntimeException("End of file!");}
 	short iLen =  ((short(rSource[iByteIndex]) & 0x00FF)<<8) |
 		(short(rSource[iByteIndex+1]) & 0x00FF);
 
-	if (iLen < 0) {throw Poco::RuntimeException("Illegal lengh field");}
+	if (iLen < 0) {throw FCRuntimeException("Illegal lengh field");}
 
 	iByteIndex += 2;
-	if (iByteIndex + iLen - 1 > rSource.length()-1) {throw Poco::RuntimeException("End of file!");}
+	if (iByteIndex + iLen - 1 > rSource.length()-1) {throw FCRuntimeException("End of file!");}
 	rTarget.assign(rSource,iByteIndex,iLen);
 	iByteIndex += iLen-1; //Move index to last name char
 }
@@ -142,7 +142,7 @@ void NBTBinaryParser::handleByte(string& rSource,int& iByteIndex,NBTTagBase* pLa
 	NBTTagByte* pElement;
 
 	if (fParseHeader) {
-		if (iByteIndex + 2 > rSource.length()-1) {throw Poco::RuntimeException("End of file!");}
+		if (iByteIndex + 2 > rSource.length()-1) {throw FCRuntimeException("End of file!");}
 		iByteIndex+=2; //Move to tag type byte & skip it
 		readName(rSource,iByteIndex,sName);
 
@@ -154,7 +154,7 @@ void NBTBinaryParser::handleByte(string& rSource,int& iByteIndex,NBTTagBase* pLa
 	}
 
 
-	if (iByteIndex + 1 > rSource.length()-1) {throw Poco::RuntimeException("End of file!");}
+	if (iByteIndex + 1 > rSource.length()-1) {throw FCRuntimeException("End of file!");}
 	iByteIndex++; //Move to data start
 	pElement->getDataRef() = rSource[iByteIndex];
 
@@ -173,7 +173,7 @@ void NBTBinaryParser::handleByte(string& rSource,int& iByteIndex,NBTTagBase* pLa
 		}
 		break;
 	default:
-		throw Poco::RuntimeException("Illegal storage");
+		throw FCRuntimeException("Illegal storage");
 	}
 }
 
@@ -183,7 +183,7 @@ void NBTBinaryParser::handleShort(string& rSource,int& iByteIndex,NBTTagBase* pL
 	NBTU_Short unionShort;
 
 	if (fParseHeader) {
-		if (iByteIndex + 2 > rSource.length()-1) {throw Poco::RuntimeException("End of file!");}
+		if (iByteIndex + 2 > rSource.length()-1) {throw FCRuntimeException("End of file!");}
 		iByteIndex+=2; //Move to tag type byte & skip it
 		readName(rSource,iByteIndex,sName);
 
@@ -195,7 +195,7 @@ void NBTBinaryParser::handleShort(string& rSource,int& iByteIndex,NBTTagBase* pL
 	}
 
 	
-	if (iByteIndex + 2 > rSource.length()-1) {throw Poco::RuntimeException("End of file!");}
+	if (iByteIndex + 2 > rSource.length()-1) {throw FCRuntimeException("End of file!");}
 	iByteIndex++; //Move to data start
 	memcpy(unionShort.sData,&rSource[iByteIndex],2);
 	pElement->getDataRef() = Poco::ByteOrder::flipBytes(Poco::Int16(unionShort.iData));
@@ -216,7 +216,7 @@ void NBTBinaryParser::handleShort(string& rSource,int& iByteIndex,NBTTagBase* pL
 		}
 		break;
 	default:
-		throw Poco::RuntimeException("Illegal storage");
+		throw FCRuntimeException("Illegal storage");
 	}
 }
 
@@ -226,7 +226,7 @@ void NBTBinaryParser::handleInt(string& rSource,int& iByteIndex,NBTTagBase* pLas
 	NBTU_Int unionInt;
 
 	if (fParseHeader) {
-		if (iByteIndex + 2 > rSource.length()-1) {throw Poco::RuntimeException("End of file!");}
+		if (iByteIndex + 2 > rSource.length()-1) {throw FCRuntimeException("End of file!");}
 		iByteIndex+=2; //Move to tag type byte & skip it
 		readName(rSource,iByteIndex,sName);
 
@@ -238,7 +238,7 @@ void NBTBinaryParser::handleInt(string& rSource,int& iByteIndex,NBTTagBase* pLas
 	}
 
 
-	if (iByteIndex + 4 > rSource.length()-1) {throw Poco::RuntimeException("End of file!");}
+	if (iByteIndex + 4 > rSource.length()-1) {throw FCRuntimeException("End of file!");}
 	iByteIndex++;//Move to data start
 	memcpy(unionInt.sData,&rSource[iByteIndex],4);
 	pElement->getDataRef() = Poco::ByteOrder::flipBytes(Poco::Int32(unionInt.iData));
@@ -259,7 +259,7 @@ void NBTBinaryParser::handleInt(string& rSource,int& iByteIndex,NBTTagBase* pLas
 		}
 		break;
 	default:
-		throw Poco::RuntimeException("Illegal storage");
+		throw FCRuntimeException("Illegal storage");
 	}
 }
 
@@ -269,7 +269,7 @@ void NBTBinaryParser::handleInt64(string& rSource,int& iByteIndex,NBTTagBase* pL
 	NBTU_Int64 unionInt64;
 
 	if (fParseHeader) {
-		if (iByteIndex + 2 > rSource.length()-1) {throw Poco::RuntimeException("End of file!");}
+		if (iByteIndex + 2 > rSource.length()-1) {throw FCRuntimeException("End of file!");}
 		iByteIndex+=2; //Move to tag type byte & skip it
 		readName(rSource,iByteIndex,sName);
 
@@ -281,7 +281,7 @@ void NBTBinaryParser::handleInt64(string& rSource,int& iByteIndex,NBTTagBase* pL
 	}
 
 
-	if (iByteIndex + 8 > rSource.length()-1) {throw Poco::RuntimeException("End of file!");}
+	if (iByteIndex + 8 > rSource.length()-1) {throw FCRuntimeException("End of file!");}
 	iByteIndex++; //Move to data start
 	memcpy(unionInt64.sData,&rSource[iByteIndex],8);
 	pElement->getDataRef() = Poco::ByteOrder::flipBytes(Poco::Int64(unionInt64.iData));
@@ -302,7 +302,7 @@ void NBTBinaryParser::handleInt64(string& rSource,int& iByteIndex,NBTTagBase* pL
 		}
 		break;
 	default:
-		throw Poco::RuntimeException("Illegal storage");
+		throw FCRuntimeException("Illegal storage");
 	}
 }
 
@@ -312,7 +312,7 @@ void NBTBinaryParser::handleFloat(string& rSource,int& iByteIndex,NBTTagBase* pL
 	NBTU_Int unionInt;
 
 	if (fParseHeader) {
-		if (iByteIndex + 2 > rSource.length()-1) {throw Poco::RuntimeException("End of file!");}
+		if (iByteIndex + 2 > rSource.length()-1) {throw FCRuntimeException("End of file!");}
 		iByteIndex+=2; //Move to tag type byte & skip it
 		readName(rSource,iByteIndex,sName);
 
@@ -324,7 +324,7 @@ void NBTBinaryParser::handleFloat(string& rSource,int& iByteIndex,NBTTagBase* pL
 	}
 
 
-	if (iByteIndex + 4 > rSource.length()-1) {throw Poco::RuntimeException("End of file!");}
+	if (iByteIndex + 4 > rSource.length()-1) {throw FCRuntimeException("End of file!");}
 	iByteIndex++; //Move to data start
 	memcpy(unionInt.sData,&rSource[iByteIndex],4);
 	unionInt.iData = Poco::ByteOrder::flipBytes(Poco::Int32(unionInt.iData));
@@ -346,7 +346,7 @@ void NBTBinaryParser::handleFloat(string& rSource,int& iByteIndex,NBTTagBase* pL
 		}
 		break;
 	default:
-		throw Poco::RuntimeException("Illegal storage");
+		throw FCRuntimeException("Illegal storage");
 	}
 }
 
@@ -356,7 +356,7 @@ void NBTBinaryParser::handleDouble(string& rSource,int& iByteIndex,NBTTagBase* p
 	NBTU_Int64 unionInt64;
 
 	if (fParseHeader) {
-		if (iByteIndex + 2 > rSource.length()-1) {throw Poco::RuntimeException("End of file!");}
+		if (iByteIndex + 2 > rSource.length()-1) {throw FCRuntimeException("End of file!");}
 		iByteIndex+=2; //Move to tag type byte & skip it
 		readName(rSource,iByteIndex,sName);
 
@@ -367,7 +367,7 @@ void NBTBinaryParser::handleDouble(string& rSource,int& iByteIndex,NBTTagBase* p
 		//cout<<"double (nameless)\n";
 	}
 
-	if (iByteIndex + 8 > rSource.length()-1) {throw Poco::RuntimeException("End of file!");}
+	if (iByteIndex + 8 > rSource.length()-1) {throw FCRuntimeException("End of file!");}
 	iByteIndex++;
 	memcpy(unionInt64.sData,&rSource[iByteIndex],8);
 	unionInt64.iData = Poco::ByteOrder::flipBytes(Poco::Int64(unionInt64.iData));
@@ -389,7 +389,7 @@ void NBTBinaryParser::handleDouble(string& rSource,int& iByteIndex,NBTTagBase* p
 		}
 		break;
 	default:
-		throw Poco::RuntimeException("Illegal storage");
+		throw FCRuntimeException("Illegal storage");
 	}
 }
 
@@ -398,7 +398,7 @@ void NBTBinaryParser::handleString(string& rSource,int& iByteIndex,NBTTagBase* p
 	NBTTagString* pElement;
 
 	if (fParseHeader) {
-		if (iByteIndex + 2 > rSource.length()-1) {throw Poco::RuntimeException("End of file!");}
+		if (iByteIndex + 2 > rSource.length()-1) {throw FCRuntimeException("End of file!");}
 		iByteIndex+=2; //Move to tag type byte & skip it
 		readName(rSource,iByteIndex,sName);
 
@@ -425,7 +425,7 @@ void NBTBinaryParser::handleString(string& rSource,int& iByteIndex,NBTTagBase* p
 		}
 		break;
 	default:
-		throw Poco::RuntimeException("Illegal storage");
+		throw FCRuntimeException("Illegal storage");
 	}
 }
 
@@ -436,7 +436,7 @@ void NBTBinaryParser::handleByteArray(string& rSource,int& iByteIndex,NBTTagBase
 	char* pData;
 
 	if (fParseHeader) {
-		if (iByteIndex + 2 > rSource.length()-1) {throw Poco::RuntimeException("End of file!");}
+		if (iByteIndex + 2 > rSource.length()-1) {throw FCRuntimeException("End of file!");}
 		iByteIndex+=2; //Move to tag type byte & skip it
 		readName(rSource,iByteIndex,sName);
 
@@ -446,18 +446,18 @@ void NBTBinaryParser::handleByteArray(string& rSource,int& iByteIndex,NBTTagBase
 		pElement = new NBTTagByteArray("");
 		//cout<<"byteArray (nameless)\n";
 	}
-	if (iByteIndex + 4 > rSource.length()-1) {throw Poco::RuntimeException("End of file!");}
+	if (iByteIndex + 4 > rSource.length()-1) {throw FCRuntimeException("End of file!");}
 	iByteIndex++; //Move to data start
 	memcpy(unionInt.sData,&rSource[iByteIndex],4);
 	unionInt.iData = Poco::ByteOrder::flipBytes(unionInt.iData);
 	iByteIndex += 3;//Move to data end
 
 	if (unionInt.iData < 0) {
-		throw Poco::RuntimeException("Illegal ByteArray length field");
+		throw FCRuntimeException("Illegal ByteArray length field");
 	}
 
 	if (unionInt.iData > 0) {
-		if (iByteIndex + unionInt.iData-1 > rSource.length()-1) {throw Poco::RuntimeException("End of file!");}
+		if (iByteIndex + unionInt.iData-1 > rSource.length()-1) {throw FCRuntimeException("End of file!");}
 		pData = new char[unionInt.iData];
 		iByteIndex++; //Move to data start
 		memcpy(pData,&rSource[iByteIndex],unionInt.iData);
@@ -481,7 +481,7 @@ void NBTBinaryParser::handleByteArray(string& rSource,int& iByteIndex,NBTTagBase
 		}
 		break;
 	default:
-		throw Poco::RuntimeException("Illegal storage");
+		throw FCRuntimeException("Illegal storage");
 	}
 }
 
@@ -490,7 +490,7 @@ NBTTagCompound* NBTBinaryParser::handleCompound(string& rSource,int& iByteIndex,
 	NBTTagCompound* pElement;
 
 	if (fParseHeader) {
-		if (iByteIndex + 2 > rSource.length()-1) {throw Poco::RuntimeException("End of file!");}
+		if (iByteIndex + 2 > rSource.length()-1) {throw FCRuntimeException("End of file!");}
 		iByteIndex+=2; //Move to tag type byte & skip it
 		readName(rSource,iByteIndex,sName);
 		pElement = new NBTTagCompound(sName);
@@ -515,7 +515,7 @@ NBTTagCompound* NBTBinaryParser::handleCompound(string& rSource,int& iByteIndex,
 		}
 		break;
 	default:
-		throw Poco::RuntimeException("Illegal storage");
+		throw FCRuntimeException("Illegal storage");
 	}
 	return pElement;
 }
@@ -527,23 +527,23 @@ void NBTBinaryParser::handleList(string& rSource,int& iByteIndex,NBTTagBase* pLa
 	NBTTagList* pElement;
 
 	if (fParseHeader) {
-		if (iByteIndex + 2 > rSource.length()-1) {throw Poco::RuntimeException("End of file!");}
+		if (iByteIndex + 2 > rSource.length()-1) {throw FCRuntimeException("End of file!");}
 		iByteIndex+=2; //Move to tag type byte & skip it
 		readName(rSource,iByteIndex,sName);
 	}
 
-	if (iByteIndex + 1 > rSource.length()-1) {throw Poco::RuntimeException("End of file!");}
+	if (iByteIndex + 1 > rSource.length()-1) {throw FCRuntimeException("End of file!");}
 	iByteIndex++; 
 	iType = rSource[iByteIndex];
 	
-	if (iByteIndex + 4 > rSource.length()-1) {throw Poco::RuntimeException("End of file!");}
+	if (iByteIndex + 4 > rSource.length()-1) {throw FCRuntimeException("End of file!");}
 	iByteIndex++;
 	 memcpy(unionInt.sData,&rSource[iByteIndex],4);
 	unionInt.iData = Poco::ByteOrder::flipBytes(unionInt.iData);
 	iByteIndex += 3;
 
-	if (iType < 1 || iType > 10) {throw Poco::RuntimeException("Unknown tag type");}
-	if (unionInt.iData < 0) {throw Poco::RuntimeException("Invalid count field");}
+	if (iType < 1 || iType > 10) {throw FCRuntimeException("Unknown tag type");}
+	if (unionInt.iData < 0) {throw FCRuntimeException("Invalid count field");}
 
 	if (fParseHeader) {
 		pElement = new NBTTagList(sName,iType);
@@ -565,11 +565,11 @@ void NBTBinaryParser::handleList(string& rSource,int& iByteIndex,NBTTagBase* pLa
 			}
 
 			while (storageStack.top() != pElement){
-				if (iByteIndex+1 > rSource.length()-1) {throw Poco::RuntimeException("End of file!");}
+				if (iByteIndex+1 > rSource.length()-1) {throw FCRuntimeException("End of file!");}
 				nextElement(rSource,storageStack,iByteIndex,rSource[iByteIndex+1]);
 			}
 			
-			if (storageStack.empty()) {throw Poco::RuntimeException("Unexpected end");}
+			if (storageStack.empty()) {throw FCRuntimeException("Unexpected end");}
 			unionInt.iData--;
 		}
 		storageStack.pop();
@@ -590,6 +590,6 @@ void NBTBinaryParser::handleList(string& rSource,int& iByteIndex,NBTTagBase* pLa
 		}
 		break;
 	default:
-		throw Poco::RuntimeException("Illegal storage");
+		throw FCRuntimeException("Illegal storage");
 	}
 }

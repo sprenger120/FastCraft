@@ -15,7 +15,7 @@ GNU General Public License for more details.
 #include "NBTTagByteArray.h"
 #include "NBTConstants.h"
 #include "NetworkOut.h"
-#include <Poco/Exception.h>
+#include "FCRuntimeException.h"
 
 NBTTagByteArray::NBTTagByteArray(string sName) :
 NBTTagBase(sName,FC_NBT_TYPE_BYTEARRAY),
@@ -40,6 +40,6 @@ string& NBTTagByteArray::getDataRef() {
 }
 
 char NBTTagByteArray::operator[] (int index) {
-	if (index < 0 || index > sData.length()) { throw Poco::RuntimeException("Index out of bound!"); }
+	if (index < 0 || index > sData.length()) { throw FCRuntimeException("Index out of bound!"); }
 	return sData.at(index);
 }

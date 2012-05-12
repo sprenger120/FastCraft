@@ -14,9 +14,9 @@ GNU General Public License for more details.
 */
 
 #include "ChunkProvider.h"
-#include <Poco/Exception.h>
+#include "FCRuntimeException.h"
 #include <Poco/DeflatingStream.h>
-#include <Poco/Exception.h>
+#include "FCRuntimeException.h"
 #include "Structs.h"
 #include "NetworkOutRoot.h"
 #include "NetworkOut.h"
@@ -64,7 +64,7 @@ void ChunkProvider::HandleMovement(const EntityCoordinates& PlayerCoordinates) {
 
 	if (isChunkListEmpty()) {
 		if (!CheckChunkCircle()) {
-			throw Poco::RuntimeException("Chunk delivering failed");
+			throw FCRuntimeException("Chunk delivering failed");
 		}
 
 		_oldPlayerCoordinates = _PlayerCoordinates;
@@ -75,7 +75,7 @@ void ChunkProvider::HandleMovement(const EntityCoordinates& PlayerCoordinates) {
 	if (_oldPlayerCoordinates.X != _PlayerCoordinates.X ||  _oldPlayerCoordinates.Z != _PlayerCoordinates.Z) {
 		CheckSpawnedChunkList(); //Check spawned chunks and despawn if too distant
 		if (!CheckChunkCircle()) { //check player's chunk circle and spawn if there is a hole
-			throw Poco::RuntimeException("Chunk delivering failed");
+			throw FCRuntimeException("Chunk delivering failed");
 		}
 		_oldPlayerCoordinates = _PlayerCoordinates;
 		return;
@@ -229,8 +229,8 @@ bool ChunkProvider::CheckChunkCircle() {
 
 			}
 		}
-	}catch(Poco::RuntimeException&err ) {
-		cout<<"CheckChunkCircle error:"<<err.message()<<"\n";
+	}catch(FCRuntimeException &err ) {
+		cout<<"CheckChunkCircle error:"<<err.getMessage()<<"\n";
 		return false;
 	}
 	return true;

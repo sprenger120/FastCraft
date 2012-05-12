@@ -17,7 +17,7 @@ GNU General Public License for more details.
 #include "Constants.h"
 #include <Poco/Thread.h>
 #include <Poco/Net/NetException.h>
-#include <Poco/Exception.h>
+#include "FCRuntimeException.h"
 
 using Poco::Thread;
 
@@ -114,8 +114,8 @@ void NetworkWriter::run() {
 
 
 			_rLowQueue.pop();
-		}catch(Poco::RuntimeException& ex) {
-			std::cout<<"NetworkWriter::run exception:"<<ex.message()<<"\n";
+		}catch(FCRuntimeException& ex) {
+			std::cout<<"NetworkWriter::run exception:"<<ex.getMessage()<<"\n";
 			waitTillDisconnected();
 			continue; //Queue exception
 		}

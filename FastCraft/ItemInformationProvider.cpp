@@ -14,12 +14,12 @@ GNU General Public License for more details.
 */
 
 #include "ItemInformationProvider.h"
-#include <Poco/Exception.h>
+#include "FCRuntimeException.h"
 #include <Poco/String.h>
 #include <Poco/Path.h>
 #include <Poco/File.h>
 #include "Constants.h"
-using Poco::RuntimeException;
+
 using std::cout;
 using std::string;
 using Poco::Data::into;
@@ -322,8 +322,8 @@ _vItems(0),
 		for (x = _vBlocks.size() -1; x > 0; x--) {
 			try {
 				isValid(_vBlocks[x]);
-			}catch(Poco::RuntimeException& ex) {
-				cout<<"Block #"<<int(_vBlocks[x].ID)<<":"<<int(_vBlocks[x].SubID)<<" is invalid ("<<ex.message()<<")\n";
+			}catch(FCRuntimeException& ex) {
+				cout<<"Block #"<<int(_vBlocks[x].ID)<<":"<<int(_vBlocks[x].SubID)<<" is invalid ("<<ex.getMessage()<<")\n";
 				_vBlocks.erase (_vBlocks.begin() + x);
 			}
 		}
@@ -333,8 +333,8 @@ _vItems(0),
 		for (x = _vItems.size() -1; x > 0; x--) {
 			try {
 				isValid(_vItems[x]);
-			}catch(Poco::RuntimeException& ex) {
-				cout<<"Item #"<<_vItems[x].ID<<":"<<int(_vItems[x].SubID)<<" is invalid ("<<ex.message()<<")\n";
+			}catch(FCRuntimeException& ex) {
+				cout<<"Item #"<<_vItems[x].ID<<":"<<int(_vItems[x].SubID)<<" is invalid ("<<ex.getMessage()<<")\n";
 				_vItems.erase (_vItems.begin() + x);
 			}
 		}
@@ -410,7 +410,7 @@ string ItemInformationProvider::getName(ItemID ID) {
 			}
 		}
 	}
-	throw Poco::RuntimeException("Not found!");
+	throw FCRuntimeException("Not found!");
 }
 
 
@@ -437,7 +437,7 @@ string ItemInformationProvider::getName(short ID) {
 		}
 	}
 
-	throw Poco::RuntimeException("Not found!");
+	throw FCRuntimeException("Not found!");
 }
 
 
@@ -485,7 +485,7 @@ ItemID ItemInformationProvider::getIDbyName(string Name) {
 		}
 	}
 
-	throw Poco::RuntimeException("Not found!");
+	throw FCRuntimeException("Not found!");
 }
 
 bool ItemInformationProvider::isBlock(ItemID ID) {
@@ -514,48 +514,48 @@ bool ItemInformationProvider::isBlock(short iID) {
 
 
 BlockEntry ItemInformationProvider::getBlock(ItemID ID) {
-	if (_vBlocks.empty()) { throw Poco::RuntimeException("Not found!"); }
-	if (!isBlock(ID)) { throw Poco::RuntimeException("Not a block!"); }
+	if (_vBlocks.empty()) { throw FCRuntimeException("Not found!"); }
+	if (!isBlock(ID)) { throw FCRuntimeException("Not a block!"); }
 
 	int index = search(_vBlocks,ID);
 	if (index == -1) {
-		throw Poco::RuntimeException("Not found!");
+		throw FCRuntimeException("Not found!");
 	}
 
 	return _vBlocks[index];	
 }
 
 BlockEntry ItemInformationProvider::getBlock(short iID) {
-	if (_vBlocks.empty()) { throw Poco::RuntimeException("Not found!"); }
-	if (!isBlock(iID)) { throw Poco::RuntimeException("Not a block!"); }
+	if (_vBlocks.empty()) { throw FCRuntimeException("Not found!"); }
+	if (!isBlock(iID)) { throw FCRuntimeException("Not a block!"); }
 
 	int index = search(_vBlocks, std::make_pair(iID,0));
 	if (index == -1) {
-		throw Poco::RuntimeException("Not found!");
+		throw FCRuntimeException("Not found!");
 	}
 
 	return _vBlocks[index];	
 }
 
 ItemEntry ItemInformationProvider::getItem(ItemID ID) {
-	if (_vItems.empty()) { throw Poco::RuntimeException("Not found!"); }
-	if (isBlock(ID)) { throw Poco::RuntimeException("Not a item!"); }
+	if (_vItems.empty()) { throw FCRuntimeException("Not found!"); }
+	if (isBlock(ID)) { throw FCRuntimeException("Not a item!"); }
 
 	int index = search(_vItems, ID);
 	if (index == -1) {
-		throw Poco::RuntimeException("Not found!");
+		throw FCRuntimeException("Not found!");
 	}
 
 	return _vItems[index];	
 }
 
 ItemEntry ItemInformationProvider::getItem(short iID) {
-	if (_vItems.empty()) { throw Poco::RuntimeException("Not found!"); }
-	if (isBlock(iID)) { throw Poco::RuntimeException("Not a item!"); }
+	if (_vItems.empty()) { throw FCRuntimeException("Not found!"); }
+	if (isBlock(iID)) { throw FCRuntimeException("Not a item!"); }
 
 	int index = search(_vItems, std::make_pair(iID,0));
 	if (index == -1) {
-		throw Poco::RuntimeException("Not found!");
+		throw FCRuntimeException("Not found!");
 	}
 
 	return _vItems[index];	
@@ -571,101 +571,101 @@ int ItemInformationProvider::getBlocksInCache() {
 
 void ItemInformationProvider::isValid(ItemEntry Entry) {
 	if (Entry.Enchantable && !Entry.Damageable) {
-		throw Poco::RuntimeException("Enchantable but undestroyable");
+		throw FCRuntimeException("Enchantable but undestroyable");
 	}
 
 	if (Entry.Durability < -1 || Entry.Durability == 0) {
-		throw Poco::RuntimeException("Illegal durability");
+		throw FCRuntimeException("Illegal durability");
 	}
 
 	if (Entry.Damageable && Entry.Durability==-1) {
-		throw Poco::RuntimeException("Destroyable but no durability");
+		throw FCRuntimeException("Destroyable but no durability");
 	}
 
 	if (Entry.MaxStackSize <= 0) {
-		throw Poco::RuntimeException("Illegal stack size");
+		throw FCRuntimeException("Illegal stack size");
 	}
 
 	if (Entry.Damageable && Entry.MaxStackSize != 1) {
-		throw Poco::RuntimeException("Destroyable but MaxStackSize > 1");
+		throw FCRuntimeException("Destroyable but MaxStackSize > 1");
 	}
 
 	if (Entry.Damageable && Entry.Eatable) {
-		throw Poco::RuntimeException("Cou can't make tools eatable");
+		throw FCRuntimeException("Cou can't make tools eatable");
 	}
 
 	if (Entry.Weapon && !Entry.Damageable) {
-		throw Poco::RuntimeException("Indestructible weapon");
+		throw FCRuntimeException("Indestructible weapon");
 	}
 
 	if (Entry.SubID > 15 || Entry.SubID < 0) {
-		throw Poco::RuntimeException("Illegal SubID");
+		throw FCRuntimeException("Illegal SubID");
 	}
 
 	if (Entry.ID > 4096 || Entry.ID < 0) {
-		throw Poco::RuntimeException("Illegal ID");
+		throw FCRuntimeException("Illegal ID");
 	}
 
 	if (Entry.Name.compare("") == 0) {
-		throw Poco::RuntimeException("Name is empty");
+		throw FCRuntimeException("Name is empty");
 	}
 
 	if (Entry.Damage <= 0) {
-		throw Poco::RuntimeException("Illegal damage");
+		throw FCRuntimeException("Illegal damage");
 	}
 
 	if (Entry.FoodValue < 0) { 
-		throw Poco::RuntimeException("Invalid food value");
+		throw FCRuntimeException("Invalid food value");
 	}
 
 	if (!Entry.Eatable && Entry.FoodValue != 0) {
-		throw Poco::RuntimeException("Non eatable things can't have food value");
+		throw FCRuntimeException("Non eatable things can't have food value");
 	}
 
 	if(Entry.ConnectedBlock.first != -1 && Entry.ConnectedBlock.second != -1) {
 		if (search(_vBlocks,Entry.ConnectedBlock) == -1) {
-			throw Poco::RuntimeException("Connected block doesn't exist");
+			throw FCRuntimeException("Connected block doesn't exist");
 		}
 	}
 }
 
 void ItemInformationProvider::isValid(BlockEntry Entry) {
 	if (Entry.SubID > 15 || Entry.SubID < 0) {
-		throw Poco::RuntimeException("Illegal SubID");
+		throw FCRuntimeException("Illegal SubID");
 	}
 
 	if (Entry.Name.compare("") == 0) {
-		throw Poco::RuntimeException("Name is empty");
+		throw FCRuntimeException("Name is empty");
 	}
 
 	if (Entry.MaxStackSize <= 0) {
-		throw Poco::RuntimeException("Illegal stack size");
+		throw FCRuntimeException("Illegal stack size");
 	}
 
 	if (Entry.SelfLightLevel > 17 || Entry.SelfLightLevel < 0) {
-		throw Poco::RuntimeException("Illegal SelfLightLevel");
+		throw FCRuntimeException("Illegal SelfLightLevel");
 	}
 
 	if (Entry.Thickness < 0.0F || Entry.Thickness > 1.0F) {
-		throw Poco::RuntimeException("Illegal thickness");
+		throw FCRuntimeException("Illegal thickness");
 	}
 
 	if (Entry.ID > 4096 || Entry.ID < 0) {
-		throw Poco::RuntimeException("Illegal ID");
+		throw FCRuntimeException("Illegal ID");
 	}
 
 	if (Entry.Height < 0.0F || Entry.Height > 1.0F) {
-		throw Poco::RuntimeException("Illegal height");
+		throw FCRuntimeException("Illegal height");
 	}
 
 	if (Entry.noLoot) {
 		if (Entry.ConnectedItem.first != 0) {
-			throw Poco::RuntimeException("noLoot flag set, connected item != 0");
+			throw FCRuntimeException("noLoot flag set, connected item != 0");
 		}
 	}else{
 		if (Entry.ConnectedItem.first != -1 && Entry.ConnectedItem.second != -1) {
 			if (search(_vItems,Entry.ConnectedItem) == -1) {
-				throw Poco::RuntimeException("Connected item doesn't exist");
+				throw FCRuntimeException("Connected item doesn't exist");
 			}
 		}
 	}
