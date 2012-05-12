@@ -29,6 +29,7 @@ GNU General Public License for more details.
 #include "Structs.h"
 #include "ChunkMath.h"
 #include "MinecraftServer.h"
+#include "FCRuntimeException.h"
 
 using Poco::Thread;
 using std::cout;
@@ -82,6 +83,7 @@ PlayerThread::PlayerThread(PackingThread& rPackingThread,MinecraftServer* pServe
 	*/
 
 	startThread(this);
+	throw FCRuntimeException("testexception");
 }
 
 
