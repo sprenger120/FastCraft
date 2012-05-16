@@ -59,12 +59,10 @@ MapChunk* World::generateChunk(int X,int Z) {
 	
 	pChunk = new MapChunk;
 	
-
 	std::memset(pChunk->Blocks,0x00,FC_CHUNK_DATACOUNT);
 	std::memset(pChunk->Metadata,0x00,FC_CHUNK_NIBBLECOUNT);
 	std::memset(pChunk->BlockLight,0x00,FC_CHUNK_NIBBLECOUNT);
 	std::memset(pChunk->SkyLight,0xFF,FC_CHUNK_NIBBLECOUNT);
-
 
 	for (short y=0;y<=60;y++) {
 		for (int x=0;x<=15;x++) {
@@ -73,7 +71,7 @@ MapChunk* World::generateChunk(int X,int Z) {
 			}
 		}
 	}
-
+	_heapChunks.add(ChunkIndex,pChunk);
 
 	return pChunk;
 }
@@ -83,7 +81,10 @@ MapChunk* World::getChunkByChunkCoordinates(int X,int Z) {
 	MapChunk* p;
 	long long Index = generateIndex(X,Z);
 
-	if (_heapChunks.get(Index,p)) {return p;} 
+
+	if (_heapChunks.get(Index,p)) {
+		return p;
+	} 
 	
 	try  {
 		p = generateChunk(X,Z);
@@ -91,6 +92,7 @@ MapChunk* World::getChunkByChunkCoordinates(int X,int Z) {
 		std::cout<<"World::getChunkByChunkCoordinates Chunk generation aborted due a error"<<"\n";
 		ex.rethrow();
 	}
+
 	return p;
 }
 
@@ -115,7 +117,6 @@ pair<ChunkCoordinates,int> World::WorldCoordinateConverter(int X,short Y,int Z) 
 		std::cout<<"World::WorldCoordinateConverter index error"<<"\n";
 		throw FCRuntimeException("Index error");
 	}
-
 
 	pair<ChunkCoordinates,int> Pair(Coords,Index);
 	return Pair;
@@ -334,7 +335,13 @@ void World::setBlockLight(int X,short Y,int Z,char iLightLevel) {
 												p->BlockLight[iNibbleIndex],
 												iLightLevel
 												);
-	} catch (FCRuntimeException& ex) {
+		p->SkyLight[iNibbleIndex] = prepareNibble( 
+												char(coord.second%2),
+												p->BlockLight[iNibbleIndex],
+												iLightLevel
+												);
+
+	}catch (FCRuntimeException& ex) {
 		ex.rethrow();
 	}
 }
@@ -348,5 +355,8 @@ void World::setBlock(BlockCoordinates Coords,ItemID Data) {
 }
 
 long long World::generateIndex(int X,int Z) {
-	return  ((((long long)Z)<<32) & 0xFFFFFFFF00000000) & (((long long)X) & 0xFFFFFFFF);
+	long long x = X;
+	long long z = Z;
+	
+	return ((x<<32) & 0xffffffff00000000) | (z & 0x00000000ffffffff);
 }
