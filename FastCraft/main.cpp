@@ -14,7 +14,7 @@ GNU General Public License for more details.
 */
 #define BUILD_VERSION ""
 #include <iostream>
-#include <vld.h>
+//#include <vld.h>
 #include <Poco/Thread.h>
 #include "FCRuntimeException.h"
 #include <Poco/Path.h>
@@ -36,11 +36,40 @@ using Poco::Thread;
 int main(int argc, char *argv[]) {
 	std::string BuildVer(BUILD_VERSION);
 	
-	cout<<"FastCraft Minecraft Server"<<"\n";
-	cout<<"Version "<<BUILD_VERSION<<(BuildVer.compare("") == 0 ? "" : "-")<<FC_VERSION<<" for Minecraft "<<FC_SUPPORTED_MINCRAFTVERSION<<"\n"<<std::endl;
 
+	cout<<"______        _   _____            __ _   \n";
+	cout<<"|  ___|      | | /  __ \\          / _| |  \n";
+	cout<<"| |_ __ _ ___| |_| /  \\/_ __ __ _| |_| |_ \n";
+	cout<<"|  _/ _` / __| __| |   | '__/ _` |  _| __|\n";
+	cout<<"| || (_| \\__ \\ |_| \\__/\\ | | (_| | | | |_ \n";
+	cout<<"\\_| \\__,_|___/\\__|\\____/_|  \\__,_|_|  \\__|\n";
+	cout<<"        Minecraft vServer Software\n";
+	cout<<"Core version:"<<BUILD_VERSION<<(BuildVer.compare("") == 0 ? "" : "-")<<FC_VERSION<<" for Minecraft "<<FC_SUPPORTED_MINCRAFTVERSION<<"\n"<<std::endl;
+
+	
+	/*  Set up core components */
+
+	cout<<"--- Init core components---\n";
+	cout<<"SQLite...";
+	Poco::Data::SQLite::Connector::registerConnector();
+	cout<<" Done\n";
+
+	Constants::init();
+	
+	#if defined(_WIN32)
+		cout<<"SYM...";
+		if (!SymInitialize(GetCurrentProcess(),NULL,true)) { 
+			std::cout<<" Failed";
+		}else{
+			cout<<" Done\n";
+		}
+	#endif
+
+	cout<<std::endl<<"\n";
+
+	/* check server directory */
 	Poco::Path pathRoot(argv[0]); 
-	pathRoot.setFileName(""); //Remove filename
+	pathRoot.setFileName("");
 
 	pathRoot.pushDirectory("Server");
 	Poco::File fileRootDirectory(pathRoot.toString());
@@ -59,14 +88,8 @@ int main(int argc, char *argv[]) {
 	}
 
 
-	Poco::Data::SQLite::Connector::registerConnector(); //Startup sqlite engine
-	Constants::init(); //load constants
-	
-	#if defined(_WIN32)
-		if (!SymInitialize(GetCurrentProcess(),NULL,true)) { std::cout<<"Unable to init Sym\n";}
-	#endif
 
-
+	/* Load vServers */
 	std::vector<MinecraftServer*> vpServer(0);
 	std::vector<Poco::File>		  vFileList(0);
 
@@ -92,7 +115,7 @@ int main(int argc, char *argv[]) {
 		}
 
 		try {
-			cout<<"Starting "<<pathTemp[pathTemp.depth()]<<"\n";
+			cout<<"--- Starting vServer: "<<pathTemp[pathTemp.depth()]<<" ---\n";
 			pathTemp.pushDirectory(pathTemp[pathTemp.depth()]);
 			pathTemp.setFileName("");
 			pServer = new MinecraftServer(pathTemp[pathTemp.depth()-1],pathTemp,vUsedPorts);
@@ -102,9 +125,13 @@ int main(int argc, char *argv[]) {
 		}
 		vpServer.push_back(pServer);
 		pathTemp.clear();
+		
+		if (x<vFileList.size()-1) {cout<<std::endl<<"\n";}
 	}
 
-	cout<<"Loading done!\n";
+
+	cout<<std::endl<<"\n--- Done ---\n";
+
 
 	bool fSomethingRuns = false;	
 	while(1) {
@@ -125,6 +152,7 @@ int main(int argc, char *argv[]) {
 		}
 		if (!fSomethingRuns) {break;}
 	}
+
 
 	Poco::Data::SQLite::Connector::unregisterConnector();
 	return 1;
