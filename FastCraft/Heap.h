@@ -151,13 +151,13 @@ public:
 	/*
 	* Returns count of allocated elements
 	*/
-	void getElementCount();
+	tAdressType getElementCount();
 
 
 	/*
 	* Returns count of allocated nodes
 	*/
-	void getNodeCount();
+	tAdressType getNodeCount();
 
 
 	/*
@@ -230,7 +230,7 @@ void Heap<tDataType,tAdressType>::add(tAdressType ID,tDataType& rElement) {
 	Poco::ScopedLock<Poco::Mutex> sLock(_Mutex);
 
 	for (char i = 0;i<=sizeof(tAdressType)*8-1;i++) {
-		fEnd = (ID & _pEndBitsMaskArray[i])   == 0;
+		fEnd = (ID & _pEndBitsMaskArray[i])  == 0;
 
 		switch(ID & _pSingleBitMaskArray[i]) {
 		case 0:
@@ -282,16 +282,18 @@ bool Heap<tDataType,tAdressType>::get(tAdressType ID,tDataType& ref) {
 
 		switch(ID & _pSingleBitMaskArray[i]) {
 		case 0:
-			if (pPath->pLow == NULL) { return NULL;}
+			if (pPath->pLow == NULL) { return false;}
 			p = pPath->pLow;
 			break;
 		default:
-			if (pPath->pHigh == NULL) { return NULL;}
+			if (pPath->pHigh == NULL) { return false;}
 			p = pPath->pHigh;
 			break;
 		}
 
+
 		if (fEnd) {
+			if (p->pElement == NULL) {return false;}
 			ref = *(p->pElement);
 			return true;
 		}else{
@@ -371,6 +373,17 @@ typename Heap<tDataType,tAdressType>::HeapIterator Heap<tDataType,tAdressType>::
 	return Iterator;
 }
 
+
+template<typename tDataType,typename tAdressType>
+tAdressType Heap<tDataType,tAdressType>::getElementCount() {
+	return _iSize;
+}
+
+
+template<typename tDataType,typename tAdressType>
+tAdressType Heap<tDataType,tAdressType>::getNodeCount() {
+	return _iNodeCount;
+}
 
 
 /* 
