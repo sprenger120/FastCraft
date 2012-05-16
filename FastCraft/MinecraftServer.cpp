@@ -252,7 +252,7 @@ char MinecraftServer::readConfiguration(Poco::Path& path) {
 		parseNodeDouble(pDoc,"/settings/Player/FlyMod/MaxSpeed",_dMaxPlayerSpeed,7.5,50.0);
 		if (!_fOnlineMode) {	
 			cout<<"***Config WARNING: Server runs in unsafe mode. Hackers can connect without verification!"<<"\n";  	
-			cout<<"***Solution: Set OnlineMode in your fastcraft.properties to true."<<"\n";
+			cout<<"***Solution: Set OnlineMode in your settings.xml to true."<<"\n";
 		}
 	}
 	return FC_VSERVERERROR_OK;
