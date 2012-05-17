@@ -460,9 +460,8 @@ void PlayerThread::Packet1_Login() {
 	if (!_fHandshakeSent) { Disconnect("Incorrect login order!",false); }
 
 	try {
-		//Check minecraft version
+		/* Check Version */
 		iProtocolVersion = _NetworkInRoot.readInt(); //Protocol Version
-
 
 		if (iProtocolVersion > FC_SUPPORTED_PROTOCOLVERSION) {
 			Disconnect("Outdated server! Needed Version: " + string(FC_SUPPORTED_MINCRAFTVERSION));
@@ -474,13 +473,16 @@ void PlayerThread::Packet1_Login() {
 			return;
 		}
 
+
+		/* Read unused stuff */
 		_NetworkInRoot.readString(); //Username (already known)	
 		_NetworkInRoot.readInt64();
 		_NetworkInRoot.readString();
 		_NetworkInRoot.readInt();
 		_NetworkInRoot.readInt(); //This are 4 unused byte fields
 
-		//Check premium 
+
+		/* Check premium if needed */
 		if (_pMinecraftServer->isOnlineModeActivated()) {
 			string sPath("/game/checkserver.jsp?user=");
 			sPath.append(_sName);
@@ -503,23 +505,26 @@ void PlayerThread::Packet1_Login() {
 			}
 		}
 
-		//Check if there is a player with same name
+
+		/* Check if there is a player with the same name */
 		PlayerThread* pPlayer = _pMinecraftServer->getPlayerPool()->getPlayerByName(_sName,this);
 		if (pPlayer != NULL) {
 			pPlayer->Disconnect("Logged in from another location.",false);
 		}
 
 
-		//YES DUDE, you got it !
+		/* Login passed*/
 		_iEntityID = _pMinecraftServer->generateID();
 
+		
+		/* Resolving spawn world*/
 		_pActualWorld = _pMinecraftServer->getWorldByName(_pMinecraftServer->getMainWorldName());
 		if(_pActualWorld == NULL) {
 			Disconnect("Spawn world not found!");
 			return;
 		}
 
-		//Set start coordinates
+		/* set spawn Coordinates */
 		_Coordinates.X = 50.0;
 		_Coordinates.Y = 100.0;
 		_Coordinates.Z = 50.0;
@@ -530,12 +535,9 @@ void PlayerThread::Packet1_Login() {
 		_lastCoordinates = _Coordinates;
 		CheckPosition(false);
 
-		/*
-		* Response
-		*/
-		//Login response
+		
+		/* Building response packet*/
 		NetworkOut Out(&_NetworkOutRoot);
-
 		Out.addByte(0x01);
 		Out.addInt(_iEntityID);
 		Out.addString("");
@@ -546,61 +548,57 @@ void PlayerThread::Packet1_Login() {
 		Out.addByte(_pMinecraftServer->getDifficulty());
 		Out.addByte(FC_WORLDHEIGHT);
 		Out.addByte((unsigned char)_pMinecraftServer->getPlayerSlotCount());
-
 		Out.Finalize(FC_QUEUE_HIGH);
 
-		//compass
+		
+		/* sending compass */
 		Out.addByte(0x6);
-		Out.addInt(0); //X
-		Out.addInt(0); // Y
-		Out.addInt(0); // Z 
+		Out.addInt(0); 
+		Out.addInt(0); 
+		Out.addInt(0);  
 		Out.Finalize(FC_QUEUE_HIGH);
 
-		//Time
+		/* sending time */
 		sendTime();
 
 		_ChunkProvider.HandleNewPlayer();
 		_ChunkProvider.HandleMovement(_Coordinates); //Pre Chunks
 
-		//Health
-		_iHealth= 10;
-		_iFood=0;
-		_nSaturation=0.0F;
+		/* sending/setting health */
+		_iHealth	= 10;
+		_iFood		= 0;
+		_nSaturation= 0.0F;
 		syncHealth();
 
-		//Inventory
-		ItemSlot Item1(_pMinecraftServer->getItemInfoProvider(),std::make_pair(276,0),1);
-		//ItemSlot Item2(std::make_pair(35,15),64);
-		//ItemSlot Item3(std::make_pair(338,0),64);
 
+		/* sending/setting inventory */
+		ItemSlot Item1(_pMinecraftServer->getItemInfoProvider(),std::make_pair(276,0),1);
 		_Inventory.setSlot(38,Item1);
-		//_Inventory.setSlot(37,Item2);
-		//_Inventory.setSlot(36,Item3);
 		_Inventory.synchronizeInventory();
 
+		
+		/* sending clients position */
 		sendClientPosition();
 
-		insertChat("§dWelcome to FastCraft 0.0.2 Alpha server.");
-		ProcessQueue(); //Send login packages
+		/* Send all login packets */
+		ProcessQueue(); 
 
-		sendKeepAlive(); //Measure ping
+		/* Welcome message */
+		insertChat(_pMinecraftServer->getServerMOTD());
+
 		
+		/* Set offically to spawned & push join event */
 		_fSpawned = true;	
 		PlayerEventBase* p = new PlayerJoinEvent(this);//Push PlayerPool Join event
 		_pMinecraftServer->getPlayerPool()->addEvent(p);
 		
 
-		//Spawn own name to playerinfo
-		PlayerInfoList(true,_sName);
-
-		//Spawn other player
-		vector<PlayerThread*> vPlayers;
-		vPlayers = _pMinecraftServer->getPlayerPool()->ListPlayers(59);
-
-		if (!vPlayers.empty()) {
-			for ( int x = 0;x<= vPlayers.size()-1;x++) {
-				if(vPlayers[x]->getUsername().compare(_sName)==0) {continue;}//No double spawning of own name
-				PlayerInfoList(true,vPlayers[x]->getUsername());
+		/* send active player list */
+		vector<PlayerThread*>& rvPlayers = _pMinecraftServer->getPlayerPool()->ListPlayers(59);
+		if (!rvPlayers.empty()) {
+			for (short x = 0;x<= rvPlayers.size()-1;x++) {
+				if (!rvPlayers[x]->isSpawned()) {continue;}
+				PlayerInfoList(true,rvPlayers[x]->getUsername());
 			}
 		}
 
