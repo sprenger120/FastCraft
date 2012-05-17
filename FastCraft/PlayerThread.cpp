@@ -144,11 +144,10 @@ void PlayerThread::run() {
 
 			iPacket = _NetworkInRoot.readByte();
 
-			/*if (!_fSpawned &&  (iPacket!=0x01 && iPacket!=0x02 && iPacket!=0xFE)) {
+			if (!_fSpawned &&  (iPacket!=0x01 && iPacket!=0x02 && iPacket!=0xFE)) {
 				Disconnect("Login not done!");
 				continue;
-			}*/
-
+			}
 
 			switch (iPacket) {
 			case 0x0:
@@ -290,7 +289,10 @@ void PlayerThread::Disconnect(char iLeaveMode) {
 	_heapSpawnedEntities.cleanupElements();
 	_fSpawned       = false;
 	_fAssigned      = false;
-	_fHandshakeSent =false;
+	_fHandshakeSent = false;
+
+	_timer_Ping.stop();
+	_timer_Ping.reset();
 }
 
 
@@ -1563,7 +1565,6 @@ void PlayerThread::updatePing() {
     _iPlayerPing = _timer_Ping.elapsed()/1000; 
     _timer_Ping.reset();
     _timer_Ping.start();
-	cout<<getPing()<<"\n";
 }
 
 short PlayerThread::getPing() {
