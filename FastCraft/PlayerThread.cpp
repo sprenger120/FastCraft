@@ -747,7 +747,7 @@ void PlayerThread::Packet254_ServerListPing() {
 	_sTemp.clear();
 	_sTemp.assign(_pMinecraftServer->getServerDescription()); //Server Description
 	_sTemp.append("§");
-	Poco::NumberFormatter::append(_sTemp, 0);//!++ Playercount
+	Poco::NumberFormatter::append(_sTemp, _pMinecraftServer->getPlayerPool()->getConnectedPlayerCount());//!++ Playercount
 	_sTemp.append("§");
 	Poco::NumberFormatter::append(_sTemp,_pMinecraftServer->getPlayerSlotCount()); //player slots
 
