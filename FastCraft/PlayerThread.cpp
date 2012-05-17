@@ -450,8 +450,7 @@ void PlayerThread::ProcessQueue() {
 }
 
 void PlayerThread::Packet0_KeepAlive() {
-	_NetworkInRoot.readInt(); //Get id
-	_iPlayerPing = 0L; //!++ Ping
+	_NetworkInRoot.readInt(); 
 }
 
 void PlayerThread::Packet1_Login() {
@@ -602,6 +601,8 @@ void PlayerThread::Packet1_Login() {
 				PlayerInfoList(true,vPlayers[x]->getUsername());
 			}
 		}
+
+        _timer_Ping.start();
 	} catch(FCRuntimeException) {
 		Disconnect(FC_LEAVE_OTHER);
 	}
@@ -662,9 +663,8 @@ void PlayerThread::Packet3_Chat() {
 }
 
 void PlayerThread::Packet10_Player() {
-	if (isSpawned()) {
-		_ChunkProvider.NextChunk();
-	}
+	if (isSpawned()) {_ChunkProvider.NextChunk();}
+    updatePing();
 	try {
 		_Coordinates.OnGround = _NetworkInRoot.readBool();
 	} catch(FCRuntimeException) {
@@ -674,9 +674,9 @@ void PlayerThread::Packet10_Player() {
 
 void PlayerThread::Packet11_Position() {
 	EntityCoordinates TmpCoord;
-	if (isSpawned()) {
-		_ChunkProvider.NextChunk();
-	}
+	if (isSpawned()) {_ChunkProvider.NextChunk();}
+	updatePing();
+
 	try {
 		//Read coordinates in a temporary variable
 		TmpCoord.X = _NetworkInRoot.readDouble();
@@ -702,9 +702,8 @@ void PlayerThread::Packet11_Position() {
 }
 
 void PlayerThread::Packet12_Look() {
-	if (isSpawned()) {
-		_ChunkProvider.NextChunk();
-	}
+	if (isSpawned()) {_ChunkProvider.NextChunk();}
+    updatePing();
 	try {
 		_Coordinates.Yaw = _NetworkInRoot.readFloat();
 		_Coordinates.Pitch = _NetworkInRoot.readFloat();
@@ -717,9 +716,8 @@ void PlayerThread::Packet12_Look() {
 void PlayerThread::Packet13_PosAndLook() {
 	EntityCoordinates TmpCoord;
 
-	if (isSpawned()) {
-		_ChunkProvider.NextChunk();
-	}
+	if (isSpawned()) {_ChunkProvider.NextChunk();}
+    updatePing();
 
 	//Read coordinates in a temporary variable
 	try {
@@ -1555,10 +1553,19 @@ void PlayerThread::handleEating() {
 }
 
 void PlayerThread::sendKeepAlive() {
-	/*_timerLastAlivePacketSent.reset();*/
-
 	NetworkOut Out(&_NetworkOutRoot);
 	Out.addByte(0x0);
 	Out.addInt(_Rand.next());
 	Out.Finalize(FC_QUEUE_HIGH);
+}
+
+void PlayerThread::updatePing() {
+    _iPlayerPing = _timer_Ping.elapsed()/1000; 
+    _timer_Ping.reset();
+    _timer_Ping.start();
+	cout<<getPing()<<"\n";
+}
+
+short PlayerThread::getPing() {
+	return _iPlayerPing;
 }

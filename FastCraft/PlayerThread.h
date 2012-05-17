@@ -89,7 +89,7 @@ private:
 	Poco::Net::StreamSocket _Connection;
 	NetworkOutRoot _NetworkOutRoot;
 	NetworkIn _NetworkInRoot;
-	long long _iPlayerPing;
+	short _iPlayerPing;
 
 
 	/* Data delivering */
@@ -111,7 +111,9 @@ private:
 	World* _pActualWorld;
 	Heap<EntityListEntry,int> _heapSpawnedEntities;
 
+    /* Time Management */
 	TimeJobServer<PlayerThread> _timeJobServer;
+    Poco::Stopwatch _timer_Ping;
 public:
 	/*
 	* Constructor
@@ -331,6 +333,12 @@ public:
 	*/
 	void setEntityStatus(int,char);
 	void setEntityStatus(char);     //Sets status on player's id
+
+
+    /* 
+    * Returns actual player ping 
+    */
+    short getPing();
 private:
 	//Interval functions
 	void Interval_KeepAlive();
@@ -368,6 +376,7 @@ private:
 	void sendClientPosition();
 	void sendKeepAlive();
 	void ChatToAll(string&);
+    void updatePing();
 
 	//Handler
 	void handleEating(); 
