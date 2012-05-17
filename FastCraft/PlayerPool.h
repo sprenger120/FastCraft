@@ -104,16 +104,6 @@ public:
 
 
 	/*
-	* Builds a EntityPlayer instance from a PlayerThread pointer
-	* Will throw Poco::RuntimeException if Player isn't spawned
-
-	Parameter:
-	@1 : Pointer to a spawned PlayerThread
-	*/
-	//static EntityPlayer buildEntityPlayerFromPlayerPtr(PlayerThread*);
-
-
-	/*
 	* Searchesr PlayerThread thats name fits into given and return it's pointer
 	* Returns NULL if nothing found
 	* This is a case insensitive search
@@ -131,6 +121,12 @@ public:
 	void sendMessageToAll(string);
 
 	bool willHurtOther(BlockCoordinates,PlayerThread*);
+
+
+	/*
+	* Returns count of actual connected players
+	*/
+	short getConnectedPlayerCount();
 private:
 	int getFreeSlot(); //Returns -1 if there is no free slot
 };

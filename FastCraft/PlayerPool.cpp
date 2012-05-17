@@ -166,3 +166,12 @@ bool PlayerPool::willHurtOther(BlockCoordinates blockCoord,PlayerThread* pPlayer
 	}
 	return false;
 }*/
+
+short PlayerPool::getConnectedPlayerCount() {
+	if (_vPlayerThreads.empty()) {return 0;}
+	short count = 0;
+	for (short x=0;x<=_vPlayerThreads.size()-1;x++) {
+		if (_vPlayerThreads[x]->isSpawned()) {count++;}
+	}
+	return count;
+}
