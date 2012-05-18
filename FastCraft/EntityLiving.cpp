@@ -88,7 +88,7 @@ void EntityLiving::sendEquipment(NetworkOut& rOut) {
 		if (_vpHeld[x] == NULL) {continue;}
 		rOut.addByte(0x5);
 		rOut.addInt(_iEntityID);
-		rOut.addShort(x);
+		rOut.addShort( x==0 ? 0 : 4-(x-1) );
 		if(_vpHeld[x]->isEmpty()) { //empty slot
 			rOut.addShort(-1);
 			rOut.addShort(0);
