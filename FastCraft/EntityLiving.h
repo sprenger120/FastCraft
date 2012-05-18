@@ -39,7 +39,6 @@ protected:
 	char _iType;
 	short _iHealth;
 	EquipmentArray _vpHeld;
-	EntityFlags _Flags;
 public:
 	/*
 	* Constructor
@@ -148,5 +147,11 @@ public:
 	@1 : index      (see EquipmentArray definition)
 	*/
 	ItemID getEquipment(char);
+
+
+	/*
+	* Entity Flags
+	*/
+	EntityFlags Flags;
 };
 #endif
