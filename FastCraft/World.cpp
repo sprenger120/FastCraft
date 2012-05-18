@@ -30,7 +30,8 @@ using std::cout;
 
 World::World(string Name,char iDimension,MinecraftServer* pServer) :
 _WorldName(Name),
-	_iDimension(iDimension)
+	_iDimension(iDimension),
+	_heapChunks(true)
 {
 	_pMinecraftServer = pServer;
 	generateChunks(-10,-10,10,10);
@@ -53,47 +54,44 @@ void World::generateChunks(int FromX,int FromZ,int ToX,int ToZ) {
 
 MapChunk* World::generateChunk(int X,int Z) {
 	long long ChunkIndex = generateIndex(X,Z);
-	MapChunk* pChunk = NULL; 
+	MapChunk** pChunk = _heapChunks.get(ChunkIndex); 
 
-	if (_heapChunks.get(ChunkIndex,pChunk)) {return pChunk;} /* Is this chunk already generated? */
+	if (pChunk != NULL) {return *pChunk;} /* Is this chunk already generated? */
 	
-	pChunk = new MapChunk;
+	MapChunk* pNewChunk = new MapChunk;
 	
-	std::memset(pChunk->Blocks,0x00,FC_CHUNK_DATACOUNT);
-	std::memset(pChunk->Metadata,0x00,FC_CHUNK_NIBBLECOUNT);
-	std::memset(pChunk->BlockLight,0x00,FC_CHUNK_NIBBLECOUNT);
-	std::memset(pChunk->SkyLight,0xFF,FC_CHUNK_NIBBLECOUNT);
+	std::memset(pNewChunk->Blocks,0x00,FC_CHUNK_DATACOUNT);
+	std::memset(pNewChunk->Metadata,0x00,FC_CHUNK_NIBBLECOUNT);
+	std::memset(pNewChunk->BlockLight,0x00,FC_CHUNK_NIBBLECOUNT);
+	std::memset(pNewChunk->SkyLight,0xFF,FC_CHUNK_NIBBLECOUNT);
 
 	for (short y=0;y<=60;y++) {
 		for (int x=0;x<=15;x++) {
 			for (int z=0;z<=15;z++) {
-				pChunk->Blocks[ChunkMath::toIndex(x,y,z)] = 12;
+				pNewChunk->Blocks[ChunkMath::toIndex(x,y,z)] = 12;
 			}
 		}
 	}
-	_heapChunks.add(ChunkIndex,pChunk);
 
-	return pChunk;
+	_heapChunks.add(ChunkIndex,pNewChunk);
+
+	return pNewChunk;
 }
 
 
 MapChunk* World::getChunkByChunkCoordinates(int X,int Z) {
-	MapChunk* p;
 	long long Index = generateIndex(X,Z);
+	MapChunk** p = _heapChunks.get(Index);
 
-
-	if (_heapChunks.get(Index,p)) {
-		return p;
-	} 
+	if (p != NULL) {return *p;} 
 	
 	try  {
-		p = generateChunk(X,Z);
+		MapChunk* pNewChunk = generateChunk(X,Z);
+		return pNewChunk;
 	} catch(FCRuntimeException& ex) {
-		std::cout<<"World::getChunkByChunkCoordinates Chunk generation aborted due a error"<<"\n";
 		ex.rethrow();
 	}
-
-	return p;
+	return NULL;
 }
 
 pair<ChunkCoordinates,int> World::WorldCoordinateConverter(int X,short Y,int Z) {
