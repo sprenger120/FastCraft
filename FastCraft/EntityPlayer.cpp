@@ -64,23 +64,27 @@ void EntityPlayer::spawn(NetworkOut& rOut) {
 	rOut.Finalize(FC_QUEUE_HIGH);
 
 	sendEquipment(rOut);
+	appendMetadata(rOut);
 }
 
 
 void EntityPlayer::appendMetadata(NetworkOut& rOut) {
 	//Flags
 	//            DataID      Data Type
+	rOut.addByte(0x28);
+	rOut.addInt(_iEntityID);
 	rOut.addByte((0&0x1f) | ((0<<5)&0xe0)); 
 	
-	std::bitset<5> Flags;
-	Flags[0] = _Flags.isOnFire();
-	Flags[1] = _Flags.isCrouched();
-	Flags[2] = _Flags.isRiding();
-	Flags[3] = _Flags.isSprinting();
-	Flags[4] = _Flags.isRightClicking();
+	std::bitset<5> bitFlags;
+	bitFlags[0] = Flags.isOnFire();
+	bitFlags[1] = Flags.isCrouched();
+	bitFlags[2] = Flags.isRiding();
+	bitFlags[3] = Flags.isSprinting();
+	bitFlags[4] = Flags.isRightClicking();
 
-	rOut.addByte((unsigned char)Flags.to_ulong());
+	rOut.addByte((unsigned char)bitFlags.to_ulong());
 	rOut.addByte(127);
+	rOut.Finalize(FC_QUEUE_HIGH);
 }
 
 short EntityPlayer::getMaxHealth() {
