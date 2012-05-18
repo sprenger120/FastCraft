@@ -18,6 +18,7 @@ GNU General Public License for more details.
 #include <iostream>
 #include <Poco/Mutex.h>
 #include <Poco/ScopedLock.h>
+#include "FCRuntimeException.h"
 using std::string;
 
 
@@ -32,8 +33,6 @@ class Heap {
 
 		HeapElement();
 	};
-	string toBinary(tAdressType);
-
 
 	HeapElement* _Root;
 	HeapElement* _pLastAddedEntry;
@@ -44,6 +43,7 @@ class Heap {
 	tAdressType* _pEndBitsMaskArray;
 
 	Poco::Mutex _Mutex;
+	bool _fPtr;
 public:
 	class HeapIterator {
 		HeapElement* _pBegin;
@@ -94,8 +94,11 @@ public:
 
 	/*
 	* Constructor
+	
+	Parameter:
+	@1 : Set this to true if you are storing pointers 
 	*/
-	Heap();
+	Heap(bool);
 
 
 	/*
@@ -116,14 +119,13 @@ public:
 
 
 	/*
-	* Gets element by ID operator
-	* Returns false if element wasn't found
+	* Gets element by ID 
+	* Returns NULL if element wasn't found
 
 	Parameter:
 	@1 : Index of element
-	@2 : Reference to your local copy
 	*/
-	bool get(tAdressType,tDataType&);
+	tDataType* get(tAdressType);
 
 
 	/*
@@ -133,6 +135,16 @@ public:
 	@1 : ID of element
 	*/
 	bool has(tAdressType);
+
+
+	/*
+	* Removes an element
+	* Throws FCRuntimeException if element doesn't exists
+
+	Parameter:
+	@1 : ID of element
+	*/
+	void erase(tAdressType);
 
 
 	/*
@@ -164,6 +176,9 @@ public:
 	* Returns Iterator to beginning
 	*/
 	typename Heap<tDataType,tAdressType>::HeapIterator begin();	
+private:
+	string toBinary(tAdressType);
+	typename Heap<tDataType,tAdressType>::HeapElement* getElement(tAdressType);
 };
 
 
@@ -171,11 +186,12 @@ public:
  * Heap
  */
 template<typename tDataType,typename  tAdressType>
-Heap<tDataType,tAdressType>::Heap() {
+Heap<tDataType,tAdressType>::Heap(bool fPtr) {
 	/* Init variables */
 	_iSize = 0;
 	_iNodeCount = 1;
 	_pLastAddedEntry = _Root = new HeapElement;
+	_fPtr = fPtr;
 
 
 	/* building bit tables */
@@ -272,7 +288,7 @@ void Heap<tDataType,tAdressType>::add(tAdressType ID,tDataType& rElement) {
 
 
 template<typename tDataType,typename tAdressType>
-bool Heap<tDataType,tAdressType>::get(tAdressType ID,tDataType& ref) {
+typename Heap<tDataType,tAdressType>::HeapElement* Heap<tDataType,tAdressType>::getElement(tAdressType ID) {
 	HeapElement* pPath = _Root;
 	HeapElement* p;
 	bool fEnd;
@@ -282,56 +298,57 @@ bool Heap<tDataType,tAdressType>::get(tAdressType ID,tDataType& ref) {
 
 		switch(ID & _pSingleBitMaskArray[i]) {
 		case 0:
-			if (pPath->pLow == NULL) { return false;}
+			if (pPath->pLow == NULL) { return NULL;}
 			p = pPath->pLow;
 			break;
 		default:
-			if (pPath->pHigh == NULL) { return false;}
+			if (pPath->pHigh == NULL) { return NULL;}
 			p = pPath->pHigh;
 			break;
 		}
 
 
 		if (fEnd) {
-			if (p->pElement == NULL) {return false;}
-			ref = *(p->pElement);
-			return true;
+			if (p->pElement == NULL) {return NULL;}
+			return p;
 		}else{
 			pPath = p;
 		}
 	}
-	return false;
+	return NULL;
+}
+
+
+template<typename tDataType,typename tAdressType>
+tDataType* Heap<tDataType,tAdressType>::get(tAdressType ID) {
+	HeapElement* p = getElement(ID);
+
+	if (p == NULL || p->pElement == NULL) {return NULL;}
+
+	return p->pElement;
 }
 
 template<typename tDataType,typename tAdressType>
 bool Heap<tDataType,tAdressType>::has(tAdressType ID) {
-	HeapElement* pPath = _Root;
-	HeapElement* p;
-	bool fEnd;
+	HeapElement* p = getElement(ID);
 
-	for (char i = 0;i<=sizeof(tAdressType)*8-1;i++) {
-		fEnd = (ID & _pEndBitsMaskArray[i]) == 0;
-
-		switch(ID & _pSingleBitMaskArray[i]) {
-		case 0:
-			if (pPath->pLow == NULL) { return false;}
-			p = pPath->pLow;
-			break;
-		default:
-			if (pPath->pHigh == NULL) { return false;}
-			p = pPath->pHigh;
-			break;
-		}
-
-		if (fEnd) {
-			return true;
-		}else{
-			pPath = p;
-		}
+	if (p == NULL || p->pElement == NULL) {
+		return false;
+	}else{
+		return true;
 	}
-	return false;
 }
 
+template<typename tDataType,typename tAdressType>
+void Heap<tDataType,tAdressType>::erase(tAdressType ID) {
+	HeapElement* p = getElement(ID);
+	if (p == NULL || p->pElement == NULL) {throw 1;FCRuntimeException("Element doesn't exists");}
+	
+
+	if (_fPtr) {delete *(p->pElement);}
+	delete p->pElement;
+	p->pElement = NULL;
+}
 
 template<typename tDataType,typename tAdressType>
 void Heap<tDataType,tAdressType>::cleanupElements() {
@@ -339,6 +356,7 @@ void Heap<tDataType,tAdressType>::cleanupElements() {
 
 	do {
 		if (p->pElement != NULL) { 
+			if (_fPtr) {delete *(p->pElement);}
 			delete p->pElement;
 			p->pElement = NULL;
 			_iSize--;
@@ -353,6 +371,7 @@ void Heap<tDataType,tAdressType>::cleanupNodes() {
 	HeapElement* pNextE = NULL;
 	do{
 		if (pE->pElement != NULL) { 
+			if (_fPtr) {delete *(pE->pElement);}
 			delete pE->pElement;
 			pE->pElement = NULL;
 			_iSize--;
