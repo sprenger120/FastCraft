@@ -41,6 +41,8 @@ ItemSlot::ItemSlot(ItemInformationProvider* pIIP,ItemID id,char iStackSize) {
 		clear();
 		return;
 	}
+	_Item = id;
+	_iStackSize = iStackSize;
 
 	switch(pIIP->isBlock(id)) {
 	case true:
