@@ -46,5 +46,4 @@ void ServerThreadBase::killThread() {
 		Poco::Thread::sleep(50);
 	}
 	_iThreadStatus = FC_THREADSTATUS_DEAD;
-	std::cout<<"Thread: "<<_sName<<" exited\n";
 }
