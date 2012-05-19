@@ -53,7 +53,8 @@ PlayerThread::PlayerThread(PackingThread& rPackingThread,MinecraftServer* pServe
 	_ChunkProvider(_NetworkOutRoot,rPackingThread,this,pServer),
 	_Inventory(_NetworkOutRoot,_NetworkInRoot,pServer->getItemInfoProvider()),
 	
-	_timeJobServer(this)
+	_timeJobServer(this),
+	_heapSpawnedEntities(false) /* This are  pointers, but the memory will be freed elsewhere */
 {
 	_iEntityID = FC_UNKNOWNEID;
 	_iHealth = 0;
@@ -126,11 +127,6 @@ void PlayerThread::run() {
 
 
 		try {
-			/*if (!_fSpawned && _iThreadTicks >= FC_MAXLOGINTIME) {
-				Disconnect("Login timed out");
-				continue;
-			}*/
-
 			/*Interval_KeepAlive(); 
 			Interval_Time();
 			Interval_HandleMovement();
@@ -256,7 +252,6 @@ void PlayerThread::Disconnect(string sReason,bool fShow) {
 
 void PlayerThread::Disconnect(char iLeaveMode) {
 	if (!_fAssigned) { return; }
-
 	if (isSpawned() || iLeaveMode == FC_LEAVE_KICK) {
 		_ChunkProvider.HandleDisconnect();
 		_Inventory.HandleDisconnect();
@@ -301,28 +296,17 @@ void PlayerThread::Connect(Poco::Net::StreamSocket& Sock) {
 		cout<<"***INTERNAL SERVER WARNING: PlayerPool tryed to assign an already assigned player thread"<<"\n";
 		Disconnect(FC_LEAVE_OTHER);
 	}
-	_fAssigned=true;
+	_fAssigned = true;
 
 	_Connection = Sock; 
 	_Connection.setLinger(true,5);
-	_Connection.setNoDelay(false);
+	_Connection.setNoDelay(true);
 	_Connection.setBlocking(true);
+	_Connection.setReceiveTimeout(Poco::Timespan(0,0,0,10,0));
+	_Connection.setSendTimeout(Poco::Timespan(0,0,0,10,0));
 
 	_Inventory.clear();
 	_sIP.assign(_Connection.peerAddress().toString());
-
-
-	/*_timespanSendTime.reset();
-	_timespanSendKeepAlive.reset();
-	_timespanHandleMovement.reset();
-	_timespanMovementSent.reset();
-	_timespanSpeedCalculation.reset();
-	_timespanPositionCheck.reset();
-
-	_timerLastBlockPlace.reset();
-	_timerStartedEating.reset();
-	_timerStartedDigging.reset();
-	*/
 }
 
 string PlayerThread::generateConnectionHash() {
@@ -525,9 +509,9 @@ void PlayerThread::Packet1_Login() {
 		}
 
 		/* set spawn Coordinates */
-		_Coordinates.X = 50.0;
-		_Coordinates.Y = 100.0;
-		_Coordinates.Z = 50.0;
+		_Coordinates.X = 0.0;
+		_Coordinates.Y = 65.0;
+		_Coordinates.Z = 0.0;
 		_Coordinates.Stance = 0.0;
 		_Coordinates.OnGround = false;
 		_Coordinates.Pitch = 0.0F;
@@ -594,11 +578,14 @@ void PlayerThread::Packet1_Login() {
 		
 
 		/* send active player list */
-		vector<PlayerThread*>& rvPlayers = _pMinecraftServer->getPlayerPool()->ListPlayers(59);
+		vector<PlayerThread*>& rvPlayers = _pMinecraftServer->getPlayerPool()->ListPlayers();
 		if (!rvPlayers.empty()) {
+			short iSpawnedPlayers=0;
 			for (short x = 0;x<= rvPlayers.size()-1;x++) {
 				if (!rvPlayers[x]->isSpawned()) {continue;}
 				PlayerInfoList(true,rvPlayers[x]->getUsername());
+				iSpawnedPlayers++;
+				if(iSpawnedPlayers == 59) {break;}
 			}
 		}
 
@@ -612,6 +599,7 @@ void PlayerThread::Packet1_Login() {
 void PlayerThread::Packet2_Handshake() {
 	try {
 		_sName = _NetworkInRoot.readString();
+		cout<<_sName<<"\n";
 	} catch(FCRuntimeException) {
 		Disconnect(FC_LEAVE_OTHER);
 	}
@@ -866,175 +854,31 @@ void PlayerThread::Interval_Movement() {
 }
 
 void PlayerThread::spawnEntity(Entity* pEntity) {
-	//if (isEntitySpawned(ID)) {
-	//	throw FCRuntimeException("Already spawned!");
-	//}
-	//if (ID == _iEntityID) {
-	//	throw FCRuntimeException("Own EntityID can't be spawned!");
-	//}
+	if (pEntity == NULL)  {throw FCRuntimeException("Nullpointer");}
 
-	//EntityListEntry Entry;
+	NetworkOut out(&_NetworkOutRoot);
+	pEntity->spawn(out);
 
-	//Entry.EntityID = ID;
-	//Entry.Type = FC_ENTITY_PLAYER;
-	//Entry.oldPosition = rPlayer._Coordinates;
-
-	//_vSpawnedEntities.push_back(Entry);
-
-	//NetworkOut Out(&_NetworkOutRoot);
-	////Spawn player
-	//Out.addByte(0x14);
-	//Out.addInt(ID);
-	//Out.addString(rPlayer._sName);
-
-	//Out.addInt( (int) (rPlayer._Coordinates.X * 32.0));
-	//Out.addInt( (int) (rPlayer._Coordinates.Y * 32.0));
-	//Out.addInt( (int) (rPlayer._Coordinates.Z * 32.0));
-
-	//Out.addByte( (char) rPlayer._Coordinates.Yaw);  //!++ Hier ist ein Fehler
-	//Out.addByte( (char) rPlayer._Coordinates.Pitch);
-
-	//Out.addShort(rPlayer._aHeldItems[0].getItem().first);
-
-	//Out.Finalize(FC_QUEUE_HIGH);
-
-	////Spawn his equipment
-	//for (int x=0;x<=4;x++) {
-	//	Out.addByte(0x05);
-	//	Out.addInt(ID);
-	//	Out.addShort(x);
-	//	if (rPlayer._aHeldItems[x].getItem().first == 0) {
-	//		Out.addShort(-1);
-	//	}else{
-	//		Out.addShort(rPlayer._aHeldItems[x].getItem().first);
-	//	}
-	//	Out.addShort(rPlayer._aHeldItems[x].getItem().second); //Damage/Metadata
-	//	Out.Finalize(FC_QUEUE_HIGH);
-	//}
+	_heapSpawnedEntities.add(pEntity->getEntityID(),pEntity);
 }
 
 bool PlayerThread::isEntitySpawned(int ID) {
-	//if (!_vSpawnedEntities.empty()) {
-	//	for ( int x= 0;x<=_vSpawnedEntities.size()-1;x++) {
-	//		if (_vSpawnedEntities[x].EntityID == ID){
-	//			return true;
-	//		}
-	//	}
-	//}
-	return false;
+	return _heapSpawnedEntities.has(ID);
 }
 
 void PlayerThread::updateEntityPosition(Entity* pEntity) {
-	//int id = -1;
-
-	////search element
-	//if (!_vSpawnedEntities.empty()) {
-	//	for (int x=0;x<=_vSpawnedEntities.size()-1;x++){
-	//		if (_vSpawnedEntities[x].EntityID == ID){
-	//			id = x;
-	//		}
-	//	}
-	//}else{
-	//	throw FCRuntimeException("Not spawned");
-	//}
-	//if(id==-1) {
-	//	throw FCRuntimeException("Not spawned");
-	//}
-
-
-	//if (_vSpawnedEntities[id].oldPosition == Coordinates) {
-	//	return; //Coordinates are equal -> no update
-	//}
-
-	//NetworkOut Out(&_NetworkOutRoot);
-	//EntityCoordinates& roldPosition = _vSpawnedEntities[id].oldPosition;
-	//
-	//double dX =  Coordinates.X - roldPosition.X;
-	//double dY =  Coordinates.Y - roldPosition.Y;
-	//double dZ =  Coordinates.Z - roldPosition.Z;
-
-	////cout<<"dX:"<<dX<<" dY:"<<dY<<" dZ:"<<dZ<<"\n";
-
-	//if(_vSpawnedEntities[id].oldPosition.LookEqual(Coordinates)) {	//Player just moved around and doesn't change camera 
-	//	if (fabs(dX) <= 4.0 && fabs(dY) <= 4.0 && fabs(dZ) <= 4.0 ) {//Movement under 4 blocks
-	//		//relative move
-	//		Out.addByte(0x1F);
-	//		Out.addInt(ID);
-	//		Out.addByte(   (char) (dX*32.0) );
-	//		Out.addByte(   (char) (dY*32.0) );
-	//		Out.addByte(   (char) (dZ*32.0) );
-	//		Out.Finalize(FC_QUEUE_HIGH);
-	//		_vSpawnedEntities[id].oldPosition = Coordinates;
-	//		return;
-	//	}else {
-	//		//Full update
-	//	}
-	//}else{ //player moved camera
-	//	if (_vSpawnedEntities[id].oldPosition.CoordinatesEqual(Coordinates)) { //Just moved camera
-	//		Out.addByte(0x20);
-	//		Out.addInt(ID);
-	//		Out.addByte( (char) ((Coordinates.Yaw * 256.0F) / 360.0F) );
-	//		Out.addByte( (char) ((Coordinates.Pitch * 256.0F) / 360.0F) );
-	//		Out.Finalize(FC_QUEUE_HIGH);
-	//		_vSpawnedEntities[id].oldPosition = Coordinates;
-	//		return;
-	//	}
-	//	if (fabs(dX) <= 4.0 && fabs(dY) <= 4.0 && fabs(dZ) <= 4.0 ) {//Movement under 4 blocks
-	//		//relative move + camera
-	//		Out.addByte(0x21);
-	//		Out.addInt(ID);
-	//		Out.addByte((char) (dX*32.0) );
-	//		Out.addByte((char) (dY*32.0) );
-	//		Out.addByte((char) (dZ*32.0) );
-	//		Out.addByte((char) ((Coordinates.Yaw * 256.0F) / 360.0F) );
-	//		Out.addByte((char) ((Coordinates.Pitch * 256.0F) / 360.0F) );
-	//		Out.Finalize(FC_QUEUE_HIGH);
-	//		_vSpawnedEntities[id].oldPosition = Coordinates;
-	//		return;
-	//	}else {
-	//		//Full update
-	//	}
-	//}
-
-	//Out.addByte(0x22);
-
-	//Out.addInt(ID);
-
-	//Out.addInt( (int) (Coordinates.X * 32.0));
-	//Out.addInt( (int) (Coordinates.Y * 32.0));
-	//Out.addInt( (int) (Coordinates.Z * 32.0));
-
-	//Out.addByte( (char) ((Coordinates.Yaw * 256.0F) / 360.0F) );
-	//Out.addByte( (char) ((Coordinates.Pitch * 256.0F) / 360.0F) );
-
-	//Out.Finalize(FC_QUEUE_HIGH);
-
-	//_vSpawnedEntities[id].oldPosition = Coordinates;
+	
 }
 
 void PlayerThread::despawnEntity(int ID) {
-	//int id = -1;
+	if (!_heapSpawnedEntities.has(ID)) {throw FCRuntimeException("Entity not spawned");}
 
-	////search element
-	//if (!_vSpawnedEntities.empty()) {
-	//	for (int x=0;x<=_vSpawnedEntities.size()-1;x++){
-	//		if (_vSpawnedEntities[x].EntityID == ID){
-	//			id = x;
-	//		}
-	//	}
-	//}else{
-	//	throw FCRuntimeException("Not spawned");
-	//}
-	//if(id==-1) {
-	//	throw FCRuntimeException("Not spawned");
-	//}
+	_heapSpawnedEntities.erase(ID);
 
-	//_vSpawnedEntities.erase(_vSpawnedEntities.begin()+id);
-
-	//NetworkOut Out(&_NetworkOutRoot);
-	//Out.addByte(0x1D);
-	//Out.addInt(ID);
-	//Out.Finalize(FC_QUEUE_HIGH);
+	NetworkOut Out(&_NetworkOutRoot);
+	Out.addByte(0x1D);
+	Out.addInt(ID);
+	Out.Finalize(FC_QUEUE_HIGH);
 }
 
 int PlayerThread::getEntityID() {
@@ -1560,7 +1404,7 @@ void PlayerThread::sendKeepAlive() {
 }
 
 void PlayerThread::updatePing() {
-    _iPlayerPing = _timer_Ping.elapsed()/1000; 
+    _iPlayerPing = short(_timer_Ping.elapsed()/1000);
     _timer_Ping.reset();
     _timer_Ping.start();
 }
