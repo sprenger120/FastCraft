@@ -128,3 +128,7 @@ void Entity::syncCoordinates(NetworkOut& rOut,EntityCoordinates& lastCoordinates
 
 	rOut.Finalize(FC_QUEUE_HIGH);
 }
+
+char Entity::getBaseType() {
+	return Constants::get("/Entity/BaseType/Entity");
+}

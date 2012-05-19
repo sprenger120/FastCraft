@@ -111,5 +111,12 @@ public:
 	* Sends spawn packet to given client
 	*/
 	virtual void spawn(NetworkOut&);
+
+
+	/* 
+	* Returns entitys base type
+	* Values are taken from /Entity/BaseType/...
+	*/
+	virtual char getBaseType();
 };
 #endif
