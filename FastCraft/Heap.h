@@ -43,7 +43,6 @@ class Heap {
 	tAdressType* _pEndBitsMaskArray;
 
 	Poco::Mutex _Mutex;
-	bool _fPtr;
 public:
 	class HeapIterator {
 		HeapElement* _pBegin;
@@ -94,11 +93,9 @@ public:
 
 	/*
 	* Constructor
-	
-	Parameter:
-	@1 : Set this to true if you are storing pointers 
+	* This heap can only store pointers!
 	*/
-	Heap(bool);
+	Heap();
 
 
 	/*
@@ -186,12 +183,11 @@ private:
  * Heap
  */
 template<typename tDataType,typename  tAdressType>
-Heap<tDataType,tAdressType>::Heap(bool fPtr) {
+Heap<tDataType,tAdressType>::Heap() {
 	/* Init variables */
 	_iSize = 0;
 	_iNodeCount = 1;
 	_pLastAddedEntry = _Root = new HeapElement;
-	_fPtr = fPtr;
 
 
 	/* building bit tables */
@@ -345,9 +341,10 @@ void Heap<tDataType,tAdressType>::erase(tAdressType ID) {
 	if (p == NULL || p->pElement == NULL) {throw 1;FCRuntimeException("Element doesn't exists");}
 	
 
-	if (_fPtr) {delete *(p->pElement);}
+	delete *(p->pElement);
 	delete p->pElement;
 	p->pElement = NULL;
+	_iSize--;
 }
 
 template<typename tDataType,typename tAdressType>
@@ -356,7 +353,7 @@ void Heap<tDataType,tAdressType>::cleanupElements() {
 
 	do {
 		if (p->pElement != NULL) { 
-			if (_fPtr) {delete *(p->pElement);}
+			delete *(p->pElement);
 			delete p->pElement;
 			p->pElement = NULL;
 			_iSize--;
@@ -371,7 +368,7 @@ void Heap<tDataType,tAdressType>::cleanupNodes() {
 	HeapElement* pNextE = NULL;
 	do{
 		if (pE->pElement != NULL) { 
-			if (_fPtr) {delete *(pE->pElement);}
+			delete *(pE->pElement);
 			delete pE->pElement;
 			pE->pElement = NULL;
 			_iSize--;
