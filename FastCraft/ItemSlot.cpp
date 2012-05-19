@@ -49,7 +49,7 @@ ItemSlot::ItemSlot(ItemInformationProvider* pIIP,ItemID id,char iStackSize) {
 
 		switch(pIIP->isBlock(id)) {
 		case true:
-			_pItemCache_Block =  &pIIP->getBlock(id);
+			_pItemCache_Block = pIIP->getBlock(id);
 			_pItemCache_Item = NULL;
 
 			if (_iStackSize < 0) { _iStackSize = 0; }
@@ -57,7 +57,7 @@ ItemSlot::ItemSlot(ItemInformationProvider* pIIP,ItemID id,char iStackSize) {
 			break;
 		case false:
 			_pItemCache_Block = NULL;
-			_pItemCache_Item = &pIIP->getItem(id);
+			_pItemCache_Item = pIIP->getItem(id);
 
 			if (_iStackSize < 0) { _iStackSize = 0; }
 			if (_iStackSize > _pItemCache_Item->MaxStackSize) {_iStackSize = _pItemCache_Item->MaxStackSize;}
@@ -79,11 +79,11 @@ void ItemSlot::setItem(ItemID id) {
 		switch(_pItemInfoProvider->isBlock(id)) {
 		case true:
 			_pItemCache_Item = NULL;
-			_pItemCache_Block = &_pItemInfoProvider->getBlock(id);
+			_pItemCache_Block = _pItemInfoProvider->getBlock(id);
 			break;
 		case false:
 			_pItemCache_Block = NULL;
-			_pItemCache_Item = &_pItemInfoProvider->getItem(id);
+			_pItemCache_Item = _pItemInfoProvider->getItem(id);
 			break;
 		}
 		_Item = id;
@@ -210,7 +210,7 @@ void ItemSlot::readFromNetwork(NetworkIn& rNetwork) {
 
 				//Rewrite Item/BlockEntry cache
 				_pItemCache_Item = NULL;
-				_pItemCache_Block = &_pItemInfoProvider->getBlock(_Item);
+				_pItemCache_Block = _pItemInfoProvider->getBlock(_Item);
 
 				//Check stack size
 				if (_iStackSize < 0) {_iStackSize = 0;}
@@ -224,7 +224,7 @@ void ItemSlot::readFromNetwork(NetworkIn& rNetwork) {
 						throw FCRuntimeException("ItemID not registered");
 					}
 
-					ItemEntry* pItem = &_pItemInfoProvider->getItem(iItemID);
+					ItemEntry* pItem = _pItemInfoProvider->getItem(iItemID);
 					if (pItem->Damageable) {
 						if(pItem->Enchantable) {
 							short iEnchPayload = rNetwork.readShort();
@@ -249,7 +249,7 @@ void ItemSlot::readFromNetwork(NetworkIn& rNetwork) {
 
 						//Rewrite item cache
 						_pItemCache_Block = NULL;
-						_pItemCache_Item = &_pItemInfoProvider->getItem(_Item);
+						_pItemCache_Item = _pItemInfoProvider->getItem(_Item);
 					}
 				}
 			}
