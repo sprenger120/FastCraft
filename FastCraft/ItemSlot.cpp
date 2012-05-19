@@ -36,28 +36,32 @@ ItemSlot::ItemSlot(ItemInformationProvider* pIIP,ItemID id,char iStackSize) {
 	_iStackSize = iStackSize;
 	_iUsage = 0;
 
-	if (!pIIP->isRegistered(id)) {
-		std::cout<<"ItemSlot::ItemSlot Unregistered item "<<id.first<<":"<<(short(id.second) & 0xff)<<"\n";
+	if (id.first == -1 && id.second == -1) {
 		clear();
-		return;
-	}
-	_Item = id;
-	_iStackSize = iStackSize;
+	}else{
+		if (!pIIP->isRegistered(id)) {
+			std::cout<<"ItemSlot::ItemSlot Unregistered item "<<id.first<<":"<<(short(id.second) & 0xff)<<"\n";
+			clear();
+			return;
+		}
+		_Item = id;
+		_iStackSize = iStackSize;
 
-	switch(pIIP->isBlock(id)) {
-	case true:
-		_pItemCache_Block =  &pIIP->getBlock(id);
-		_pItemCache_Item = NULL;
-		
-		if (_iStackSize < 0) { _iStackSize = 0; }
-		if (_iStackSize > _pItemCache_Block->MaxStackSize) {_iStackSize = _pItemCache_Block->MaxStackSize;}
-		break;
-	case false:
-		_pItemCache_Block = NULL;
-		_pItemCache_Item = &pIIP->getItem(id);
+		switch(pIIP->isBlock(id)) {
+		case true:
+			_pItemCache_Block =  &pIIP->getBlock(id);
+			_pItemCache_Item = NULL;
 
-		if (_iStackSize < 0) { _iStackSize = 0; }
-		if (_iStackSize > _pItemCache_Item->MaxStackSize) {_iStackSize = _pItemCache_Item->MaxStackSize;}
+			if (_iStackSize < 0) { _iStackSize = 0; }
+			if (_iStackSize > _pItemCache_Block->MaxStackSize) {_iStackSize = _pItemCache_Block->MaxStackSize;}
+			break;
+		case false:
+			_pItemCache_Block = NULL;
+			_pItemCache_Item = &pIIP->getItem(id);
+
+			if (_iStackSize < 0) { _iStackSize = 0; }
+			if (_iStackSize > _pItemCache_Item->MaxStackSize) {_iStackSize = _pItemCache_Item->MaxStackSize;}
+		}
 	}
 }
 
@@ -279,7 +283,7 @@ void ItemSlot::writeToNetwork(NetworkOut& Out) {
 	}else{
 		Out.addShort(_Item.first);
 		Out.addByte(_iStackSize);
-		
+
 		if (_pItemCache_Item != NULL && _pItemCache_Item->Damageable) {
 			Out.addShort(_iUsage);
 			Out.addShort(-1);
