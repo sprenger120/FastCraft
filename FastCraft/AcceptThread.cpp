@@ -142,8 +142,8 @@ void AcceptThread::run() {
 					if (actual < lowest) {lowest = actual;}
 				}
 
-				/* More than three connections in a timespan of 10 seconds -> ban IP */
-				if (iCount > 3 && lowest <= 10000) {
+				/* More than four connections in a timespan of 10 seconds -> ban IP */
+				if (iCount > 4 && lowest <= 10000) {
 					StrmSock.close();
 					vBannedIPs.push_back(std::make_pair<string,Poco::Timestamp::TimeDiff>(sNewConnectionIP,Timer.elapsed()/1000));
 
