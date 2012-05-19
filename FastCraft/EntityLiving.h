@@ -153,5 +153,19 @@ public:
 	* Entity Flags
 	*/
 	EntityFlags Flags;
+
+
+	/*
+	* Returns type of EntityLiving instance 
+	* Values are taken from /Entity/Alive/TypeID/...
+	*/
+	char getType();
+
+
+	/* 
+	* Returns entitys base type
+	* Values are taken from /Entity/BaseType/...
+	*/
+	char getBaseType();
 };
 #endif

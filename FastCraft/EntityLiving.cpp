@@ -161,3 +161,12 @@ ItemID EntityLiving::getEquipment(char index) {
 	if (index < 0 || index > 4) {throw FCRuntimeException("Illegal index");}
 	return (_vpHeld[index] == NULL ? FC_EMPTYITEMID : _vpHeld[index]->getItem());
 }
+
+
+char EntityLiving::getBaseType() {
+	return Constants::get("/Entity/BaseType/Living");
+}
+
+char EntityLiving::getType(){
+	return _iType;
+}
