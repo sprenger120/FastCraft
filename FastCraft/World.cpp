@@ -144,7 +144,7 @@ char World::getFreeSpace(int X,int Z) {
 
 	//Get height
 	for (y=FC_WORLDHEIGHT-1;y>0;y--) { //For from 128 -> 1
-		if (_pMinecraftServer->getItemInfoProvider()->getBlock(pChunk->Blocks[iOffset+y]).Solid) {
+		if (_pMinecraftServer->getItemInfoProvider()->getBlock(pChunk->Blocks[iOffset+y])->Solid) {
 			return y+1;
 		}
 	}
@@ -176,7 +176,7 @@ bool World::isSuffocating(EntityCoordinates Coords) {
 		ChunkMath::toChunkInternal((int)floor(Coords.Z))
 		);
 
-	return _pMinecraftServer->getItemInfoProvider()->getBlock((short)pChunk->Blocks[iOffset]).Solid;
+	return _pMinecraftServer->getItemInfoProvider()->getBlock((short)pChunk->Blocks[iOffset])->Solid;
 }
 
 void World::setBlock(int X,short Y,int Z,ItemID Block) {
