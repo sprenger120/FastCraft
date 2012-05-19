@@ -53,8 +53,7 @@ PlayerThread::PlayerThread(PackingThread& rPackingThread,MinecraftServer* pServe
 	_ChunkProvider(_NetworkOutRoot,rPackingThread,this,pServer),
 	_Inventory(_NetworkOutRoot,_NetworkInRoot,pServer->getItemInfoProvider()),
 	
-	_timeJobServer(this),
-	_heapSpawnedEntities(false) /* This are  pointers, but the memory will be freed elsewhere */
+	_timeJobServer(this)
 {
 	_iEntityID = FC_UNKNOWNEID;
 	_iHealth = 0;
@@ -88,6 +87,7 @@ PlayerThread::PlayerThread(PackingThread& rPackingThread,MinecraftServer* pServe
 
 
 PlayerThread::~PlayerThread() {
+	cout<<"destruct!\n";
 	Disconnect("Server shutdown",false);
 	killThread();
 }
@@ -854,12 +854,32 @@ void PlayerThread::Interval_Movement() {
 }
 
 void PlayerThread::spawnEntity(Entity* pEntity) {
+	if (!isSpawned()) {throw FCRuntimeException("Not spawned!");}
 	if (pEntity == NULL)  {throw FCRuntimeException("Nullpointer");}
 
 	NetworkOut out(&_NetworkOutRoot);
 	pEntity->spawn(out);
 
-	_heapSpawnedEntities.add(pEntity->getEntityID(),pEntity);
+	EntityListEntry* Entry = new EntityListEntry;
+
+	Entry->EntityID = pEntity->getEntityID();
+	Entry->Position = pEntity->Coordinates;
+	Entry->vEquip.resize(5);
+
+	if (pEntity->isAlive()) {
+		EntityLiving* pLiving = (EntityLiving*)pEntity;
+
+		Entry->Type = pLiving->getType();
+		Entry->Alive = true;
+		for (char x=0;x<=4;x++) {
+			Entry->vEquip[x] = new ItemSlot(_pMinecraftServer->getItemInfoProvider(),pLiving->getEquipment(x),1);
+		}
+	}else{
+		Entry->Alive = false;
+		for (char x=0;x<=4;x++) {Entry->vEquip[x] = NULL;}
+	}
+
+	_heapSpawnedEntities.add(pEntity->getEntityID(),Entry);
 }
 
 bool PlayerThread::isEntitySpawned(int ID) {
@@ -867,10 +887,20 @@ bool PlayerThread::isEntitySpawned(int ID) {
 }
 
 void PlayerThread::updateEntityPosition(Entity* pEntity) {
+	if (!isSpawned()) {throw FCRuntimeException("Not spawned!");}
+	if (pEntity == NULL)  {throw FCRuntimeException("Nullpointer");}
 	
+	EntityListEntry** ptr;
+	if ((ptr = _heapSpawnedEntities.get(pEntity->getEntityID())) == NULL) {throw FCRuntimeException("Not spawned!");}
+
+	NetworkOut Out(&_NetworkOutRoot);
+	pEntity->syncCoordinates(Out,(*ptr)->Position);
+
+	(*ptr)->Position = pEntity->Coordinates;
 }
 
 void PlayerThread::despawnEntity(int ID) {
+	if (!isSpawned()) {throw FCRuntimeException("Not spawned!");}
 	if (!_heapSpawnedEntities.has(ID)) {throw FCRuntimeException("Entity not spawned");}
 
 	_heapSpawnedEntities.erase(ID);

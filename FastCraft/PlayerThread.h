@@ -40,6 +40,7 @@ GNU General Public License for more details.
 #include "TimeJobServer.h"
 #include "ServerThreadBase.h"
 #include "Heap.h"
+#include "EntityLiving.h"
 
 class World;
 class PackingThread;
@@ -52,9 +53,11 @@ using std::pair;
 
 struct EntityListEntry {
 	int EntityID;
-	char Type;
 	EntityCoordinates Position;
-	vector<ItemSlot*> vEquip; 
+
+	bool Alive;
+	char Type; /* TypeID of EntityLiving instances */
+	EquipmentArray vEquip; /* Equip of entity living instances */
 };
 
 class PlayerThread : public ServerThreadBase {
@@ -109,7 +112,7 @@ private:
 	PlayerInventory _Inventory;
 	MinecraftServer* _pMinecraftServer;
 	World* _pActualWorld;
-	Heap<EntityListEntry,int> _heapSpawnedEntities;
+	Heap<EntityListEntry*,int> _heapSpawnedEntities;
 
     /* Time Management */
 	TimeJobServer<PlayerThread> _timeJobServer;
@@ -228,8 +231,8 @@ public:
 	
 	/*
 	* Updates entitys position
-	* Will throw Poco::RuntimeException if entity isn't spawned so far
-	* Throws Poco::RuntimeException if pointer is NULL
+	* Will throw FCRuntimeException if entity isn't spawned so far
+	* Throws FCRuntimeException if pointer is NULL
 
 	Parameter:
 	@1 : Valid pointer to an entity-derived class
