@@ -19,12 +19,16 @@ GNU General Public License for more details.
 #include "ServerThreadBase.h"
 #include <string>
 #include <Poco/Thread.h>
+#include <Poco/Stopwatch.h>
+#include <vector>
 
 //Forward definitions
 class PlayerPool;
 class MinecraftServer;
 
+using std::vector;
 using std::string;
+using Poco::Timestamp;
 
 class AcceptThread : public ServerThreadBase {
 private:
@@ -51,6 +55,9 @@ public:
 	/*
 	* Thread main
 	*/
-	virtual void run(); //Thread Main
+	virtual void run(); 
+private:
+	void cutOffPort(string,string&);
+	int search(vector<std::pair<string,std::pair<Timestamp::TimeDiff,Timestamp::TimeDiff>>>&,string);
 };
 #endif
