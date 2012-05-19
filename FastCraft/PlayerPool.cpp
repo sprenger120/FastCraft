@@ -130,7 +130,7 @@ void PlayerPool::sendMessageToAll(string str) {
 	}
 }
 
-vector<PlayerThread*>&  PlayerPool::ListPlayers(int iMax) {
+vector<PlayerThread*>&  PlayerPool::ListPlayers() {
 	return _vPlayerThreads;
 }
 

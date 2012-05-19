@@ -94,13 +94,9 @@ public:
 
 
 	/*
-	* List all connected players
-	* Returns a string vector
-
-	Parameter:
-	@1 : Maxiaml size of vector
+	* Returns a reference to the internal playerThread vector
 	*/
-	vector<PlayerThread*>& ListPlayers(int);
+	vector<PlayerThread*>& ListPlayers();
 
 
 	/*
@@ -119,7 +115,6 @@ public:
 	* Sends a message to all connected and spawned players
 	*/
 	void sendMessageToAll(string);
-
 	bool willHurtOther(BlockCoordinates,PlayerThread*);
 
 
