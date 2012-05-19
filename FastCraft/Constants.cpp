@@ -82,6 +82,11 @@ void Constants::init() {
 	_Map["/Entity/Object/TypeID/DragonEgg"]			= 74;
 	_Map["/Entity/Object/TypeID/FishingFloat"]		= 90;
 
+	_Map["/Entity/BaseType/Entity"]					= 1;
+	_Map["/Entity/BaseType/Pickup"]					= 2;
+	_Map["/Entity/BaseType/Object"]					= 3;
+	_Map["/Entity/BaseType/Living"]					= 4;
+
 	_Map["/Color/White"]							= 0;
 	_Map["/Color/Orange"]							= 1;
 	_Map["/Color/Magenta"]							= 2;
