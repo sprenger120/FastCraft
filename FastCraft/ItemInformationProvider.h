@@ -147,8 +147,8 @@ public:
 	Parameter:
 	@1 : ItemID
 	*/
-	BlockEntry getBlock(ItemID);
-	BlockEntry getBlock(short);
+	BlockEntry* getBlock(ItemID);
+	BlockEntry* getBlock(short);
 
 
 	/*
@@ -159,8 +159,8 @@ public:
 	Parameter:
 	@1 : ItemID
 	*/
-	ItemEntry getItem(ItemID);
-	ItemEntry getItem(short);
+	ItemEntry* getItem(ItemID);
+	ItemEntry* getItem(short);
 
 
 	/*

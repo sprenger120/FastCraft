@@ -513,7 +513,7 @@ bool ItemInformationProvider::isBlock(short iID) {
 }
 
 
-BlockEntry ItemInformationProvider::getBlock(ItemID ID) {
+BlockEntry* ItemInformationProvider::getBlock(ItemID ID) {
 	if (_vBlocks.empty()) { throw FCRuntimeException("Not found!"); }
 	if (!isBlock(ID)) { throw FCRuntimeException("Not a block!"); }
 
@@ -522,10 +522,10 @@ BlockEntry ItemInformationProvider::getBlock(ItemID ID) {
 		throw FCRuntimeException("Not found!");
 	}
 
-	return _vBlocks[index];	
+	return &_vBlocks[index];	
 }
 
-BlockEntry ItemInformationProvider::getBlock(short iID) {
+BlockEntry* ItemInformationProvider::getBlock(short iID) {
 	if (_vBlocks.empty()) { throw FCRuntimeException("Not found!"); }
 	if (!isBlock(iID)) { throw FCRuntimeException("Not a block!"); }
 
@@ -534,10 +534,10 @@ BlockEntry ItemInformationProvider::getBlock(short iID) {
 		throw FCRuntimeException("Not found!");
 	}
 
-	return _vBlocks[index];	
+	return &_vBlocks[index];	
 }
 
-ItemEntry ItemInformationProvider::getItem(ItemID ID) {
+ItemEntry* ItemInformationProvider::getItem(ItemID ID) {
 	if (_vItems.empty()) { throw FCRuntimeException("Not found!"); }
 	if (isBlock(ID)) { throw FCRuntimeException("Not a item!"); }
 
@@ -546,10 +546,10 @@ ItemEntry ItemInformationProvider::getItem(ItemID ID) {
 		throw FCRuntimeException("Not found!");
 	}
 
-	return _vItems[index];	
+	return &_vItems[index];	
 }
 
-ItemEntry ItemInformationProvider::getItem(short iID) {
+ItemEntry* ItemInformationProvider::getItem(short iID) {
 	if (_vItems.empty()) { throw FCRuntimeException("Not found!"); }
 	if (isBlock(iID)) { throw FCRuntimeException("Not a item!"); }
 
@@ -558,7 +558,7 @@ ItemEntry ItemInformationProvider::getItem(short iID) {
 		throw FCRuntimeException("Not found!");
 	}
 
-	return _vItems[index];	
+	return &_vItems[index];	
 }
 
 int ItemInformationProvider::getItemsInCache() {
