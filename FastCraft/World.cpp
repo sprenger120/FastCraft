@@ -30,8 +30,7 @@ using std::cout;
 
 World::World(string Name,char iDimension,MinecraftServer* pServer) :
 _WorldName(Name),
-	_iDimension(iDimension),
-	_heapChunks(true)
+	_iDimension(iDimension)
 {
 	_pMinecraftServer = pServer;
 	generateChunks(-10,-10,10,10);
