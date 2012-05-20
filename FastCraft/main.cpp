@@ -24,9 +24,19 @@ GNU General Public License for more details.
 #include "Constants.h"
 #include "MinecraftServer.h"
 
+//#include "EntityPlayer.h"
+//#include "PlayerPool.h"
+//#include "PlayerThread.h"
+//#include "EntityPickup.h"
+
+
+
 #if defined(_WIN32)
     #include <Windows.h>
     #include <DbgHelp.h>
+	#include "NetworkOutRoot.h"
+	#include "NetworkIn.h"
+#include <sstream>
 #endif
 
 
@@ -132,9 +142,35 @@ int main(int argc, char *argv[]) {
 
 	cout<<std::endl<<"\n--- Done ---\n";
 
+	//Thread::sleep(5000);
+
+	////EntityLiving e(Constants::get("/Entity/Alive/TypeID/ZombiePigman"),vpServer[0],vpServer[0]->getWorldByName("world"));
+	////EntityPlayer e(vpServer[0],vpServer[0]->getWorldByName("world"),"testy");
+	//EntityPickup e(vpServer[0],vpServer[0]->getWorldByName("world"),std::make_pair<short,char>(35,15));
+	//e.Coordinates.X = 0;
+	//e.Coordinates.Z = 0;
+	//e.Coordinates.Y = 61;
+	//
+	//for (x=0;x<=5;x++) {
+	//	for (int z=0;z<=5;z++){
+	//		EntityPickup e(vpServer[0],vpServer[0]->getWorldByName("world"),std::make_pair<short,char>(1,0));
+	//		e.Coordinates.X = double(x);
+	//		e.Coordinates.Z = double(z);
+	//		e.Coordinates.Y = 61;
+	//		vpServer[0]->getPlayerPool()->getPlayerByName("Godofcode120",NULL)->spawnEntity(&e);
+	//	}
+	//}
+
 
 	bool fSomethingRuns = false;	
 	while(1) {
+		#if defined(_WIN32)
+			std::wstringstream wSS;
+			wSS<<"FastCraft    Traffic I/O:"<<   double(NetworkIn::getReadTraffic() + NetworkOutRoot::getWriteTraffic()) / double(1024 * 1024)<<" MB";
+			SetConsoleTitle(wSS.str().c_str());
+		#endif
+
+
 		Thread::sleep(100);
 
 		//Check if there is at least one server that runs
