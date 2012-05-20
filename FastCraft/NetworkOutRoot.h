@@ -71,5 +71,11 @@ public:
 	@2 : Reference to string that have to pushed to queue
 	*/
 	void Add(char,string&);
+
+
+	/*
+	* Returns write traffic in bytes 
+	*/
+	static unsigned long long getWriteTraffic();
 };
 #endif

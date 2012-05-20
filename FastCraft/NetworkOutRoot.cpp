@@ -56,3 +56,7 @@ void NetworkOutRoot::Add(char iType,string& rData) {
 		throw FCRuntimeException("Unknown queue type");
 	}
 }
+
+unsigned long long NetworkOutRoot::getWriteTraffic(){
+	return _iWriteTraffic;
+}
