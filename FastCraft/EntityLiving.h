@@ -45,7 +45,7 @@ public:
 	* Throws Poco::RuntimeException if typeID is invalid
 	
 	Parameter:
-	@1 : Type of entity (/Entity/Alive/TypeID/)
+	@1 : type of entity (/Entity/Alive/TypeID/)
 	@2 : a valid MinecraftServer instance
 	@3 : pointer to a World class that the entity is in
 	*/
@@ -90,8 +90,15 @@ public:
 
 	/*
 	* Adds the mob specific metadata to NetworkOut buffer
+	* Only adds the raw metadata without the EntityMetadata packet
 	*/
 	virtual void appendMetadata(NetworkOut&);
+
+
+	/*
+	* Sends a metadata update packet
+	*/
+	void sendMetadata(NetworkOut&);
 
 
 	/*

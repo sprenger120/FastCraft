@@ -75,6 +75,13 @@ void EntityLiving::appendMetadata(NetworkOut& rOut) {
 	rOut.addByte(127);
 }
 
+void EntityLiving::sendMetadata(NetworkOut& rOut) { 
+	rOut.addByte(0x28);
+	rOut.addInt(_iEntityID);
+	appendMetadata(rOut);
+	rOut.Finalize(FC_QUEUE_HIGH);
+}
+
 short EntityLiving::getHealth() {
 	return _iHealth;
 } 
@@ -106,6 +113,9 @@ void EntityLiving::updateEquipment(NetworkOut& rOut,EquipmentArray& rOldEquip) {
 	for (char x=0;x<=4;x++) {
 		if (_vpHeld[x] == NULL && rOldEquip[x] == NULL) {continue;}
 		if (_vpHeld[x] == NULL && rOldEquip[x] != NULL) {
+			delete rOldEquip[x];
+			rOldEquip[x] = NULL;
+
 			rOut.addByte(0x5);
 			rOut.addInt(_iEntityID);
 			rOut.addShort(x);
@@ -114,8 +124,15 @@ void EntityLiving::updateEquipment(NetworkOut& rOut,EquipmentArray& rOldEquip) {
 			rOut.Finalize(FC_QUEUE_HIGH);
 			continue;
 		}
+		 
 
-		if ( (_vpHeld[x] != NULL && rOldEquip[x] == NULL) || (_vpHeld[x]->getItem().first != rOldEquip[x]->getItem().first)) {
+		if (_vpHeld[x] != NULL && rOldEquip[x] == NULL) {rOldEquip[x] = new ItemSlot(*_vpHeld[x]);}
+
+
+		if (_vpHeld[x]->getItem().first != rOldEquip[x]->getItem().first || 
+			_vpHeld[x]->getItem().second != rOldEquip[x]->getItem().second) {
+			rOldEquip[x]->setItem(_vpHeld[x]->getItem());
+
 			rOut.addByte(0x5);
 			rOut.addInt(_iEntityID);
 			rOut.addShort(x);
