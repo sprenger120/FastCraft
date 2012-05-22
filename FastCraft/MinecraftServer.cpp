@@ -172,8 +172,8 @@ void MinecraftServer::run() {
 
 
 	while(_iThreadStatus==FC_THREADSTATUS_RUNNING)  {
-		Poco::Thread::sleep(200);
-		_iInGameTime++;
+		Poco::Thread::sleep(1000);
+		_iInGameTime += 20;
 	}
 
 	_iThreadStatus = FC_THREADSTATUS_DEAD;
