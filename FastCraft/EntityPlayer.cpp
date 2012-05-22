@@ -20,6 +20,7 @@ GNU General Public License for more details.
 #include <bitset>
 #include <cmath>
 #include "FCRuntimeException.h"
+#include "PlayerThread.h"
 
 EntityPlayer::EntityPlayer(MinecraftServer* pServer,World* pWorld,string sName) try :
 EntityLiving		(Constants::get("/Entity/Alive/TypeID/Player"),pServer,pWorld),
@@ -27,9 +28,29 @@ _sName				("")
 {
 	if (sName.compare("") == 0) {throw FCRuntimeException("Illegal name");}
 	_sName.assign(sName);
+	_iHealth = 20;
 }catch(FCRuntimeException & ex) {
 	ex.rethrow();
 }
+
+EntityPlayer::EntityPlayer(PlayerThread* pPlayer) try :
+EntityLiving		(Constants::get("/Entity/Alive/TypeID/Player"),pPlayer->getMinecraftServer(),pPlayer->getWorld()),
+	_sName				(pPlayer->getUsername())
+{
+
+	Flags = pPlayer->getFlags();
+	Coordinates = pPlayer->getCoordinates();
+	_iHealth = 20;
+	_iEntityID = pPlayer->getEntityID();
+
+	setEquipment(0,pPlayer->getInventory().getSelectedSlot().getItem());
+	for (char x=1;x<=4;x++) {
+		setEquipment(x, pPlayer->getInventory().getSlot(4+x).getItem());
+	}
+}catch(FCRuntimeException & ex) {
+	ex.rethrow();
+}
+
 
 EntityPlayer::~EntityPlayer() {
 	for(int x=0;x<=4;x++) {
@@ -64,15 +85,13 @@ void EntityPlayer::spawn(NetworkOut& rOut) {
 	rOut.Finalize(FC_QUEUE_HIGH);
 
 	sendEquipment(rOut);
-	appendMetadata(rOut);
+	sendMetadata(rOut);
 }
 
 
 void EntityPlayer::appendMetadata(NetworkOut& rOut) {
 	//Flags
-	//            DataID      Data Type
-	rOut.addByte(0x28);
-	rOut.addInt(_iEntityID);
+	//            DataID      Data Type);
 	rOut.addByte((0&0x1f) | ((0<<5)&0xe0)); 
 	
 	std::bitset<5> bitFlags;
@@ -84,7 +103,6 @@ void EntityPlayer::appendMetadata(NetworkOut& rOut) {
 
 	rOut.addByte((unsigned char)bitFlags.to_ulong());
 	rOut.addByte(127);
-	rOut.Finalize(FC_QUEUE_HIGH);
 }
 
 short EntityPlayer::getMaxHealth() {

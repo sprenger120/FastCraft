@@ -22,6 +22,7 @@ GNU General Public License for more details.
 
 //Forward definitions
 class ItemSlot;
+class PlayerThread;
 
 using std::string;
 using std::vector;
@@ -38,9 +39,13 @@ public:
 	@1 : a valid MinecraftServer instance
 	@2 : pointer to a World class that the entity is in
 	@3 : Username
+
+	Parameter:
+	* Will take the EID of the player
+	@1 : a PlayerThread instance 
 	*/
 	EntityPlayer(MinecraftServer*,World*,string);
-					
+	EntityPlayer(PlayerThread*);			
 
 	/*
 	* Destructor
