@@ -32,7 +32,7 @@ _vItems(0),
 {
 	Poco::Data::Session DB("SQLite", rPath.toString());
 
-	int iItemCount = 0,iBlockCount=0,x=0,i=0,index=0,iCount=0;
+	int iItemCount = 0,iBlockCount=0,x=0,i=0,index=0,iCount=0,Speed=0,Spread=0;
 	bool fFound;
 	ItemEntry IEntry;
 	BlockEntry BEntry;
@@ -43,13 +43,16 @@ _vItems(0),
 
 	BEntry.Thickness		= 1.0F;
 	BEntry.Height			= 1.0F;
-	BEntry.Stackable		= true;                  /* You can place a block of same type above or under */
+	BEntry.Stackable		= true; /* You can place a block of same type above or under */
 	BEntry.CanFloat			= true;
 	BEntry.ConnectedItem	= FC_EMPTYITEMID; /* if this field is set to another value as -1, the given ITEM will pop off on breaking*/
 	BEntry.BlastResistance  = 1.0F;
 	BEntry.hasSubBlocks		= false;
 	BEntry.noLoot			= false;
 	BEntry.Placeable		= true;
+	BEntry.Fluid			= false;
+	BEntry.Spread			= 0;
+	BEntry.Speed			= 0;
 
 	IEntry.Eatable			= false;
 	IEntry.ConnectedBlock	= FC_EMPTYITEMID; /* if this field is set to another value as -1, the given BLOCK will placed*/
@@ -317,30 +320,59 @@ _vItems(0),
 	iCount=0;
 
 
+	//Fluid 
+	DB<<"SELECT count(`ID`) FROM `Fluid`",into(iCount),now;
+	if (iCount > 0) {
+		for (x=0;x<=iCount-1;x++) {
+			DB<<"SELECT ID,SubID,Spread,Speed FROM Fluid LIMIT :x,1;",
+				into(ID.first),
+				into(ID.second),
+				into(Spread),
+				into(Speed),
+				use(x),
+				now;
+
+			index = search(_vBlocks,ID);
+
+			if (index == -1) {
+				cout<<"\tBlock "<<ID.first<<":"<<int(ID.second)<<" not found!\n";
+			}else{
+				_vBlocks[index].Fluid = true;
+				_vBlocks[index].Spread = (char)Spread;
+				_vBlocks[index].Speed  = (char)Speed;
+			}
+		}
+	}
+	iCount=0;
+
 	cout<<"Postprocessing information...\n";
-	if (!_vBlocks.empty()) {
-		for (x = _vBlocks.size() -1; x > 0; x--) {
-			try {
+	bool fBlocksDone = false;
+	try {
+		if (!_vBlocks.empty()) {
+			for (x = _vBlocks.size() -1; x > 0; x--) {
 				isValid(_vBlocks[x]);
-			}catch(FCRuntimeException& ex) {
-				cout<<"Block #"<<int(_vBlocks[x].ID)<<":"<<int(_vBlocks[x].SubID)<<" is invalid ("<<ex.getMessage()<<")\n";
-				_vBlocks.erase (_vBlocks.begin() + x);
 			}
 		}
-	}
+		fBlocksDone=true;
 
-	if (!_vItems.empty()) {
-		for (x = _vItems.size() -1; x > 0; x--) {
-			try {
+		if (!_vItems.empty()) {
+			for (x = _vItems.size() -1; x > 0; x--) {
 				isValid(_vItems[x]);
-			}catch(FCRuntimeException& ex) {
-				cout<<"Item #"<<_vItems[x].ID<<":"<<int(_vItems[x].SubID)<<" is invalid ("<<ex.getMessage()<<")\n";
-				_vItems.erase (_vItems.begin() + x);
 			}
 		}
+	}catch(FCRuntimeException) {
+		if (!fBlocksDone) {
+			cout<<"Block #"<<int(_vBlocks[x].ID)<<":"<<int(_vBlocks[x].SubID)<<" is invalid\n";
+		}else{
+			cout<<"Item #"<<_vItems[x].ID<<":"<<int(_vItems[x].SubID)<<" is invalid\n";
+		}
+		cout<<"Clearing loaded blocks/items...\n";
+		_vBlocks.clear();
+		_vItems.clear();
+		return;
 	}
 
-
+	/* Setting the hasSubItems Flag */
 	bool fhasSub = false;
 	if (!_vItems.empty()) {
 		for (x = 0;x<=_vItems.size()-1;x++) {
@@ -379,7 +411,6 @@ _vItems(0),
 			}
 		}
 	}
-	/*cout<<"Done. (Loaded Entries:"<<ItemInformationProvider::getItemsInCache() + ItemInformationProvider::getBlocksInCache()<<")"<<"\n";*/
 	DB.close();
 }
 
@@ -658,9 +689,14 @@ void ItemInformationProvider::isValid(BlockEntry Entry) {
 		throw FCRuntimeException("Illegal height");
 	}
 
+	if (Entry.Fluid) {
+		if(Entry.Speed  < 0) { throw FCRuntimeException("Speed is below 0");}
+		if(Entry.Spread < 0) {throw FCRuntimeException("Spread is below 0");}
+	}
+
 	if (Entry.noLoot) {
 		if (Entry.ConnectedItem.first != 0) {
-			throw FCRuntimeException("noLoot flag set, connected item != 0");
+			throw FCRuntimeException("noLoot flag set, connected item not null 0");
 		}
 	}else{
 		if (Entry.ConnectedItem.first != -1 && Entry.ConnectedItem.second != -1) {

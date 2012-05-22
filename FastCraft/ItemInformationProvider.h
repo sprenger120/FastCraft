@@ -72,6 +72,10 @@ struct BlockEntry {
 	bool hasSubBlocks;
 	bool noLoot;
 
+	bool Fluid;
+	char Spread;
+	char Speed;
+
 	ItemID ConnectedItem;
 };
 
