@@ -52,9 +52,17 @@ GNU General Public License for more details.
 #define FC_LEAVE_QUIT					2
 #define FC_LEAVE_OTHER					3
 
+//vServer status constants
 #define FC_VSERVERERROR_OK				0
 #define FC_VSERVERERROR_INACTIVE		1
 #define FC_VSERVERERROR_ERROR			2
+
+//Entity actions
+#define FC_ENTITY_ACTION_CROUCH			1
+#define FC_ENTITY_ACTION_UNCROUCH		2
+#define FC_ENTITY_ACTION_LEAVEBED		3
+#define FC_ENTITY_ACTION_STARTSPRINTING	4
+#define FC_ENTITY_ACTION_STOPSPRINTING	5
 
 using std::string;
 

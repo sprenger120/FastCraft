@@ -27,18 +27,13 @@ void Constants::init() {
 	_Map["/Entity/Alive/Animation/Crouch"]			= 104;
 	_Map["/Entity/Alive/Animation/UnCrouch"]		= 105;
 
+
 	_Map["/Entity/Alive/Status/Hurt"]				= 2;
 	_Map["/Entity/Alive/Status/Dead"]				= 3;
 	_Map["/Entity/Alive/Status/WolfTaming"]			= 6;
 	_Map["/Entity/Alive/Status/WolfTamed"]			= 7;
 	_Map["/Entity/Alive/Status/WolfShake"]			= 8;
 	_Map["/Entity/Alive/Status/AcceptEating"]		= 9;
-
-	_Map["/Entity/Alive/Action/Crouch"]				= 1;
-	_Map["/Entity/Alive/Action/UnCrouch"]			= 2;
-	_Map["/Entity/Alive/Action/LeaveBed"]			= 3;
-	_Map["/Entity/Alive/Action/StartSprinting"]		= 4;
-	_Map["/Entity/Alive/Action/StopSprinting"]		= 5;
 
 	_Map["/Entity/Alive/TypeID/Creeper"]			= 50;
 	_Map["/Entity/Alive/TypeID/Skeleton"]			= 51;
