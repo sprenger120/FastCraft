@@ -26,7 +26,7 @@ template<typename tDataType,typename tAdressType>
 class Heap {
 	class HeapElement {
 	public:
-		tDataType* pElement;
+		tDataType pElement;
 		HeapElement* pLow;
 		HeapElement* pHigh;
 		HeapElement* pNextRowElement;
@@ -110,9 +110,9 @@ public:
 
 	Parameter:
 	@1 : ID of element 
-	@2 : Reference to new element (will be copied)
+	@2 : the new element (allocated in the heap)
 	*/
-	void add(tAdressType,tDataType&);
+	void add(tAdressType,tDataType);
 
 
 	/*
@@ -122,7 +122,7 @@ public:
 	Parameter:
 	@1 : Index of element
 	*/
-	tDataType* get(tAdressType);
+	tDataType get(tAdressType);
 
 
 	/*
@@ -233,8 +233,7 @@ string Heap<tDataType,tAdressType>::toBinary(tAdressType i) {
 }
 
 template<typename tDataType,typename tAdressType>
-void Heap<tDataType,tAdressType>::add(tAdressType ID,tDataType& rElement) {
-	tDataType* pElement = new tDataType(rElement);
+void Heap<tDataType,tAdressType>::add(tAdressType ID,tDataType pElement) {
 	HeapElement* pPath = _Root;
 	HeapElement* p = _Root;
 	bool fEnd;
@@ -270,7 +269,7 @@ void Heap<tDataType,tAdressType>::add(tAdressType ID,tDataType& rElement) {
 		if (fEnd) {
 			if (p->pElement != NULL) {
 				delete pElement;
-				throw Poco::RuntimeException("Already existing");
+				throw FCRuntimeException("Already existing");
 			}
 			p->pElement = pElement; 
 
@@ -316,7 +315,7 @@ typename Heap<tDataType,tAdressType>::HeapElement* Heap<tDataType,tAdressType>::
 
 
 template<typename tDataType,typename tAdressType>
-tDataType* Heap<tDataType,tAdressType>::get(tAdressType ID) {
+tDataType Heap<tDataType,tAdressType>::get(tAdressType ID) {
 	HeapElement* p = getElement(ID);
 
 	if (p == NULL || p->pElement == NULL) {return NULL;}
@@ -340,8 +339,8 @@ void Heap<tDataType,tAdressType>::erase(tAdressType ID) {
 	HeapElement* p = getElement(ID);
 	if (p == NULL || p->pElement == NULL) {throw 1;FCRuntimeException("Element doesn't exists");}
 	
+	Poco::ScopedLock<Poco::Mutex> sLock(_Mutex);
 
-	delete *(p->pElement);
 	delete p->pElement;
 	p->pElement = NULL;
 	_iSize--;
@@ -350,27 +349,30 @@ void Heap<tDataType,tAdressType>::erase(tAdressType ID) {
 template<typename tDataType,typename tAdressType>
 void Heap<tDataType,tAdressType>::cleanupElements() {
 	HeapElement* p = _Root;
+	
+	Poco::ScopedLock<Poco::Mutex> sLock(_Mutex);
 
 	do {
 		if (p->pElement != NULL) { 
-			delete *(p->pElement);
 			delete p->pElement;
 			p->pElement = NULL;
 			_iSize--;
 		}
 		p = p->pNextRowElement;
 	}while(p != NULL);
+	cout<<"Elements after clearing:"<<_iSize<<"\n";
 }
 
 template<typename tDataType,typename tAdressType>
 void Heap<tDataType,tAdressType>::cleanupNodes() {
 	HeapElement* pE = _Root;
 	HeapElement* pNextE = NULL;
+
+	Poco::ScopedLock<Poco::Mutex> sLock(_Mutex);
+
 	do{
 		if (pE->pElement != NULL) { 
-			delete *(pE->pElement);
 			delete pE->pElement;
-			pE->pElement = NULL;
 			_iSize--;
 		}
 		pNextE = pE->pNextRowElement;//Save pointer to nex element
