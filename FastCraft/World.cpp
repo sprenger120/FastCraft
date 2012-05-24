@@ -53,40 +53,40 @@ void World::generateChunks(int FromX,int FromZ,int ToX,int ToZ) {
 
 MapChunk* World::generateChunk(int X,int Z) {
 	long long ChunkIndex = generateIndex(X,Z);
-	MapChunk** pChunk = _heapChunks.get(ChunkIndex); 
+	MapChunk* pChunk = _heapChunks.get(ChunkIndex); 
 
-	if (pChunk != NULL) {return *pChunk;} /* Is this chunk already generated? */
+	if (pChunk != NULL) {return pChunk;} /* Is this chunk already generated? */
 	
-	MapChunk* pNewChunk = new MapChunk;
+	pChunk = new MapChunk;
 	
-	std::memset(pNewChunk->Blocks,0x00,FC_CHUNK_DATACOUNT);
-	std::memset(pNewChunk->Metadata,0x00,FC_CHUNK_NIBBLECOUNT);
-	std::memset(pNewChunk->BlockLight,0x00,FC_CHUNK_NIBBLECOUNT);
-	std::memset(pNewChunk->SkyLight,0xFF,FC_CHUNK_NIBBLECOUNT);
+	std::memset(pChunk->Blocks,0x00,FC_CHUNK_DATACOUNT);
+	std::memset(pChunk->Metadata,0x00,FC_CHUNK_NIBBLECOUNT);
+	std::memset(pChunk->BlockLight,0x00,FC_CHUNK_NIBBLECOUNT);
+	std::memset(pChunk->SkyLight,0xFF,FC_CHUNK_NIBBLECOUNT);
 
 	for (short y=0;y<=60;y++) {
 		for (int x=0;x<=15;x++) {
 			for (int z=0;z<=15;z++) {
-				pNewChunk->Blocks[ChunkMath::toIndex(x,y,z)] = 12;
+				pChunk->Blocks[ChunkMath::toIndex(x,y,z)] = 12;
 			}
 		}
 	}
 
-	_heapChunks.add(ChunkIndex,pNewChunk);
+	_heapChunks.add(ChunkIndex,pChunk);
 
-	return pNewChunk;
+	return pChunk;
 }
 
 
 MapChunk* World::getChunkByChunkCoordinates(int X,int Z) {
 	long long Index = generateIndex(X,Z);
-	MapChunk** p = _heapChunks.get(Index);
+	MapChunk* pChunk = _heapChunks.get(Index);
 
-	if (p != NULL) {return *p;} 
+	if (pChunk != NULL) {return pChunk;} 
 	
 	try  {
-		MapChunk* pNewChunk = generateChunk(X,Z);
-		return pNewChunk;
+		pChunk = generateChunk(X,Z);
+		return pChunk;
 	} catch(FCRuntimeException& ex) {
 		ex.rethrow();
 	}
@@ -184,6 +184,8 @@ void World::setBlock(int X,short Y,int Z,ItemID Block) {
 		throw FCRuntimeException("Block not registered");
 	}
 
+	cout<<"set block: "<<Block.first<<":"<<int(Block.second)<<"\n";
+
 	MapChunk* p;
 
 	try {
@@ -195,7 +197,7 @@ void World::setBlock(int X,short Y,int Z,ItemID Block) {
 		p->Blocks[Coords.second] = (char)Block.first; //Set Block
 		p->Metadata[iNibbleIndex] = prepareNibble(  //Set Metadata
 												char(Coords.second%2),
-												p->BlockLight[iNibbleIndex],
+												p->Metadata[iNibbleIndex],
 												Block.second
 												);
 
@@ -205,7 +207,7 @@ void World::setBlock(int X,short Y,int Z,ItemID Block) {
 		BlockCoords.Y = (char)Y;
 		BlockCoords.Z = Z;
 		
-		PlayerEventBase* p = new PlayerSetBlockEvent(BlockCoords,Block,_WorldName);
+		PlayerEventBase* p = new PlayerSetBlockEvent(BlockCoords,Block,this);
 		_pMinecraftServer->getPlayerPool()->addEvent(p);
 	} catch (FCRuntimeException& ex) {
 		ex.rethrow();
@@ -226,7 +228,7 @@ ItemID World::getBlock(int X,short Y,int Z) {
 		Data.second = p->Metadata[Coords.second/2];
 
 		if (Coords.second%2) {
-			 Data.second = (Data.second>>4) & 15;
+			 Data.second = Data.second>>4;
 		}else{
 			 Data.second &= 15;
 		}
