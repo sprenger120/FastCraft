@@ -22,7 +22,7 @@ GNU General Public License for more details.
 //Core Constants
 #define FC_VERSION						"0.0.2 Alpha"
 #define FC_SUPPORTED_MINCRAFTVERSION	"1.1"
-#define FC_SUPPORTED_DOCVER				2
+#define FC_SUPPORTED_DOCVER				3
 #define FC_SUPPORTED_PROTOCOLVERSION	23
 
 //Various Constants
@@ -30,6 +30,7 @@ GNU General Public License for more details.
 #define FC_MAXLOGINTIME					10000 //10 Seconds to complete login procedure
 #define FC_EMPTYITEMID					std::make_pair<short,char>(-1,-1)
 #define FC_WORLDHEIGHT					128
+#define FC_VIEWDISTANCE					10
 #define FC_UNKNOWNEID					-1
 
 
