@@ -72,9 +72,11 @@ struct BlockEntry {
 	bool hasSubBlocks;
 	bool noLoot;
 
-	bool Fluid;
-	char Spread;
-	char Speed;
+	bool Fluid; /* Stationary_Water, Stationary_Lava :  Will be set if you can pickup this block with a bucket */
+	bool isSpreadBlock; /*  Water,Lava : Still a fluid in general but you can't pickup it with a bucket*/
+	char Spread; /* how long does this will spread */
+	char Speed; /* how many ticks does it need to spawn a new spread block */
+	short SpreadBlock; /* e.g. if this block is Stationary_Water(9), this field have to be Water (8)*/
 
 	ItemID ConnectedItem;
 };

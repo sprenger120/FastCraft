@@ -32,7 +32,7 @@ _vItems(0),
 {
 	Poco::Data::Session DB("SQLite", rPath.toString());
 
-	int iItemCount = 0,iBlockCount=0,x=0,i=0,index=0,iCount=0,Speed=0,Spread=0;
+	int iItemCount = 0,iBlockCount=0,x=0,i=0,index=0,iCount=0;
 	bool fFound;
 	ItemEntry IEntry;
 	BlockEntry BEntry;
@@ -323,12 +323,14 @@ _vItems(0),
 	//Fluid 
 	DB<<"SELECT count(`ID`) FROM `Fluid`",into(iCount),now;
 	if (iCount > 0) {
+		int Speed=0,Spread=0,SpreadBlock = 0;
 		for (x=0;x<=iCount-1;x++) {
-			DB<<"SELECT ID,SubID,Spread,Speed FROM Fluid LIMIT :x,1;",
+			DB<<"SELECT ID,SubID,Spread,Speed,SpreadBlock FROM Fluid LIMIT :x,1;",
 				into(ID.first),
 				into(ID.second),
 				into(Spread),
 				into(Speed),
+				into(SpreadBlock),
 				use(x),
 				now;
 
@@ -340,6 +342,7 @@ _vItems(0),
 				_vBlocks[index].Fluid = true;
 				_vBlocks[index].Spread = (char)Spread;
 				_vBlocks[index].Speed  = (char)Speed;
+				_vBlocks[index].SpreadBlock  = (short)SpreadBlock;
 			}
 		}
 	}
@@ -372,10 +375,11 @@ _vItems(0),
 		return;
 	}
 
-	/* Setting the hasSubItems Flag */
+	/* Setting Flags */
 	bool fhasSub = false;
 	if (!_vItems.empty()) {
 		for (x = 0;x<=_vItems.size()-1;x++) {
+			/* hasSubBlocks */
 			if (_vItems[x].hasSubItems) {continue;}
 
 			for (i = 1;i<=15;i++) {
@@ -395,19 +399,26 @@ _vItems(0),
 
 	if (!_vBlocks.empty()) {
 		for (x = 0;x<=_vBlocks.size()-1;x++) {
-			if (_vBlocks[x].hasSubBlocks) {continue;}
+			/* hasSubBlocks */
+			if (!_vBlocks[x].hasSubBlocks) {
+				for (i = 1;i<=15;i++) {
+					index = search(_vBlocks,std::make_pair(_vBlocks[x].ID,i));
+					if (index != -1) {
+						fhasSub = true;
+						_vBlocks[index].hasSubBlocks = true;
+					} 
+				}
 
-			for (i = 1;i<=15;i++) {
-				index = search(_vBlocks,std::make_pair(_vBlocks[x].ID,i));
-				if (index != -1) {
-					fhasSub = true;
-					_vBlocks[index].hasSubBlocks = true;
-				} 
+				if (fhasSub) {
+					_vBlocks[x].hasSubBlocks = true;
+					fhasSub=false;
+				}
 			}
 
-			if (fhasSub) {
-				_vBlocks[x].hasSubBlocks = true;
-				fhasSub=false;
+			/*  Set the isSpreadBlock flag */
+			if (_vBlocks[x].Fluid && !_vBlocks[x].isSpreadBlock) {
+				index = search(_vBlocks,std::make_pair<short,char>(_vBlocks[x].SpreadBlock,0));
+				_vBlocks[index].isSpreadBlock = true;
 			}
 		}
 	}
@@ -690,8 +701,14 @@ void ItemInformationProvider::isValid(BlockEntry Entry) {
 	}
 
 	if (Entry.Fluid) {
-		if(Entry.Speed  < 0) { throw FCRuntimeException("Speed is below 0");}
-		if(Entry.Spread < 0) {throw FCRuntimeException("Spread is below 0");}
+		int index;
+		
+		if (Entry.Speed  < 0) { throw FCRuntimeException("Speed is below 0");}
+		if (Entry.Spread < 0) {throw FCRuntimeException("Spread is below 0");}
+		if (!isBlock(Entry.SpreadBlock)) {throw FCRuntimeException("SpreadBlock not registered/not a block");}
+		
+		index = search(_vBlocks,std::make_pair<short,char>(Entry.SpreadBlock,0));
+		if (_vBlocks[index].Fluid) {throw FCRuntimeException("Spread blocks can't be fluids");}
 	}
 
 	if (Entry.noLoot) {
