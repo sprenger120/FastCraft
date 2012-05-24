@@ -124,7 +124,7 @@ bool ChunkProvider::CheckChunkCircle() {
 	MapChunk* pChunk;
 	ChunkCoordinates CircleRoot,Temp;
 	PackJob Job;
-	char iViewDistance = _pMCServer->getViewDistance();
+	char iViewDistance = char(FC_VIEWDISTANCE);
 
 	Job.pNetwork = &(_rNetwork);
 	Job.pPlayer = _pPlayer;
@@ -241,7 +241,7 @@ void ChunkProvider::CheckSpawnedChunkList() {
 	if (_vSpawnedChunks.empty()) { return; }
 
 	bool fDespawn=false; 
-	int iViewDistance = _pMCServer->getViewDistance(),x;
+	int iViewDistance = FC_VIEWDISTANCE,x;
 
 	for (x=_vSpawnedChunks.size()-1;x>=0;x--) {
 		if (_vSpawnedChunks[x].X < _PlayerCoordinates.X - iViewDistance) {fDespawn=true;}
