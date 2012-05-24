@@ -132,3 +132,7 @@ void Entity::syncCoordinates(NetworkOut& rOut,EntityCoordinates& lastCoordinates
 char Entity::getBaseType() {
 	return Constants::get("/Entity/BaseType/Entity");
 }
+
+MinecraftServer* Entity::getMinecraftServer(){
+	return _pMCServer;
+}

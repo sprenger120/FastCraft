@@ -118,5 +118,11 @@ public:
 	* Values are taken from /Entity/BaseType/...
 	*/
 	virtual char getBaseType();
+
+
+	/*
+	* Returns pointer to MinecraftServer that entity is in
+	*/
+	MinecraftServer* getMinecraftServer();
 };
 #endif
