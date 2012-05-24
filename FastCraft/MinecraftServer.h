@@ -59,7 +59,6 @@ private:
 	string _sMainMapName;
 	bool _fSpawnPeacefulMobs;
 	bool _fSpawnHostileMobs;
-	char _iViewDistance;
 	bool _fPVP;
 	bool _fAllowFlyMod;
 	double _dMaxPlayerSpeed;
@@ -200,11 +199,6 @@ public:
 	bool isPeacefulAnimalSpawningActivated();
 	bool isHostileAnimalSpawningActivated();
 
-
-	/*
-	* Returns how many chunks a send around the player (raduis of chunk spawning circle)
-	*/
-	char getViewDistance();
 
 	/*
 	* Returns true if player vs. player actions will affect their health

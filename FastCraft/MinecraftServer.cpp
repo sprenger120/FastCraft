@@ -52,7 +52,6 @@ _sServerName(""),
 	_fLoadEnd					= true;
 	_fSpawnPeacefulMobs			= true;
 	_fSpawnHostileMobs			= true;
-	_iViewDistance				= 10;
 	_fPVP						= true;
 	_fAllowFlyMod				= false;
 	_dMaxPlayerSpeed			= 7.5;
@@ -189,6 +188,7 @@ char MinecraftServer::readConfiguration(Poco::Path& path) {
 
 	Poco::XML::InputSource ISource(Input);
 	Poco::XML::DOMParser parser;
+	//parser.setEncoding("ascii");
 	Poco::AutoPtr<Poco::XML::Document> pDoc;
 
 	try {
@@ -225,7 +225,6 @@ char MinecraftServer::readConfiguration(Poco::Path& path) {
 		if(parseNodeInt(pDoc,"/settings/Server/ServerMode",iData,0,1)) {_iServerMode = Int2Bool(iData);}
 		if(parseNodeInt(pDoc,"/settings/Server/Difficulty",iData,0,1)) {_iDifficulty = (char)iData;}
 		if(parseNodeInt(pDoc,"/settings/Map/AllowNeather",iData,0,1)) {_fAllowNeather = Int2Bool(iData);}
-		if(parseNodeInt(pDoc,"/settings/Map/ViewDistance",iData,7,12)) {_iViewDistance = (char)iData;}
 		parseNodeString(pDoc,"/settings/Map/RootMap",_sMainMapName);
 		if(parseNodeInt(pDoc,"/settings/Map/loadEnd",iData,0,1)) {_fLoadEnd = Int2Bool(iData);}
 		if(parseNodeString(pDoc,"/settings/Map/AdditionalWorlds",sTemp)) {
@@ -314,9 +313,6 @@ bool MinecraftServer::isHostileAnimalSpawningActivated() {
 	return _fSpawnHostileMobs;
 }
 
-char MinecraftServer::getViewDistance() {
-	return _iViewDistance;
-}
 
 bool MinecraftServer::isPVPActivated() {
 	return _fPVP;
