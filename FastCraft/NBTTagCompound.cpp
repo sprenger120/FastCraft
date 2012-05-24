@@ -24,7 +24,7 @@ NBTTagCompound::NBTTagCompound(string sName) :
 
 NBTTagCompound::~NBTTagCompound(){
 	if (!_vpElements.empty()) {
-		for (int x=0;x<=_vpElements.size()-1;x++) {
+		for (unsigned int x=0;x<=_vpElements.size()-1;x++) {
 			delete _vpElements[x];
 		}
 	}
@@ -53,7 +53,7 @@ void NBTTagCompound::write(string& rStr,bool fMode,bool fHeaderless) {
 	} 
 
 	if (!_vpElements.empty()) {
-		for (int x=0;x<=_vpElements.size()-1;x++){
+		for (unsigned int x=0;x<=_vpElements.size()-1;x++){
 			_vpElements[x]->write(rTarget,FC_NBT_OUTPUT_RAW);
 		}
 	}
@@ -68,7 +68,7 @@ void NBTTagCompound::write(string& rStr,bool fMode,bool fHeaderless) {
 int NBTTagCompound::getElementIndex(string sName) {
 	if (_vpElements.empty()) {return -1;}
 
-	for (int x=0;x<=_vpElements.size()-1;x++) {
+	for (unsigned int x=0;x<=_vpElements.size()-1;x++) {
 		if (_vpElements[x]->getName().compare(sName) == 0) {return x;}
 	}
 	return -1;
@@ -80,7 +80,7 @@ NBTTagBase* NBTTagCompound::search(string sPath, char iType) {
 	
 	vector<string> aPathElements(0);
 	string sTemp("");
-	int iStartSlash=0,iEndSlash;
+	unsigned int iStartSlash=0,iEndSlash;
 
 	//Prepare path
 	while (sPath[sPath.size()-1] == '/' && sPath[sPath.size()-2] == '/') {sPath.resize(sPath.size()-1);} //Remove double slashes from end
@@ -125,7 +125,7 @@ NBTTagBase* NBTTagCompound::search(string sPath, char iType) {
 
 NBTTagBase* NBTTagCompound::getElementByName(string sName) {
 	if (_vpElements.empty()) { return NULL;}
-	for (int x=0;x<=_vpElements.size()-1;x++) {
+	for (unsigned int x=0;x<=_vpElements.size()-1;x++) {
 		if (_vpElements[x]->getName().compare(sName) == 0) {return  _vpElements[x];}
 	}
 	return NULL;
