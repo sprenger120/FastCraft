@@ -51,17 +51,14 @@ _vPlayerThreads(pServer->getPlayerSlotCount()),
 PlayerPool::~PlayerPool() {
 	killThread();
 
-	if (!_vPlayerThreads.empty()) {
-		for (int x=0;x<=_vPlayerThreads.size()-1;x++) {
-			delete _vPlayerThreads[x];
-		}
+	for (int x=0;x<=_vPlayerThreads.size()-1;x++) {
+		delete _vPlayerThreads[x];
 	}
 	
-
-	if (!_qEvents.empty()) {
-		for(int x=0;x<=_qEvents.size()-1;x++) {
-			delete _qEvents.front();
-		}
+	
+	while (!_qEvents.empty()) {
+		delete _qEvents.front();
+		_qEvents.pop();
 	}
 }
 
