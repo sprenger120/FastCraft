@@ -66,7 +66,7 @@ void FCRuntimeException::printStacktrace() {
         symbol->SizeOfStruct = sizeof(SYMBOL_INFO);
         symbol->MaxNameLen = 254;
 
-        for (short x=2;x<=iCapuredFrames;x++) {
+        for (short x=2;x<=iCapuredFrames-1;x++) {
             f = SymFromAddr(process,(DWORD64)stack[x],0,symbol);
 			if(f){
 				std::cout<<"\t["<<x<<"] "<<symbol->Name<<"\n";
