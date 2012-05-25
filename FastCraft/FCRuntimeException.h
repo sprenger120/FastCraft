@@ -33,18 +33,20 @@ private:
 public:
 	/*
 	* Constructor
-	* The actual stacktrace will be written to console
+	* The actual stacktrace will be written to console if the bool parameter is set to true
 
 	Parameter:
 	@1 : Description of the occurred error
+	@2 : See above 
 
 	Parameter:
 	@1 : Description of the occurred error
 	@2 : Error-Code
+	@3 : See above
 	*/
-	FCRuntimeException();
-	FCRuntimeException(string);
-	FCRuntimeException(string,int);
+	FCRuntimeException(bool = true);
+	FCRuntimeException(string,bool = true);
+	FCRuntimeException(string,int,bool = true);
 
 
 	/*

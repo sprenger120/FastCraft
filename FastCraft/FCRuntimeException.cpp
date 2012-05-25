@@ -14,25 +14,25 @@ GNU General Public License for more details.
 */
 #include "FCRuntimeException.h"
 
-FCRuntimeException::FCRuntimeException() : 
+FCRuntimeException::FCRuntimeException(bool fStackTrace) : 
 _sMessage("<not given>")
 {
-	printStacktrace();
+	if (fStackTrace){printStacktrace();}
 	_iCode = 0;
 }
 
 
-FCRuntimeException::FCRuntimeException(string sDesc) : 
+FCRuntimeException::FCRuntimeException(string sDesc,bool fStackTrace) : 
 _sMessage(sDesc)
 {
-	printStacktrace();
+	if (fStackTrace){printStacktrace();}
 	_iCode = 0;
 }
 
-FCRuntimeException::FCRuntimeException(string sDesc,int i) : 
+FCRuntimeException::FCRuntimeException(string sDesc,int i,bool fStackTrace) : 
 _sMessage(sDesc)
 {
-	printStacktrace();
+	if (fStackTrace){printStacktrace();}
 	_iCode = i;
 }
 
