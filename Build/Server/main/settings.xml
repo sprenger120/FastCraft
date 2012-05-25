@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <settings>
-  <DocVer>3</DocVer>
+  <DocVer>4</DocVer>
   <Network>
     <Port>25565</Port>
     <Slots>16</Slots>
@@ -32,9 +32,10 @@
 
   <Player>
     <AllowPVP>1</AllowPVP>
-    <FlyMod>
-      <Allow>0</Allow>
-      <MaxSpeed>7.6</MaxSpeed>
+    <!--<FlyMod>
+      <AllowFlying>0</AllowFlying>
+      <MaxFlySpeed>0</MaxFlySpeed>
     </FlyMod>
+	-->
   </Player>
 </settings>
