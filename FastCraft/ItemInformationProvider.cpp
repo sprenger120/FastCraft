@@ -51,6 +51,7 @@ _vItems(0),
 	BEntry.noLoot			= false;
 	BEntry.Placeable		= true;
 	BEntry.Fluid			= false;
+	BEntry.isSpreadBlock	= false;
 	BEntry.Spread			= 0;
 	BEntry.Speed			= 0;
 
@@ -416,7 +417,7 @@ _vItems(0),
 			}
 
 			/*  Set the isSpreadBlock flag */
-			if (_vBlocks[x].Fluid && !_vBlocks[x].isSpreadBlock) {
+			if (_vBlocks[x].Fluid) {
 				index = search(_vBlocks,std::make_pair<short,char>(_vBlocks[x].SpreadBlock,0));
 				_vBlocks[index].isSpreadBlock = true;
 			}
