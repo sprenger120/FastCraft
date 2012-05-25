@@ -27,6 +27,8 @@ GNU General Public License for more details.
 using std::string;
 using std::pair;
 class MinecraftServer;
+class Entity;
+class PlayerThread;
 struct MapChunk;
 
 class World {
@@ -85,26 +87,35 @@ public:
 
 
 	/*
-	* Returns a Y coordinate at given coordinates who player can stand on without suffocate in the wall 
+	* Returns height at given X,Z coordiante
 	* Will generate chunk if not exits
-	* Will return -1 if there is no free space
+	* Will return FC_WORLDHEIGHT if blocks were built to max height 
 
 	Parameter:
 	@1 : X in world coordinates
 	@2 : Z in world coordiantes
 	*/
-	char getFreeSpace(int,int);
+	char getHeight(int,int);
 
 
 	/*
-	* Returns true if player will suffocate at his actual place
-	* Will also return true if player is the void
+	* Returns true if given Entity will suffocate at his actual place
 	* Will generate chunk if not exist
+	* Throws FCRuntimeException if a nullpointer was given
 
 	Parameter:
-	@1 : Players coordinates
+	@1 : Entity instance to check
+
+	Parameter:
+	@1 : PlayerThread instance to check
+
+	Parameter:
+	@1 : Coordinates to check
+	@2 : Height of thing 
 	*/
-	bool isSuffocating(EntityCoordinates);
+	bool isSuffocating(Entity*);
+	bool isSuffocating(PlayerThread*);
+	bool isSuffocating(EntityCoordinates,float);
 
 
 	/*

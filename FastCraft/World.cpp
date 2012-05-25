@@ -25,6 +25,9 @@ GNU General Public License for more details.
 #include <Poco/ScopedLock.h>
 #include "PlayerEvents.h"
 #include "PlayerPool.h"
+#include "Entity.h"
+#include "PlayerThread.h"
+#include <cmath>
 using std::cout;
 
 
@@ -119,64 +122,68 @@ pair<ChunkCoordinates,int> World::WorldCoordinateConverter(int X,short Y,int Z) 
 	return Pair;
 }
 
-char World::getFreeSpace(int X,int Z) {
-	int ChunkX = X>>4;
-	int ChunkZ = Z>>4;
+char World::getHeight(int X,int Z) {
 	MapChunk* pChunk;
 
 	try {
-		pChunk = getChunkByChunkCoordinates(ChunkX,ChunkZ);
+		pChunk = getChunkByChunkCoordinates(X>>4,Z>>4);
 	}catch (FCRuntimeException& ex) {
 		std::cout<<"World::getFreeSpace chunk not found"<<"\n";
 		ex.rethrow();
 	}
 
-	X = ChunkMath::toChunkInternal(X);
-	Z = ChunkMath::toChunkInternal(Z);	
+	int iOffset = ChunkMath::toIndex(ChunkMath::toChunkInternal(X),0,ChunkMath::toChunkInternal(Z));
 
 
-	int iOffset = ChunkMath::toIndex(X,0,Z);
 	unsigned char y;
 	if (iOffset==-1) {
-		std::cout<<"World::getFreeSpace could not calculate index"<<"\n";
 		throw FCRuntimeException("toIndex error");
 	}
 
 	//Get height
-	for (y=FC_WORLDHEIGHT-1;y>0;y--) { //For from 128 -> 1
-		if (_pMinecraftServer->getItemInfoProvider()->getBlock(pChunk->Blocks[iOffset+y])->Solid) {
-			return y+1;
-		}
+	for (y=FC_WORLDHEIGHT-1;y>=0;y--) { //For from 127 -> 0
+		if (pChunk->Blocks[iOffset+y]) {return y;}
 	}
 
-	return FC_WORLDHEIGHT;
+	return char(FC_WORLDHEIGHT);
 }
 
-bool World::isSuffocating(EntityCoordinates Coords) {
-	if (Coords.Y <= 0.9) {
-		return true;
-	}
+bool World::isSuffocating(Entity* pEntity) {
+	if (pEntity == NULL) {throw FCRuntimeException("Nulllpointer");}
+	return isSuffocating(pEntity->Coordinates,pEntity->getHeight());
+}
+
+bool World::isSuffocating(PlayerThread* pPlayerThread) {
+	if (pPlayerThread == NULL) {throw FCRuntimeException("Nulllpointer");}
+	return isSuffocating(pPlayerThread->getCoordinates(),1.6F);
+} 
+
+
+bool World::isSuffocating(EntityCoordinates Coords,float dHeight) {
+	if (Coords.Y > ((double)FC_WORLDHEIGHT)-1.0) {return false;} /* Above the map */
 
 	MapChunk* pChunk;
+	int iOffset;
 
 	try {
 		pChunk = getChunkByChunkCoordinates(int(Coords.X)>>4,int(Coords.Z)>>4);
 	}catch (FCRuntimeException& ex) {
-		std::cout<<"World::isSuffocating chunk not found"<<"\n";
 		ex.rethrow();
 	}
 
-	if (Coords.Y > (double)FC_WORLDHEIGHT) {
-		return false;
-	}
-
-	int iOffset = ChunkMath::toIndex( 
+	for (short y=short(Coords.Y);y<=short(Coords.Y)+short(ceil(dHeight));y++) {		
+		iOffset = ChunkMath::toIndex(
 		ChunkMath::toChunkInternal((int)floor(Coords.X)),
-		(int)floor(Coords.Y),
+		y,
 		ChunkMath::toChunkInternal((int)floor(Coords.Z))
 		);
 
-	return _pMinecraftServer->getItemInfoProvider()->getBlock((short)pChunk->Blocks[iOffset])->Solid;
+		if (_pMinecraftServer->getItemInfoProvider()->getBlock((short)pChunk->Blocks[iOffset])->Solid) {
+			return true;
+		}
+	}
+
+	return false;
 }
 
 void World::setBlock(int X,short Y,int Z,ItemID Block) {
