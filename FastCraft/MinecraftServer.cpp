@@ -44,7 +44,7 @@ _sServerName(""),
 {
 	_iPort						= 25565;
 	_iPlayerSlotCount			= 16;
-	_iServerMode				= Constants::get("/ServerMode/Survival");
+	_iServerMode				= Constants::get("/ServerMode/Survival") == 0 ? false : true;
 	_iDifficulty				= Constants::get("/Difficulty/Easy");
 	_fOnlineMode				= true;
 	_fWhitelist					= false;
