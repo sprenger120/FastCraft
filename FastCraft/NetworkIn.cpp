@@ -15,6 +15,7 @@ GNU General Public License for more details.
 #include "NetworkIn.h"
 #include "FCRuntimeException.h"
 #include <Poco/Net/NetException.h>
+#include <Poco/ByteOrder.h>
 
 
 NetworkIn::NetworkIn(StreamSocket& r) :
@@ -87,14 +88,17 @@ long long NetworkIn::readInt64() {
 		ex.rethrow();
 	}
 
-	return((((long long)_sReadBuffer[0])<<56  & 0xFF00000000000000) |
-            (((long long)_sReadBuffer[1])<<48 & 0x00FF000000000000) |
-			(((long long)_sReadBuffer[2])<<40 & 0x0000FF0000000000) |
-			(((long long)_sReadBuffer[3])<<32 & 0x000000FF00000000) |
-			(((long long)_sReadBuffer[4])<<24 & 0x00000000FF000000) |
-			(((long long)_sReadBuffer[5])<<16 & 0x0000000000FF0000) |
-			(((long long)_sReadBuffer[6])<<8  & 0x000000000000FF00) |
-			((long long)_sReadBuffer[7]       & 0x00000000000000FF));
+
+	return (
+		    ((((long long)_sReadBuffer[0])<<56) & 0xFF00000000000000) |
+            ((((long long)_sReadBuffer[1])<<48) & 0xFF000000000000) |
+			((((long long)_sReadBuffer[2])<<40) & 0xFF0000000000) |
+			((((long long)_sReadBuffer[3])<<32) & 0xFF00000000) |
+			((((long long)_sReadBuffer[4])<<24) & 0xFF000000) |
+			((((long long)_sReadBuffer[5])<<16) & 0xFF0000) |
+			((((long long)_sReadBuffer[6])<<8)  & 0xFF00) |
+			(((long long)_sReadBuffer[7])       & 0xFF)
+		  );
 }
 
 float NetworkIn::readFloat() {
@@ -156,20 +160,20 @@ void NetworkIn::read(int iLenght) {
 				break;
 			}
 		}catch(Poco::Net::ConnectionAbortedException) {
-			throw FCRuntimeException("Connection aborted");
+			throw FCRuntimeException("Connection aborted",false);
 		}catch(Poco::Net::InvalidSocketException) {
-			throw FCRuntimeException("Invalid socket");
+			throw FCRuntimeException("Invalid socket",false);
 		}catch(Poco::TimeoutException) {
-			throw FCRuntimeException("Timeout");
+			throw FCRuntimeException("Timeout",false);
 		}catch(Poco::Net::ConnectionResetException) {
-			throw FCRuntimeException("Connection reset");
+			throw FCRuntimeException("Connection reset",false);
 		}catch(Poco::IOException) {
-			throw FCRuntimeException("I/O Error");
+			throw FCRuntimeException("I/O Error",false);
 		}
 		if (iReadedLenght != iLenght) {
 			iUnderflowCount++;
 			if (iUnderflowCount > 10) {
-				throw FCRuntimeException("TCP Underflow");
+				throw FCRuntimeException("Timeout",false);
 			}
 			fUnderflow = true;
 		}
