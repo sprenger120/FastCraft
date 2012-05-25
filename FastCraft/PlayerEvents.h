@@ -23,7 +23,7 @@ GNU General Public License for more details.
 #include <string>
 
 using std::string;
-
+class World;
 
 /*
 * Chat Events
@@ -44,7 +44,7 @@ public:
 	PlayerChatEvent(PlayerThread*,string,EntityCoordinates);
 	~PlayerChatEvent();
 
-	virtual void Execute(vector<PlayerThread*>&,PlayerPool*);
+	void Execute(vector<PlayerThread*>&,PlayerPool*);
 };
 
 class ChatEvent : public PlayerEventBase {
@@ -60,7 +60,7 @@ public:
 	ChatEvent(string);
 	~ChatEvent();
 
-	virtual void Execute(vector<PlayerThread*>&,PlayerPool*);
+	void Execute(vector<PlayerThread*>&,PlayerPool*);
 };
 
 
@@ -80,7 +80,7 @@ public:
 	PlayerJoinEvent(PlayerThread*);
 	~PlayerJoinEvent();
 
-	virtual void Execute(vector<PlayerThread*>&,PlayerPool*);
+	void Execute(vector<PlayerThread*>&,PlayerPool*);
 };
 
 class PlayerDisconnectEvent : public PlayerEventBase {
@@ -99,7 +99,7 @@ public:
 	PlayerDisconnectEvent(PlayerThread*,int,string);
 	~PlayerDisconnectEvent();
 
-	virtual void Execute(vector<PlayerThread*>&,PlayerPool*);
+	void Execute(vector<PlayerThread*>&,PlayerPool*);
 };
 
 
@@ -122,7 +122,7 @@ public:
 	PlayerAnimationEvent(PlayerThread*,char);
 	~PlayerAnimationEvent();
 
-	virtual void Execute(vector<PlayerThread*>&,PlayerPool*);
+	void Execute(vector<PlayerThread*>&,PlayerPool*);
 };
 
 class PlayerUpdateFlagsEvent : public PlayerEventBase {
@@ -139,7 +139,7 @@ public:
 	PlayerUpdateFlagsEvent(PlayerThread*,EntityFlags);
 	~PlayerUpdateFlagsEvent();
 
-	virtual void Execute(vector<PlayerThread*>&,PlayerPool*);
+	void Execute(vector<PlayerThread*>&,PlayerPool*);
 };
 
 class PlayerMoveEvent : public PlayerEventBase {
@@ -156,7 +156,7 @@ public:
 	PlayerMoveEvent(PlayerThread*,EntityCoordinates);
 	~PlayerMoveEvent();
 
-	virtual void Execute(vector<PlayerThread*>&,PlayerPool*);
+	void Execute(vector<PlayerThread*>&,PlayerPool*);
 };
 
 
@@ -181,7 +181,7 @@ public:
 	PlayerChangeHeldEvent(PlayerThread*,ItemID,short);
 	~PlayerChangeHeldEvent();
 
-	virtual void Execute(vector<PlayerThread*>&,PlayerPool*);
+	void Execute(vector<PlayerThread*>&,PlayerPool*);
 };
 
 
@@ -194,8 +194,7 @@ class PlayerSetBlockEvent : public PlayerEventBase {
 private:
 	ItemID _Item;
 	BlockCoordinates _Coordinates;
-	bool _fIgnore;
-	string _sWorldName;
+	World* _pWorld;
 public:
 	/*
 	* Constructor
@@ -203,11 +202,11 @@ public:
 	Parameter:
 	@1 : Coordiantes of Block
 	@2 : Item data of set item
-	@3 : World name who player is in
+	@3 : World who pushed this event
 	*/
-	PlayerSetBlockEvent(BlockCoordinates,ItemID,string);
+	PlayerSetBlockEvent(BlockCoordinates,ItemID,World*);
 	~PlayerSetBlockEvent();
 
-	virtual void Execute(vector<PlayerThread*>&,PlayerPool*);
+	void Execute(vector<PlayerThread*>&,PlayerPool*);
 };
 #endif
