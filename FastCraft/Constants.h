@@ -22,7 +22,7 @@ GNU General Public License for more details.
 //Core Constants
 #define FC_VERSION						"0.0.2 Alpha"
 #define FC_SUPPORTED_MINCRAFTVERSION	"1.1"
-#define FC_SUPPORTED_DOCVER				3
+#define FC_SUPPORTED_DOCVER				4
 #define FC_SUPPORTED_PROTOCOLVERSION	23
 
 //Various Constants
