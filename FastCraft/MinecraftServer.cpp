@@ -54,7 +54,7 @@ _sServerName(""),
 	_fSpawnHostileMobs			= true;
 	_fPVP						= true;
 	_fAllowFlyMod				= false;
-	_dMaxPlayerSpeed			= 7.5;
+	_dMaxFlyingSpeed			= 1.0;
 	_pAcceptThread				= NULL;
 	_pPlayerPool				= NULL;
 	_pItemInformationProvider	= NULL;
@@ -238,7 +238,7 @@ char MinecraftServer::readConfiguration(Poco::Path& path) {
 							continue;
 						}
 					}else{
-							sPart.append(1,sTemp[x]);
+						sPart.append(1,sTemp[x]);
 					}
 				}
 				if(sPart.compare("") != 0) {_vsAdditionalWorlds.push_back(sPart);}
@@ -247,8 +247,8 @@ char MinecraftServer::readConfiguration(Poco::Path& path) {
 		if(parseNodeInt(pDoc,"/settings/Spawning/Peaceful",iData,0,1)) {_fSpawnPeacefulMobs = Int2Bool(iData);}
 		if(parseNodeInt(pDoc,"/settings/Spawning/Hostile",iData,0,1)) {_fSpawnHostileMobs = Int2Bool(iData);}
 		if(parseNodeInt(pDoc,"/settings/Player/AllowPVP",iData,0,1)) {_fPVP = Int2Bool(iData);}
-		if(parseNodeInt(pDoc,"/settings/Player/FlyMod/Allow",iData,0,1)) {_fAllowFlyMod = Int2Bool(iData);}
-		parseNodeDouble(pDoc,"/settings/Player/FlyMod/MaxSpeed",_dMaxPlayerSpeed,7.5,50.0);
+		//if(parseNodeInt(pDoc,"/settings/Player/FlyMod/AllowFlying",iData,0,1)) {_fAllowFlyMod = Int2Bool(iData);}
+		//parseNodeDouble(pDoc,"/settings/Player/FlyMod/MaxFlySpeed",_dMaxFlyingSpeed,1.0,10.0);
 		if (!_fOnlineMode) {	
 			cout<<"***Config WARNING: Server runs in unsafe mode. Hackers can connect without verification!"<<"\n";  	
 			cout<<"***Solution: Set OnlineMode in your settings.xml to true."<<"\n";
@@ -289,13 +289,13 @@ string MinecraftServer::getServerMOTD() {
 	return _sMOTD;
 }
 
-bool MinecraftServer::isFlyModAllowed() {
-	return _fAllowFlyMod;
-}
-
-double MinecraftServer::getMaxMovementSpeed() {
-	return _dMaxPlayerSpeed;
-}
+//bool MinecraftServer::isFlyModAllowed() {
+//	return _fAllowFlyMod;
+//}
+//
+//double MinecraftServer::getMaxFlySpeed() {
+//	return _dMaxFlyingSpeed;
+//}
 
 bool MinecraftServer::isNeatherAllowed() {
 	return _fAllowNeather;

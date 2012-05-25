@@ -61,7 +61,7 @@ private:
 	bool _fSpawnHostileMobs;
 	bool _fPVP;
 	bool _fAllowFlyMod;
-	double _dMaxPlayerSpeed;
+	double _dMaxFlyingSpeed;
 	string _sServerName;
 
 	/* ID generation */
@@ -209,14 +209,13 @@ public:
 	/*
 	* Returns true if zombe's flymod is allowed
 	*/
-	bool isFlyModAllowed();
+	//bool isFlyModAllowed();
 
 
 	/*
-	* Returns maximal moving speed
-	* The highest vanilla running speed is 7.5 km/h
+	* Returns maximal flyspeed
 	*/
-	double getMaxMovementSpeed();
+	//double getMaxFlySpeed();
 
 
 	/*
