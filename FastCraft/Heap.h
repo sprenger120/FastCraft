@@ -78,14 +78,6 @@ public:
 
 
 		/*
-		* Access operator
-		* Returns last element if Iterator reaches the end
-		* Throws Poco::RuntimeException if heap doesn't contains any elements
-		*/
-		tDataType& operator*();
-
-
-		/*
 		* Returns true if Iterator has reached the end
 		*/
 		bool isEndReached();
@@ -204,11 +196,9 @@ Heap<tDataType,tAdressType>::~Heap() {
 	delete [] _pSingleBitMaskArray;
 	delete [] _pEndBitsMaskArray;
 
-	if (_iSize > 0) {
-		cleanupNodes();
-	}else{
-		delete _Root;
-	}
+	cleanupNodes();
+	delete _Root;
+	_iNodeCount--;
 }
 
 
@@ -360,7 +350,6 @@ void Heap<tDataType,tAdressType>::cleanupElements() {
 		}
 		p = p->pNextRowElement;
 	}while(p != NULL);
-	cout<<"Elements after clearing:"<<_iSize<<"\n";
 }
 
 template<typename tDataType,typename tAdressType>
@@ -377,7 +366,7 @@ void Heap<tDataType,tAdressType>::cleanupNodes() {
 		}
 		pNextE = pE->pNextRowElement;//Save pointer to nex element
 
-		delete pE;					// remove node
+		if (pE != _Root) {delete pE;} // remove node
 		_iNodeCount--;
 
 
@@ -455,12 +444,6 @@ template<typename tDataType,typename tAdressType>
 tDataType* Heap<tDataType,tAdressType>::HeapIterator::operator->() {
 	if (_pActual == NULL) {throw Poco::RuntimeException("Doesn't contain any elements");} /* constructor moves to a valid element; keeps NULL if heap is empty */
 	return _pActual->pElement;
-}
-
-template<typename tDataType,typename tAdressType>
-tDataType& Heap<tDataType,tAdressType>::HeapIterator::operator*() {
-	if (_pActual == NULL) {throw Poco::RuntimeException("Doesn't contain any elements");} 
-	return *(_pActual->pElement);
 }
 
 template<typename tDataType,typename tAdressType>
