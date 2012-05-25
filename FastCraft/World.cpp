@@ -190,9 +190,6 @@ void World::setBlock(int X,short Y,int Z,ItemID Block) {
 	if (!_pMinecraftServer->getItemInfoProvider()->isRegistered(Block)) {
 		throw FCRuntimeException("Block not registered");
 	}
-
-	cout<<"set block: "<<Block.first<<":"<<int(Block.second)<<"\n";
-
 	MapChunk* p;
 
 	try {
