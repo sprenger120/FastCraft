@@ -45,20 +45,12 @@ GNU General Public License for more details.
 class World;
 class PackingThread;
 class MinecraftServer;
+class EntityListEntry;
 
 using std::string;
 using std::stringstream;
 using std::vector;
 using std::pair;
-
-struct EntityListEntry {
-	int EntityID;
-	EntityCoordinates Position;
-
-	bool Alive;
-	char Type; /* TypeID of EntityLiving instances */
-	EquipmentArray vEquip; /* Equip of entity living instances */
-};
 
 class PlayerThread : public ServerThreadBase {
 private:
@@ -117,6 +109,11 @@ private:
     /* Time Management */
 	TimeJobServer<PlayerThread> _timeJobServer;
     Poco::Stopwatch _timer_Ping;
+	Poco::Stopwatch _timer_LastBlockPut;
+	Poco::Stopwatch _timer_StartedEating;
+	Poco::Stopwatch _timer_lastSpeedCalculation;
+	Poco::Stopwatch _timer_lastArmSwing;
+	Poco::Stopwatch _timer_lastPositionUpdateEvent;
 public:
 	/*
 	* Constructor
@@ -342,17 +339,17 @@ public:
     * Returns actual player ping 
     */
     short getPing();
+
+
+	/*
+	* Returns the pointer to the minecraft server instance
+	*/
+	MinecraftServer* getMinecraftServer();
 private:
 	//Interval functions
 	void Interval_KeepAlive();
-	void Interval_HandleMovement();
-	void Interval_Movement();
-	void Interval_CalculateSpeed();
-	void Interval_CheckPosition();
+	/*void Interval_CheckSpeed();*/
 	void Interval_CheckEating();
-	
-	//Ticks
-	long long getTicks(); 
 
 	//Packets
 	void Packet0_KeepAlive();
@@ -391,11 +388,12 @@ private:
 	//sync functions
 	void syncHealth();
 	void syncFlagsWithPP();
+	void syncMovement(); 
 
 
 	//Other
 	string generateConnectionHash(); //Generate a new connection hash, write it to _ConnectionHash	
-	void CheckPosition(bool=true); //checks players position and correct it. Will synchronize with player if bool is true
+	void CheckPosition(); //checks players position and correct it. Will synchronize with player if bool is true
 };
 
 #endif

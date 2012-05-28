@@ -30,6 +30,7 @@ GNU General Public License for more details.
 #include "ChunkMath.h"
 #include "MinecraftServer.h"
 #include "FCRuntimeException.h"
+#include "EntityListEntry.h"
 
 using Poco::Thread;
 using std::cout;
@@ -37,7 +38,7 @@ using std::endl;
 using std::dec;
 
 PlayerThread::PlayerThread(PackingThread& rPackingThread,MinecraftServer* pServer) : 
-	ServerThreadBase("PlayerThread"),
+ServerThreadBase("PlayerThread"),
 	_rPackingThread(rPackingThread),
 
 	_Connection(),
@@ -52,7 +53,7 @@ PlayerThread::PlayerThread(PackingThread& rPackingThread,MinecraftServer* pServe
 
 	_ChunkProvider(_NetworkOutRoot,rPackingThread,this,pServer),
 	_Inventory(_NetworkOutRoot,_NetworkInRoot,pServer->getItemInfoProvider()),
-	
+
 	_timeJobServer(this)
 {
 	_iEntityID = FC_UNKNOWNEID;
@@ -71,24 +72,14 @@ PlayerThread::PlayerThread(PackingThread& rPackingThread,MinecraftServer* pServe
 
 
 	_timeJobServer.addJob(&PlayerThread::Interval_KeepAlive,15000);
-
-	/*
-		//Interval in milli seconds
-		#define FC_INTERVAL_TIMESEND			5000
-		#define FC_INTERVAL_KEEPALIVE			
-		#define FC_INTERVAL_HANDLEMOVEMENT		500
-		#define FC_INTERVAL_MOVEMENT			50
-		#define FC_INTERVAL_CALCULATESPEED		1000
-		#define FC_INTERVAL_CHECKPOSITION		1000
-	*/
+	_timeJobServer.addJob(&PlayerThread::Interval_CheckEating,100);
 
 	startThread(this);
 }
 
 
 PlayerThread::~PlayerThread() {
-	cout<<"destruct!\n";
-	Disconnect("Server shutdown",false);
+	if (isAssigned()) {Disconnect("Server shutdown",false);}
 	killThread();
 }
 
@@ -109,11 +100,6 @@ EntityCoordinates PlayerThread::getCoordinates() {
 	return _Coordinates;
 }
 
-/*
-int PlayerThread::getConnectedPlayers() {
-	return _PlayerCount;
-}*/
-
 void PlayerThread::run() {
 	unsigned char iPacket;
 
@@ -127,21 +113,16 @@ void PlayerThread::run() {
 
 
 		try {
-			/*Interval_KeepAlive(); 
-			Interval_Time();
-			Interval_HandleMovement();
-			Interval_Movement();
-			Interval_CalculateSpeed();
-			Interval_CheckPosition();
-			Interval_CheckEating();
-			*/
-
 			_timeJobServer.doJobs();
 
 			iPacket = _NetworkInRoot.readByte();
-
 			if (!_fSpawned &&  (iPacket!=0x01 && iPacket!=0x02 && iPacket!=0xFE)) {
 				Disconnect("Login not done!");
+				continue;
+			}
+
+			if (_fSpawned && (iPacket==0x01 || iPacket==0x02 || iPacket==0xFE)){
+				Disconnect("Login already done!");
 				continue;
 			}
 
@@ -150,17 +131,9 @@ void PlayerThread::run() {
 				Packet0_KeepAlive();
 				break;
 			case 0x1:
-				if (isSpawned()) {
-					Disconnect("Login already done!");
-					continue;
-				}
 				Packet1_Login();
 				break;
 			case 0x2:
-				if (isSpawned()) {
-					Disconnect("Login already done!");
-					continue;
-				}
 				Packet2_Handshake();
 				break;
 			case 0x3:
@@ -199,10 +172,10 @@ void PlayerThread::run() {
 			case 0x66:
 				Packet102_WindowClick();
 				break;
-			case 0xFE: //Server List Ping
+			case 0xFE: 
 				Packet254_ServerListPing();
 				break;
-			case 0xFF: //Disconnect
+			case 0xFF:
 				Packet255_Disconnect();
 				break;
 			default: 
@@ -271,14 +244,13 @@ void PlayerThread::Disconnect(char iLeaveMode) {
 	}
 
 	_Flags.clear();
-
 	_sName.clear();
 	_sIP.clear();
 	if (iLeaveMode != FC_LEAVE_KICK) {_NetworkWriter.clearQueues();}
 
-	_dRunnedMeters=0;
-	_Spawned_PlayerInfoList=0;
-	_iPlayerPing= -1L;
+	_dRunnedMeters = 0.0;
+	_Spawned_PlayerInfoList = 0;
+	_iPlayerPing = -1L;
 
 	_Connection.close();
 	_heapSpawnedEntities.cleanupElements();
@@ -286,8 +258,12 @@ void PlayerThread::Disconnect(char iLeaveMode) {
 	_fAssigned      = false;
 	_fHandshakeSent = false;
 
-	_timer_Ping.stop();
 	_timer_Ping.reset();
+	_timer_LastBlockPut.reset();
+	_timer_lastSpeedCalculation.reset();
+	_timer_lastArmSwing.reset();
+	_timer_lastPositionUpdateEvent.reset();
+	_timer_StartedEating.reset();
 }
 
 
@@ -322,14 +298,6 @@ string PlayerThread::generateConnectionHash() {
 	StringStream<<std::hex<<iVal;
 	_sConnectionHash.assign(StringStream.str());
 	return _sConnectionHash;
-}
-
-void PlayerThread::Interval_HandleMovement() {
-	/*if (!isSpawned()) {return;}
-	if (_timespanHandleMovement.isGone()) {
-		_timespanHandleMovement.reset();
-		_ChunkProvider.HandleMovement(_Coordinates);
-	}*/
 }
 
 void PlayerThread::sendTime() {
@@ -500,7 +468,7 @@ void PlayerThread::Packet1_Login() {
 		/* Login passed*/
 		_iEntityID = _pMinecraftServer->generateID();
 
-		
+
 		/* Resolving spawn world*/
 		_pActualWorld = _pMinecraftServer->getWorldByName(_pMinecraftServer->getMainWorldName());
 		if(_pActualWorld == NULL) {
@@ -517,9 +485,9 @@ void PlayerThread::Packet1_Login() {
 		_Coordinates.Pitch = 0.0F;
 		_Coordinates.Yaw = 0.0F;
 		_lastCoordinates = _Coordinates;
-		CheckPosition(false);
+		CheckPosition();
 
-		
+
 		/* Building response packet*/
 		NetworkOut Out(&_NetworkOutRoot);
 		Out.addByte(0x01);
@@ -534,7 +502,7 @@ void PlayerThread::Packet1_Login() {
 		Out.addByte((unsigned char)_pMinecraftServer->getPlayerSlotCount());
 		Out.Finalize(FC_QUEUE_HIGH);
 
-		
+
 		/* sending compass */
 		Out.addByte(0x6);
 		Out.addInt(0); 
@@ -556,11 +524,20 @@ void PlayerThread::Packet1_Login() {
 
 
 		/* sending/setting inventory */
+		ItemSlot Item0(_pMinecraftServer->getItemInfoProvider(),std::make_pair(1,0),64);
 		ItemSlot Item1(_pMinecraftServer->getItemInfoProvider(),std::make_pair(276,0),1);
+		ItemSlot Item2(_pMinecraftServer->getItemInfoProvider(),std::make_pair(360,0),64);
+		ItemSlot Item3(_pMinecraftServer->getItemInfoProvider(),std::make_pair(320,0),64);
+		ItemSlot Item4(_pMinecraftServer->getItemInfoProvider(),std::make_pair(277,0),1);
+		_Inventory.setSlot(37,Item0);
 		_Inventory.setSlot(38,Item1);
+		_Inventory.setSlot(39,Item2);
+		_Inventory.setSlot(40,Item3);
+		_Inventory.setSlot(36,Item4);
+
 		_Inventory.synchronizeInventory();
 
-		
+
 		/* sending clients position */
 		sendClientPosition();
 
@@ -570,12 +547,12 @@ void PlayerThread::Packet1_Login() {
 		/* Welcome message */
 		insertChat(_pMinecraftServer->getServerMOTD());
 
-		
+
 		/* Set offically to spawned & push join event */
 		_fSpawned = true;	
 		PlayerEventBase* p = new PlayerJoinEvent(this);//Push PlayerPool Join event
 		_pMinecraftServer->getPlayerPool()->addEvent(p);
-		
+
 
 		/* send active player list */
 		vector<PlayerThread*>& rvPlayers = _pMinecraftServer->getPlayerPool()->ListPlayers();
@@ -589,7 +566,8 @@ void PlayerThread::Packet1_Login() {
 			}
 		}
 
-        _timer_Ping.start();
+		/* Start timers */
+		_timer_Ping.start();
 	} catch(FCRuntimeException) {
 		Disconnect(FC_LEAVE_OTHER);
 	}
@@ -599,7 +577,6 @@ void PlayerThread::Packet1_Login() {
 void PlayerThread::Packet2_Handshake() {
 	try {
 		_sName = _NetworkInRoot.readString();
-		cout<<_sName<<"\n";
 	} catch(FCRuntimeException) {
 		Disconnect(FC_LEAVE_OTHER);
 	}
@@ -651,20 +628,21 @@ void PlayerThread::Packet3_Chat() {
 }
 
 void PlayerThread::Packet10_Player() {
-	if (isSpawned()) {_ChunkProvider.NextChunk();}
-    updatePing();
 	try {
 		_Coordinates.OnGround = _NetworkInRoot.readBool();
 	} catch(FCRuntimeException) {
 		Disconnect(FC_LEAVE_OTHER);
 	}
+
+	if (isSpawned()) {
+		_ChunkProvider.NextChunk();
+		updatePing();
+	}
 }
 
 void PlayerThread::Packet11_Position() {
 	EntityCoordinates TmpCoord;
-	if (isSpawned()) {_ChunkProvider.NextChunk();}
-	updatePing();
-
+	
 	try {
 		//Read coordinates in a temporary variable
 		TmpCoord.X = _NetworkInRoot.readDouble();
@@ -673,25 +651,31 @@ void PlayerThread::Packet11_Position() {
 		TmpCoord.Z = _NetworkInRoot.readDouble();
 		TmpCoord.OnGround = _NetworkInRoot.readBool();
 
-		//if X and Z ==  8.5000000000000000 , there is crap in the tcp buffer -> ignore it
-		if (TmpCoord.X == 8.5000000000000000 && TmpCoord.Z == 8.5000000000000000) { 
-			return;
-		}else{
 			_dRunnedMeters += MathHelper::distance2D(_Coordinates,TmpCoord);
+
+			_lastCoordinates = _Coordinates;
+			
 			_Coordinates.X = TmpCoord.X;
 			_Coordinates.Y = TmpCoord.Y;
 			_Coordinates.Stance = TmpCoord.Stance;
 			_Coordinates.Z = TmpCoord.Z;
 			_Coordinates.OnGround = TmpCoord.OnGround;
-		}
 	} catch(FCRuntimeException) {
 		Disconnect(FC_LEAVE_OTHER);
+	}
+
+	if (isSpawned()) {
+		CheckPosition();
+		_ChunkProvider.HandleMovement(_Coordinates);
+		_ChunkProvider.NextChunk();
+		updatePing();
+		syncMovement();
 	}
 }
 
 void PlayerThread::Packet12_Look() {
-	if (isSpawned()) {_ChunkProvider.NextChunk();}
-    updatePing();
+	
+	
 	try {
 		_Coordinates.Yaw = _NetworkInRoot.readFloat();
 		_Coordinates.Pitch = _NetworkInRoot.readFloat();
@@ -699,15 +683,16 @@ void PlayerThread::Packet12_Look() {
 	} catch(FCRuntimeException) {
 		Disconnect(FC_LEAVE_OTHER);
 	}
+	if (isSpawned()) {
+		_ChunkProvider.NextChunk();
+		updatePing();
+		syncMovement();
+	}
 }
 
 void PlayerThread::Packet13_PosAndLook() {
 	EntityCoordinates TmpCoord;
-
-	if (isSpawned()) {_ChunkProvider.NextChunk();}
-    updatePing();
-
-	//Read coordinates in a temporary variable
+	
 	try {
 		TmpCoord.X = _NetworkInRoot.readDouble();
 		TmpCoord.Y = _NetworkInRoot.readDouble();
@@ -717,15 +702,19 @@ void PlayerThread::Packet13_PosAndLook() {
 		TmpCoord.Pitch = _NetworkInRoot.readFloat();
 		TmpCoord.OnGround = _NetworkInRoot.readBool();
 
-		//if X and Z ==  8.5000000000000000 , there is crap in the tcp buffer -> ignore it
-		if (TmpCoord.X == 8.5000000000000000 && TmpCoord.Z == 8.5000000000000000) { 
-			return;
-		}else{
-			_dRunnedMeters += MathHelper::distance2D(_Coordinates,TmpCoord);
-			_Coordinates = TmpCoord;
-		}
+		_dRunnedMeters += MathHelper::distance2D(_Coordinates,TmpCoord);
+		_lastCoordinates = _Coordinates;
+		_Coordinates = TmpCoord;
 	} catch(FCRuntimeException) {
 		Disconnect(FC_LEAVE_OTHER);
+	}
+
+	if (isSpawned()) {
+		CheckPosition();
+		_ChunkProvider.HandleMovement(_Coordinates);
+		_ChunkProvider.NextChunk();
+		updatePing();
+		syncMovement();
 	}
 }
 
@@ -773,16 +762,27 @@ void PlayerThread::PlayerInfoList(bool fSpawn,string Name) {
 void PlayerThread::Packet16_HoldingChange() {
 	short iSlot;
 	try{
+		ItemEntry* pOldItem = _Inventory.getSelectedSlot().getItemEntryCache();
+
 		iSlot = _NetworkInRoot.readShort();
 		if (iSlot < 0 || iSlot > 8) {
 			Disconnect("Illegal holding slotID");
 			return;
 		}
 		_Inventory.HandleSelectionChange(iSlot);
-
-
 		PlayerEventBase* p = new PlayerChangeHeldEvent(this,_Inventory.getSlot(36+iSlot).getItem(),0);
 		_pMinecraftServer->getPlayerPool()->addEvent(p);
+
+
+		if (_Flags.isRightClicking()){ 
+			ItemEntry* pItem = _Inventory.getSelectedSlot().getItemEntryCache();
+			
+			_Flags.setRightClicking(false); //Kill right klick flag
+			
+			if (pOldItem != NULL && pOldItem->Eatable) { //Switched from a eatable thing to ... 
+				_timer_StartedEating.reset();/* Stop eating timers */
+			}
+		}
 	} catch(FCRuntimeException) {
 		Disconnect(FC_LEAVE_OTHER);
 	}
@@ -832,25 +832,27 @@ void PlayerThread::Packet102_WindowClick() {
 	}
 }
 
-void PlayerThread::Interval_Movement() {
-	//if (!isSpawned()) {return;}
+void PlayerThread::syncMovement() {
+	if (!isSpawned()) {return;}
 
-	//if (_timespanMovementSent.isGone()) {
-	//	if (!(_Coordinates == _lastCoordinates)) {
-	//		PlayerEventBase* p = new PlayerMoveEvent(this,_Coordinates);
-	//		_pMinecraftServer->getPlayerPool()->addEvent(p);
+	if (!(_Coordinates == _lastCoordinates)) {
+		PlayerEventBase* p = new PlayerMoveEvent(this,_Coordinates);
+		_pMinecraftServer->getPlayerPool()->addEvent(p);
+	}else{ //If position not changed after 1 second, push a movement event to player pool (Workaound for the invisable player bug)
+		
+		Poco::Timespan::TimeDiff time = _timer_lastPositionUpdateEvent.elapsed();
 
-	//		_lastCoordinates = _Coordinates;
-	//		_timespanMovementSent.reset();
-	//	}else{ //If position not changed after 1 second, push a movement event to player pool (Workaound for the invisable player bug)
-	//		if (_timespanMovementSent.getGoneTime() >= 1000) {
-	//			PlayerEventBase* p = new PlayerMoveEvent(this,_Coordinates);
-	//			_pMinecraftServer->getPlayerPool()->addEvent(p);
-	//			_timespanMovementSent.reset();
-	//		}
-	//	}
-
-	//}
+		if (time == 0) {
+			_timer_lastPositionUpdateEvent.start();
+		}else{
+			if (time/1000 > 1000) {
+				PlayerEventBase* p = new PlayerMoveEvent(this,_Coordinates);
+				_pMinecraftServer->getPlayerPool()->addEvent(p);
+				
+				_timer_lastPositionUpdateEvent.restart();
+			}
+		}
+	}
 }
 
 void PlayerThread::spawnEntity(Entity* pEntity) {
@@ -860,26 +862,7 @@ void PlayerThread::spawnEntity(Entity* pEntity) {
 	NetworkOut out(&_NetworkOutRoot);
 	pEntity->spawn(out);
 
-	EntityListEntry* Entry = new EntityListEntry;
-
-	Entry->EntityID = pEntity->getEntityID();
-	Entry->Position = pEntity->Coordinates;
-	Entry->vEquip.resize(5);
-
-	if (pEntity->isAlive()) {
-		EntityLiving* pLiving = (EntityLiving*)pEntity;
-
-		Entry->Type = pLiving->getType();
-		Entry->Alive = true;
-		for (char x=0;x<=4;x++) {
-			Entry->vEquip[x] = new ItemSlot(_pMinecraftServer->getItemInfoProvider(),pLiving->getEquipment(x),1);
-		}
-	}else{
-		Entry->Alive = false;
-		for (char x=0;x<=4;x++) {Entry->vEquip[x] = NULL;}
-	}
-
-	_heapSpawnedEntities.add(pEntity->getEntityID(),Entry);
+	_heapSpawnedEntities.add(pEntity->getEntityID(),new EntityListEntry(pEntity));
 }
 
 bool PlayerThread::isEntitySpawned(int ID) {
@@ -889,14 +872,14 @@ bool PlayerThread::isEntitySpawned(int ID) {
 void PlayerThread::updateEntityPosition(Entity* pEntity) {
 	if (!isSpawned()) {throw FCRuntimeException("Not spawned!");}
 	if (pEntity == NULL)  {throw FCRuntimeException("Nullpointer");}
-	
-	EntityListEntry** ptr;
+
+	EntityListEntry* ptr;
 	if ((ptr = _heapSpawnedEntities.get(pEntity->getEntityID())) == NULL) {throw FCRuntimeException("Not spawned!");}
 
 	NetworkOut Out(&_NetworkOutRoot);
-	pEntity->syncCoordinates(Out,(*ptr)->Position);
+	pEntity->syncCoordinates(Out,ptr->Position);
 
-	(*ptr)->Position = pEntity->Coordinates;
+	ptr->Position = pEntity->Coordinates;
 }
 
 void PlayerThread::despawnEntity(int ID) {
@@ -920,10 +903,30 @@ void PlayerThread::Packet18_Animation() {
 		int iEID = _NetworkInRoot.readInt();
 		char iAnimID = _NetworkInRoot.readByte();
 
-		if (iEID != _iEntityID){
-			Disconnect("You can't use other EntityID's as yours"); 
+		if (iEID != _iEntityID) { 
+			cout<<_sName<<" tried to use EntityAction on a strange EID\n"; 
+			return;
 		}
 
+		if (!Constants::isDefined(iAnimID,"/Entity/Alive/Animation/")) {
+			cout<<_sName<<" tried to use an invalid animationID\n"; 
+			return;
+		}
+
+
+		Poco::Timestamp::TimeDiff time = _timer_lastArmSwing.elapsed();
+
+		if (time == 0) { /* First time-> start timer*/	 
+			_timer_lastArmSwing.start();
+		}else{
+			if (time / 1000 >= FC_ARMSWINGCOOLDOWN) {
+				_timer_lastArmSwing.stop();
+				_timer_lastArmSwing.reset();
+				_timer_lastArmSwing.start();
+			}else{
+				return;
+			}
+		}
 
 		PlayerEventBase* p = new PlayerAnimationEvent(this,iAnimID);
 		_pMinecraftServer->getPlayerPool()->addEvent(p);
@@ -938,97 +941,75 @@ void PlayerThread::Packet19_EntityAction() {
 		char iActionID = _NetworkInRoot.readByte();
 
 		if (iEID != _iEntityID){
-			Disconnect("You can't use other EntityID's as yours"); 
+			cout<<_sName<<" tried to use EntityAction on a strange EID\n";
+			return;
 		}
 
-		/*switch(iActionID) {
-		case FC_ACTION_CROUCH:
-			if (_Flags.isCrouched()) {return;}
+		switch(iActionID) {
+		case FC_ENTITY_ACTION_CROUCH:
 			_Flags.setCrouched(true);
 			break;
-		case FC_ACTION_UNCROUCH:
-			if (!_Flags.isCrouched()) {return;}
+		case FC_ENTITY_ACTION_UNCROUCH:
 			_Flags.setCrouched(false);
 			break;
-		case FC_ACTION_STARTSPRINTING:
-			if (_Flags.isRightClicking()) {
-				Disconnect("Non vanilla behavior (SP while C)");
-				return;
-			}
-			if (_Flags.isSprinting()) {return;}
+		case FC_ENTITY_ACTION_STARTSPRINTING:
+			if (_Flags.isRightClicking()) {return;} /* Not a vanilla behavior */
 			_Flags.setSprinting(true);
 			break;
-		case FC_ACTION_STOPSPRINTING:
-			if (!_Flags.isSprinting()) {return;}
+		case FC_ENTITY_ACTION_STOPSPRINTING:
 			_Flags.setSprinting(false);
 			break;
 		default:
-			Disconnect("Unsupported action.");
-			break;
+			cout<<_sName<<" sent an invalid actionID\n";
+			return;
 		}
 
-		syncFlagsWithPP();*/
+		syncFlagsWithPP();
 	}catch(FCRuntimeException) {
 		Disconnect(FC_LEAVE_OTHER);
 	}
 }
 
 void PlayerThread::playAnimationOnEntity(int ID,char AnimID) {
-	if (!isEntitySpawned(ID)) {
-		throw FCRuntimeException("Not spawned!");
-	}
+	if (!isEntitySpawned(ID)) {throw FCRuntimeException("Not spawned!");}
+	if (!Constants::isDefined(AnimID,"/Entity/Alive/Animation/")){throw FCRuntimeException("Animation is not defined");}
 
 	NetworkOut Out(&_NetworkOutRoot);
 	Out.addByte(0x12);
 	Out.addInt(ID);
 	Out.addByte(AnimID);
-
 	Out.Finalize(FC_QUEUE_HIGH);
 }
 
 
-void PlayerThread::updateEntityMetadata(EntityLiving*) {
-	//if (!isEntitySpawned(ID)) {
-	//	throw FCRuntimeException("Not spawned!");
-	//}
-	//NetworkOut Out(&_NetworkOutRoot);
+void PlayerThread::updateEntityMetadata(EntityLiving* pEntity) {
+	if (!isSpawned()) {throw FCRuntimeException("Not spawned!");}
+	if (pEntity == NULL)  {throw FCRuntimeException("Nullpointer");}
 
-	//Out.addByte(0x28);
-	//Out.addInt(ID);
-
-
-	//char iMetadata = 0;
-	////Flags 
-
-	////Index 0 , general metadata
-	//Out.addByte(0); //Index = 0| Type=0
-	//iMetadata=0;
-	//iMetadata |= ((char)Flags.isOnFire()) & 1;
-	//iMetadata |= (((char)Flags.isCrouched()) & 1)<<1;
-	//iMetadata |= (((char)Flags.isRiding()) & 1 )<<2;
-	//iMetadata |= (((char)Flags.isSprinting()) & 1)<<3;
-	//iMetadata |= (((char)Flags.isRightClicking()) & 1)<<4;
-	//Out.addByte(iMetadata);
-
-	//Out.addByte(127); //End of metadata
-	//Out.Finalize(FC_QUEUE_HIGH);
+	NetworkOut Out(&_NetworkOutRoot);
+	pEntity->sendMetadata(Out);
 }
 
-void PlayerThread::Interval_CalculateSpeed() {
-	/*if (!isSpawned()) {return;}
-	if (_timespanSpeedCalculation.isGone()) {
-		double iTime = double(_timespanSpeedCalculation.getGoneTime());
-		_timespanSpeedCalculation.reset();
-
-
-		double iSpeed = (_dRunnedMeters * 60.0 * 60.0) / (iTime*3.6);
-		if (iSpeed > _pMinecraftServer->getMaxMovementSpeed()) {
-			cout<<_sName<<" moved too fast ("<<int(iSpeed)<<" km/h)"<<"\n";
-			Disconnect("You moved too fast!");
-		}
-		_dRunnedMeters=0.0;
-	}*/
-}
+//void PlayerThread::Interval_CheckSpeed() {
+//	if (!isSpawned()) {return;}
+//	if (_timer_lastSpeedCalculation.elapsed() == 0) { /* Start timer the first time */
+//		_timer_lastSpeedCalculation.start();
+//		return;
+//	}
+//
+//	double iTime  = double(_timer_lastSpeedCalculation.elapsed()) / 1000000.0; //microseconds -> seconds
+//	double iSpeed = _dRunnedMeters / iTime;
+//
+//	cout<<_sName<<" v="<<iSpeed<<" s="<<_dRunnedMeters<<" t="<<iTime<<"\n";
+//
+//	if (iSpeed > 15.0) {
+//		cout<<_sName<<" moved too fast ("<<int(iSpeed)<<" km/h)"<<"\n";
+//		Disconnect("You moved too fast!");
+//	}
+//
+//	_dRunnedMeters = 0.0;
+//	_timer_lastSpeedCalculation.reset();
+//}
 
 PlayerInventory& PlayerThread::getInventory() {
 	return _Inventory;
@@ -1038,51 +1019,18 @@ EntityFlags PlayerThread::getFlags() {
 	return _Flags;
 }
 
-void PlayerThread::updateEntityEquipment(EntityLiving*) {
-	//if (!isEntitySpawned(ID)) {
-	//	throw FCRuntimeException("Not spawned!");
-	//}
-	//if (Slot < 0 || Slot > 4) {
-	//	throw FCRuntimeException("Invalid slot");
-	//}
+void PlayerThread::updateEntityEquipment(EntityLiving* pEntity) {
+	if (!isEntitySpawned(pEntity->getEntityID())) {throw FCRuntimeException("Not spawned!");}
 
-	//NetworkOut Out(&_NetworkOutRoot);
-	//Out.addByte(0x05);
-	//Out.addInt(ID);
-	//Out.addShort(Slot);
-	//if (Item.first == 0) {
-	//	Out.addShort(-1);
-	//}else{
-	//	Out.addShort(Item.first);
-	//}
-	//Out.addShort(Item.second); //Damage/Metadata
-	//Out.Finalize(FC_QUEUE_HIGH);
+	EntityListEntry* pEntityLEntry = _heapSpawnedEntities.get(pEntity->getEntityID());
+
+	NetworkOut Out(&_NetworkOutRoot);
+	pEntity->updateEquipment(Out,pEntityLEntry->Equipment);
 }
 
-void PlayerThread::CheckPosition(bool fSynchronize) {
-	/*if (_pActualWorld->isSuffocating(_Coordinates)) {
-		char iHeight = -1;
-		BlockCoordinates blockCoords = ChunkMath::toBlockCoords(_Coordinates);
-		while(iHeight == -1) {
-			iHeight = _pActualWorld->getFreeSpace(blockCoords.X,blockCoords.Z);
-			if (iHeight == -1) {
-				_Coordinates.X += 1.0;
-				_Coordinates.Z += 1.0;
-				blockCoords = ChunkMath::toBlockCoords(_Coordinates);
-				continue;
-			}
-		}
-
-		_Coordinates.Y = ((double) iHeight) + 1.0;
-		if (fSynchronize) {sendClientPosition();}
-	}*/
-}
-
-void PlayerThread::Interval_CheckPosition() {
-	//if (!isSpawned()) {return;}
-	//if (_timespanPositionCheck.isGone()) {
-	//	_timespanPositionCheck.reset();
-	//	CheckPosition();
+void PlayerThread::CheckPosition() {
+	//if (_pActualWorld->isSuffocating(this)) {
+	//	/*cout<<_pMinecraftServer->getInGameTime()<<"\tsuffocating Y:"<<_Coordinates.Y<<"\n";*/
 	//}
 }
 
@@ -1099,192 +1047,227 @@ void PlayerThread::Packet15_PlayerBlockPlacement() {
 		Direction = _NetworkInRoot.readByte();
 		Slot.readFromNetwork(_NetworkInRoot);
 
-		//*if (_timerLastBlockPlace.getGoneTime() < 100) { //Client sends placeblock packet two times if you are aiming at a block
-		//	return;
-		//}*/ 
+		
+		Poco::Timestamp::TimeDiff lastBlockPut = _timer_LastBlockPut.elapsed()/1000;
 
-		////_timerLastBlockPlace.reset();
-
-		//ItemSlot& InHand = _Inventory.getSelectedSlot();
-
-		//ItemID iSelectedBlock = std::make_pair(0,0);
-		//if (InHand.isEmpty()) {
-		//	InHand.clear();
-		//	return;
-		//}
-
-		//if (InHand.isBlock()) {
-		//	iSelectedBlock = InHand.getItem();
-		//}
-
-		//switch (Direction) {
-		//case 0:
-		//	blockCoordinates.Y--;
-		//	break;
-		//case 1:
-		//	blockCoordinates.Y++;
-		//	break;
-		//case 2:
-		//	blockCoordinates.Z--;
-		//	break;
-		//case 3:
-		//	blockCoordinates.Z++;
-		//	break;
-		//case 4:
-		//	blockCoordinates.X--;
-		//	break;
-		//case 5:
-		//	blockCoordinates.X++;
-		//	break;
-		//case -1:
-		//	if (blockCoordinates.X==-1 && blockCoordinates.Y == -1 && blockCoordinates.Z == -1) {
-		//		if (InHand.getItem().first == 326 || InHand.getItem().first == 327) {return;} //Filter lava and water buckets
-
-		//		//Special actions are not allowed with blocks
-		//		if (_Inventory.getSelectedSlot().isBlock()) { 
-		//			spawnBlock(blockCoordinates,std::make_pair(0,0));
-		//			return;
-		//		}
-
-		//		//Eating
-		//		if (_Inventory.getSelectedSlot().getItemEntryCache()->Eatable) {
-		//			if (_iFood==20) {return;}
-		//			_timerStartedEating.reset();
-		//			_Flags.setRightClicking(true);
-		//			syncFlagsWithPP();
-		//			return;
-		//		}
-
-		//		//Weapon blocking
-		//		if (_Inventory.getSelectedSlot().getItemEntryCache()->Weapon) {
-		//			_Flags.setRightClicking(true);
-		//			syncFlagsWithPP();
-		//		}
-		//		return; 
-		//	}
-		//	break;
-		//default:
-		//	Disconnect("Illegal block direction: " + int(Direction));
-		//	return;
-		//}
-
-		//if (!InHand.isBlock()) { //But it's a item...
-		//	if (InHand.getItem().first == 325) { //Fill your bucket with water / lava
-		//			ItemID Block = _pActualWorld->getBlock(blockCoordinates);
-
-		//			if (Block.first == 9 || Block.first == 11) {
-		//				_pActualWorld->setBlock(blockCoordinates,std::make_pair(0,0));
-		//				spawnBlock(blockCoordinates,std::make_pair(0,0));
-
-		//				switch(Block.first) {
-		//				case 9: //Water
-		//					InHand.setItem( std::make_pair(326,0));
-		//					_Inventory.setSlot(36+_Inventory.getSlotSelection(),InHand);
-		//					break;
-		//				case 11: //Lava
-		//					InHand.setItem( std::make_pair(327,0));
-		//					_Inventory.setSlot(36+_Inventory.getSlotSelection(),InHand);
-		//					break;
-		//				}
-		//			}
-		//		return;
-		//	}
-
-		//	ItemEntry* Entry = InHand.getItemEntryCache();
-		//	if (Entry->ConnectedBlock.first == -1 && Entry->ConnectedBlock.second == -1 ) { //No connected item
-		//		spawnBlock(blockCoordinates,std::make_pair(0,0));
-		//		return; 
-		//	}
-		//	iSelectedBlock = Entry->ConnectedBlock;
-		//}
-		//
-		///*
-		//* Check blockCoordinates
-		//*/
-		//ItemSlot isSelectedBlock(_pMinecraftServer->getItemInfoProvider(),iSelectedBlock,1);
-		//if(isSelectedBlock.getBlockEntryCache()->Solid) {
-		//	//Prevent: set a block into your body
-		//	if ((ClientCoordinats.X == blockCoordinates.X && ClientCoordinats.Z == blockCoordinates.Z)  &&
-		//		(ClientCoordinats.Y == blockCoordinates.Y || ClientCoordinats.Y+1==blockCoordinates.Y)) { 
-		//			return;
-		//	}
-
-		//	//Prevent: set a block into other body
-		//	if (_pMinecraftServer->getPlayerPool()->willHurtOther(blockCoordinates,this)) { 
-		//		spawnBlock(blockCoordinates,std::make_pair(0,0));
-		//		return;
-		//	}
-		//}
+		/*
+		* The client sends this packet two times if you are standing in front of a block very close and you cant
+		* set it 
+		*/
+		if (lastBlockPut < 100 && lastBlockPut>0) {
+			_timer_LastBlockPut.stop();
+			_timer_LastBlockPut.reset();
+			return;
+		} 
 
 
-		//ItemID BlockAt = _pActualWorld->getBlock(blockCoordinates);
-		////Prevent: set a block into other block 
-		//if (BlockAt.first != 0 &&
-		//	BlockAt.first != 8 &&
-		//	BlockAt.first != 9 &&
-		//	BlockAt.first != 10 &&
-		//	BlockAt.first != 11) 
-		//{ 
-		//	return;
-		//}
+		ItemSlot& InHand = _Inventory.getSelectedSlot();
 
-		////Prevent: set a block above the map
-		//if (blockCoordinates.Y >= FC_WORLDHEIGHT-2) { 
-		//	spawnBlock(blockCoordinates,std::make_pair(0,0));
-		//	return;
-		//}
+		ItemID idSelectedBlock = std::make_pair(0,0);
+		if (InHand.isEmpty()) { /* No item in hand */
+			InHand.clear();
+			return;
+		}
 
-		////Prevent: set a block under the map
-		//if(blockCoordinates.Y < 0) {
-		//	return;
-		//}
+		if (InHand.isBlock()) {idSelectedBlock = InHand.getItem();}
 
-		////Prevent: set too distant blocks
-		//if (MathHelper::distance3D(blockCoordinates,ClientCoordinats) > 6.0) {
-		//	return;
-		//}
+		switch (Direction) {
+		case 0:
+			blockCoordinates.Y--;
+			break;
+		case 1:
+			blockCoordinates.Y++;
+			break;
+		case 2:
+			blockCoordinates.Z--;
+			break;
+		case 3:
+			blockCoordinates.Z++;
+			break;
+		case 4:
+			blockCoordinates.X--;
+			break;
+		case 5:
+			blockCoordinates.X++;
+			break;
+		case -1:
+			if (blockCoordinates.X==-1 && blockCoordinates.Y == -1 && blockCoordinates.Z == -1) {
+				if (InHand.getItem().first == 326 || InHand.getItem().first == 327) {return;} //Filter lava and water buckets
+
+				/* Special actions are not allowed with blocks */
+				if (InHand.isBlock()) { 
+					spawnBlock(blockCoordinates,std::make_pair(0,0));
+					return;
+				}
+
+				/* Eating */
+				if (InHand.getItemEntryCache()->Eatable) {
+					if (_iFood==20) {return;} /* You're sated */
+					
+					cout<<"start eating\n";
+
+					_timer_StartedEating.stop();
+					_timer_StartedEating.reset();
+					_timer_StartedEating.start();
+					
+				
+					switch (_Flags.isRightClicking()) {
+					case true: //Already right klicking -> "restart" right klicking
+						_Flags.setRightClicking(false);
+						syncFlagsWithPP();
+						Thread::sleep(200); // Wait 4 ticks
+						_Flags.setRightClicking(true);
+						syncFlagsWithPP();
+						break;
+					case false:
+						_Flags.setRightClicking(true);
+						syncFlagsWithPP();
+					}
+					return;
+				}
+
+				/* Weapon blocking */
+				if (InHand.getItemEntryCache()->Weapon) {
+					cout<<"start blocking\n";
+					switch (_Flags.isRightClicking()) {
+					case true: //Already right klicking -> "restart" right klicking
+						_Flags.setRightClicking(false);
+						syncFlagsWithPP();
+						Thread::sleep(200); // Wait 4 ticks
+						_Flags.setRightClicking(true);
+						syncFlagsWithPP();
+						break;
+					case false:
+						_Flags.setRightClicking(true);
+						syncFlagsWithPP();
+					}
+				}
+				return; 
+			}
+			break;
+		default:
+			cout<<_sName<<" sent a illegal block direction\n";
+			return;
+		}
 
 
-		////Prevent: set non solid blocks ontop of non solid blocks
-		//if (blockCoordinates.Y>0 && !isSelectedBlock.getBlockEntryCache()->Solid) {
-		//	ItemID BlockBelow = _pActualWorld->getBlock(blockCoordinates.X,blockCoordinates.Y-1,blockCoordinates.Z);
+		/* Items who are connected with blocks */
+		if (!InHand.isBlock()) { 
 
-		//	switch(isSelectedBlock.getBlockEntryCache()->Stackable) {
-		//	case true: //You can stack it, but it need a solid base block
-		//		if (!_pMinecraftServer->getItemInfoProvider()->getBlock(BlockBelow).Solid && BlockBelow.first != iSelectedBlock.first) {
-		//			spawnBlock(blockCoordinates,std::make_pair(0,0));
-		//			return;
-		//		}
-		//		break;
-		//	case false: //Not stackable
-		//		if( (BlockBelow.first==iSelectedBlock.first) || 
-		//			(!_pMinecraftServer->getItemInfoProvider()->getBlock(BlockBelow).Solid) //unsolid blocks need a solid ground
-		//			) 
-		//		{
-		//			spawnBlock(blockCoordinates,std::make_pair(0,0));
-		//			return;
-		//		}
-		//		break;
-		//	}
-		//}
+			/* Buckets and fluids */
+			if (InHand.getItem().first == 325) {
+					ItemID Block = _pActualWorld->getBlock(blockCoordinates);
 
-		////Prevent: Set not placeable blocks
-		//if (!isSelectedBlock.getBlockEntryCache()->Placeable) {
-		//	spawnBlock(blockCoordinates,std::make_pair(0,0));
-		//	return;
-		//}
+					if (Block.first == 9 || Block.first == 11) {
+						_pActualWorld->setBlock(blockCoordinates,std::make_pair(0,0));
+
+						switch(Block.first) {
+						case 9: //Water
+							InHand.setItem( std::make_pair(326,0));
+							_Inventory.setSlot(36+_Inventory.getSlotSelection(),InHand);
+							break;
+						case 11: //Lava
+							InHand.setItem( std::make_pair(327,0));
+							_Inventory.setSlot(36+_Inventory.getSlotSelection(),InHand);
+							break;
+						}
+					}
+				return;
+			}
 
 
-		///*
-		//* All test done. 
-		//*/
+			ItemEntry* Entry = InHand.getItemEntryCache();
+			if (Entry->ConnectedBlock.first == -1 && Entry->ConnectedBlock.second == -1) { //No connected item
+				spawnBlock(blockCoordinates,std::make_pair(0,0));
+				return; 
+			}
+			idSelectedBlock = Entry->ConnectedBlock;
+		}
 
-		////Send inventory update to player
-		//_Inventory.DecreaseInHandStack();
+
+	
+		BlockEntry* pSelectedBlock = _pMinecraftServer->getItemInfoProvider()->getBlock(idSelectedBlock);
+
+		/* Prevent: set a block above the map */
+		if (pSelectedBlock->Fluid) { /* Fluids can be placed one block above the max block level */
+			if (blockCoordinates.Y >= FC_WORLDHEIGHT-1) { return;}
+		}else{
+			if (blockCoordinates.Y >= FC_WORLDHEIGHT-2) { return;}
+		}
+
+		/* Prevent: set a block under the map */
+		if(blockCoordinates.Y < 0) {return;}
+
+		/* Prevent: set too distant blocks */
+		if (MathHelper::distance3D(blockCoordinates,ClientCoordinats) > 6.0) {return;}
 
 
-		////Append to map + push block change event
-		//_pActualWorld->setBlock(blockCoordinates,iSelectedBlock);
+		ItemID BlockAt = _pActualWorld->getBlock(blockCoordinates);
+		BlockEntry* pBlockAt = _pMinecraftServer->getItemInfoProvider()->getBlock(BlockAt);		
+
+
+		/* Prevent: Set a block into a non fluid block/non air */
+		if (BlockAt.first != 0 && !pBlockAt->Fluid && !pBlockAt->isSpreadBlock) {
+			spawnBlock(blockCoordinates,BlockAt);
+			return;
+		}
+
+		/* Prevent: Set not placeable blocks */
+		if (!pSelectedBlock->Placeable) {
+			spawnBlock(blockCoordinates,std::make_pair(0,0));
+			return;
+		}
+
+		
+		/* Prevent: Set a solid block into you/other player */
+		if(pSelectedBlock->Solid) {
+			vector<PlayerThread*>& rvpPlayerThreads = _pMinecraftServer->getPlayerPool()->ListPlayers();
+			BlockCoordinates coords;
+
+			for (short x=0;x<=rvpPlayerThreads.size()-1;x++){
+				if ( !rvpPlayerThreads[x]->isAssigned() || !rvpPlayerThreads[x]->isSpawned()) {continue;}
+				coords.X = int(floor(rvpPlayerThreads[x]->getCoordinates().X));
+				coords.Y = int(floor(rvpPlayerThreads[x]->getCoordinates().Y));
+				coords.Z = int(floor(rvpPlayerThreads[x]->getCoordinates().Z));
+
+				if ( coords.X == blockCoordinates.X &&
+					 coords.Z == blockCoordinates.Z &&
+					 (coords.Y == blockCoordinates.Y ||coords.Y+1 == blockCoordinates.Y)
+				   )
+				{ /* it will hurt someone */
+					spawnBlock(blockCoordinates,std::make_pair(0,0));
+					return;
+				}
+			}
+		}
+
+
+		/* Prevent: set non solid blocks ontop of other non solid blocks that aren't allow stacking of itself*/
+		if (blockCoordinates.Y>=1 && !pSelectedBlock->Solid) { /* Not needed if you are setting a block with Y=0 / solid block */
+			ItemID BlockBelow = _pActualWorld->getBlock(blockCoordinates.X,blockCoordinates.Y-1,blockCoordinates.Z);
+			BlockEntry* pBlockBelow = _pMinecraftServer->getItemInfoProvider()->getBlock(BlockBelow);
+
+			if (!pBlockBelow->Solid && /* Unsolid ground */
+				pSelectedBlock->Stackable && /* You can place one of the same type above this block*/
+				BlockBelow.first != idSelectedBlock.first /* Bottom block is not the same one than the to be set one*/
+				)
+			{
+				spawnBlock(blockCoordinates,std::make_pair(0,0));
+				return;
+			}
+		}
+		
+
+		/* All tests done! */
+		/* Send inventory update to player */
+		_Inventory.DecreaseInHandStack();
+
+
+		/* Append to map */
+		_pActualWorld->setBlock(blockCoordinates,idSelectedBlock);
+
+		_timer_LastBlockPut.reset();
+		_timer_LastBlockPut.start();
 	} catch(FCRuntimeException& ex ) {
 		cout<<"Exception cateched: "<<ex.getMessage()<<"\n";
 		Disconnect(FC_LEAVE_OTHER);
@@ -1339,8 +1322,9 @@ void PlayerThread::Packet14_Digging() {
 			case 4: //Drop item
 				cout<<_sName<<" dropped item\n";
 				break;
-			case 5: //Shot arrow / finish eating
+			case 5: //Shot arrow / finish eating / stop blocking
 				if (_Flags.isRightClicking()) {
+					cout<<"end right-click\n";
 					_Flags.setRightClicking(false);
 					syncFlagsWithPP();
 					return;
@@ -1353,7 +1337,7 @@ void PlayerThread::Packet14_Digging() {
 		}
 
 
-		cout<<"iStatus:"<<int(iStatus)<<"\tiFace:"<<int(iFace)<<"\n";
+	/*	cout<<"iStatus:"<<int(iStatus)<<"\tiFace:"<<int(iFace)<<"\n";*/
 	} catch(FCRuntimeException& ex ) {
 		cout<<"Exception cateched: "<<ex.getMessage()<<"\n";
 		Disconnect(FC_LEAVE_OTHER);
@@ -1361,7 +1345,6 @@ void PlayerThread::Packet14_Digging() {
 }
 
 World* PlayerThread::getWorld() {
-	//if (!_fAssigned || _pActualWorld==NULL) {throw FCRuntimeException("Not logged in");}
 	return _pActualWorld;
 }
 
@@ -1394,36 +1377,38 @@ void PlayerThread::Interval_CheckEating() {
 
 
 void PlayerThread::handleEating() {
-	//if (!_Flags.isRightClicking()) {return;}
+	if (!_Flags.isRightClicking()) {return;}
+	if (_timer_StartedEating.elapsed() == 0) {return;}
 
-	//ItemSlot& rInHandSlot = _Inventory.getSelectedSlot();
-	//if (rInHandSlot.isEmpty() || rInHandSlot.isBlock()) { //Block or empty
-	//	_Flags.setRightClicking(false);
-	//	syncFlagsWithPP();
-	//	return;
-	//}
+	ItemSlot& rInHandSlot = _Inventory.getSelectedSlot();
+	if (rInHandSlot.isEmpty() || rInHandSlot.isBlock()) { //Block or empty
+		_Flags.setRightClicking(false);
+		syncFlagsWithPP();
+		return;
+	}
 
-	//ItemEntry* IEntry = rInHandSlot.getItemEntryCache();
-	//if (IEntry->Weapon) {return;}
-	//if (!IEntry->Eatable) {
-	//	_Flags.setRightClicking(false);
-	//	syncFlagsWithPP();
-	//	return;
-	//}
+	ItemEntry* IEntry = rInHandSlot.getItemEntryCache();
+	if (IEntry->Weapon) {return;}
+	if (!IEntry->Eatable) {
+		_Flags.setRightClicking(false);
+		syncFlagsWithPP();
+		return;
+	}
 
-	//if (_timerStartedEating.getGoneTime() >= 1600 + (_iPlayerPing>500 ||_iPlayerPing == -1 ? 500 : _iPlayerPing)  ) {return;}
-	//if (_timerStartedEating.getGoneTime() >= 1500) {
-	//	_iFood = fixRange<short>(_iFood+IEntry->FoodValue,0,20); 
-	//	_nSaturation = fixRange<float>(_nSaturation + float(IEntry->FoodValue)*0.3F,0.0F,5.0F);
-	//	
-	//	setEntityStatus(FC_ENTITYSTATUS_ACCEPTEATING); //Accept eating
-	//	syncHealth();
-	//	_Inventory.DecreaseInHandStack();
-	//	
+	if (_timer_StartedEating.elapsed()/1000 >= 1200) {
+		_iFood = fixRange<short>(_iFood+IEntry->FoodValue,0,20); 
+		_nSaturation = fixRange<float>(_nSaturation + float(IEntry->FoodValue)*0.3F,0.0F,5.0F);
+		
+		setEntityStatus(Constants::get("/Entity/Alive/Status/AcceptEating")); //Accept eating
+		syncHealth();
+		_Inventory.DecreaseInHandStack();
+		
 
-	//	_Flags.setRightClicking(false);
-	//	syncFlagsWithPP();
-	//}
+		_Flags.setRightClicking(false);
+		syncFlagsWithPP();
+		_timer_StartedEating.stop();
+		_timer_StartedEating.reset();
+	}
 }
 
 void PlayerThread::sendKeepAlive() {
@@ -1434,11 +1419,15 @@ void PlayerThread::sendKeepAlive() {
 }
 
 void PlayerThread::updatePing() {
-    _iPlayerPing = short(_timer_Ping.elapsed()/1000);
-    _timer_Ping.reset();
-    _timer_Ping.start();
+	_iPlayerPing = short(_timer_Ping.elapsed()/1000);
+	_timer_Ping.reset();
+	_timer_Ping.start();
 }
 
 short PlayerThread::getPing() {
 	return _iPlayerPing;
+}
+
+MinecraftServer* PlayerThread::getMinecraftServer(){
+	return _pMinecraftServer;
 }
