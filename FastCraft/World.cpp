@@ -70,6 +70,7 @@ MapChunk* World::generateChunk(int X,int Z) {
 	for (short y=0;y<=60;y++) {
 		for (int x=0;x<=15;x++) {
 			for (int z=0;z<=15;z++) {
+				//if (x==5 && y==60) {continue;}
 				pChunk->Blocks[ChunkMath::toIndex(x,y,z)] = 12;
 			}
 		}
@@ -171,13 +172,16 @@ bool World::isSuffocating(EntityCoordinates Coords,float dHeight) {
 		ex.rethrow();
 	}
 
-	for (short y=short(Coords.Y);y<=short(Coords.Y)+short(ceil(dHeight));y++) {		
+	/*cout<<"Y :"<<short(Coords.Y)<<" => "<<short(Coords.Y)+short(ceil(dHeight))<<"\n";*/
+
+	for (short y=short(Coords.Y);y<=short(Coords.Y)+short(ceil(dHeight))-1;y++) {		
 		iOffset = ChunkMath::toIndex(
 		ChunkMath::toChunkInternal((int)floor(Coords.X)),
 		y,
 		ChunkMath::toChunkInternal((int)floor(Coords.Z))
 		);
 
+		/*cout<<"Y = "<<y<<" Blk:"<<int(pChunk->Blocks[iOffset])<<"\n";*/
 		if (_pMinecraftServer->getItemInfoProvider()->getBlock((short)pChunk->Blocks[iOffset])->Solid) {
 			return true;
 		}
