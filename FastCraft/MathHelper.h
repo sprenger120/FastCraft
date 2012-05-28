@@ -15,8 +15,11 @@ GNU General Public License for more details.
 
 #ifndef _FASTCRAFTHEADER_MATHHELPER
 #define _FASTCRAFTHEADER_MATHHELPER
+#define DEG2RAD			0.0174532925199433
 #include "EntityCoordinates.h"
 #include "Structs.h"
+
+
 
 class MathHelper {
 private:
