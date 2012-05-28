@@ -39,7 +39,7 @@ string& NBTTagByteArray::getDataRef() {
 	return sData;
 }
 
-char NBTTagByteArray::operator[] (int index) {
-	if (index < 0 || index > sData.length()) { throw FCRuntimeException("Index out of bound!"); }
+char NBTTagByteArray::operator[] (unsigned int index) {
+	if (index > sData.length()) { throw FCRuntimeException("Index out of bound!"); }
 	return sData.at(index);
 }

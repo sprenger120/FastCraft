@@ -60,6 +60,6 @@ public:
 	* Use it to get a chat at specific position
 	* Will throw Poco::RuntimeException if index is out of bound or invalid
 	*/
-	char operator[] (int);
+	char operator[] (unsigned int);
 };
 #endif
