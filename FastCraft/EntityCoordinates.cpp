@@ -14,6 +14,8 @@ GNU General Public License for more details.
 */
 #include "EntityCoordinates.h"
 #include <cmath>
+#include "MathHelper.h"
+#include<iostream>
 
 EntityCoordinates::EntityCoordinates() {
 	X = Y = Z = Stance = 0.0;
@@ -26,27 +28,16 @@ EntityCoordinates::~EntityCoordinates() {
 
 
 bool EntityCoordinates::operator == (const EntityCoordinates& other) {
-	return !(
-		fabs(X - other.X) > 0.1 || 
-		fabs(Y - other.Y) > 0.1 || 
-		fabs(Stance - other.Stance) > 0.1 ||  
-		fabs(Z - other.Z) > 0.1 || 
-		fabs(Yaw - other.Yaw) > 0.1F || 
-		fabs(Pitch - other.Pitch) > 0.1F ||   
-		OnGround !=  other.OnGround);
+	return MathHelper::distance3D(*this,other) <= 0.00390625 && 
+		   fabs(Yaw - other.Yaw) <= 0.00390625 && 
+		   fabs(Pitch - other.Pitch) <= 0.00390625;
 }
 
 bool EntityCoordinates::CoordinatesEqual(const EntityCoordinates& other) {
-	return !(
-		fabs(X - other.X) > 0.1 || 
-		fabs(Y - other.Y) > 0.1 || 
-		fabs(Stance - other.Stance) > 0.1 ||  
-		fabs(Z - other.Z) > 0.1 || 
-		OnGround !=  other.OnGround
-		);
+	return MathHelper::distance3D(*this,other) <= 0.0390625;
 }
 
 bool EntityCoordinates::LookEqual(const EntityCoordinates& other) {
-	return !(fabs(Yaw - other.Yaw) > 0.1F || 
-			fabs(Pitch - other.Pitch) > 0.1F );
+	return fabs(Yaw - other.Yaw) <= 0.00390625 && 
+			fabs(Pitch - other.Pitch) <= 0.00390625;
 }
