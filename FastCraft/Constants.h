@@ -32,6 +32,7 @@ GNU General Public License for more details.
 #define FC_WORLDHEIGHT					128
 #define FC_VIEWDISTANCE					10
 #define FC_UNKNOWNEID					-1
+#define FC_ARMSWINGCOOLDOWN				500
 
 
 //Chunk Constants
