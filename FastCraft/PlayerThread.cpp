@@ -243,20 +243,30 @@ void PlayerThread::Disconnect(char iLeaveMode) {
 		_pMinecraftServer->getPlayerPool()->addEvent(p);
 	}
 
+	_sName.append(" <leaved>");
+	_sLeaveMessage.clear();
+
+	_iEntityID	= FC_UNKNOWNEID;
+	_iHealth	= -1;
+	_iFood		= -1;
+	_nSaturation= 0.0F;
+
 	_Flags.clear();
-	_sName.clear();
-	_sIP.clear();
-	if (iLeaveMode != FC_LEAVE_KICK) {_NetworkWriter.clearQueues();}
-
-	_dRunnedMeters = 0.0;
+	
 	_Spawned_PlayerInfoList = 0;
-	_iPlayerPing = -1L;
+	_dRunnedMeters = 0.0;
 
-	_Connection.close();
-	_heapSpawnedEntities.cleanupElements();
 	_fSpawned       = false;
 	_fAssigned      = false;
 	_fHandshakeSent = false;
+	
+	_sIP.clear();
+	_Connection.close();
+	_iPlayerPing = -1;
+
+	if (iLeaveMode != FC_LEAVE_KICK) {_NetworkWriter.clearQueues();}
+
+	_heapSpawnedEntities.cleanupElements();
 
 	_timer_Ping.reset();
 	_timer_LastBlockPut.reset();
@@ -674,8 +684,6 @@ void PlayerThread::Packet11_Position() {
 }
 
 void PlayerThread::Packet12_Look() {
-	
-	
 	try {
 		_Coordinates.Yaw = _NetworkInRoot.readFloat();
 		_Coordinates.Pitch = _NetworkInRoot.readFloat();
@@ -1095,7 +1103,7 @@ void PlayerThread::Packet15_PlayerBlockPlacement() {
 				if (InHand.getItem().first == 326 || InHand.getItem().first == 327) {return;} //Filter lava and water buckets
 
 				/* Special actions are not allowed with blocks */
-				if (InHand.isBlock()) { 
+				if (InHand.isBlock()) {
 					spawnBlock(blockCoordinates,std::make_pair(0,0));
 					return;
 				}
@@ -1207,7 +1215,7 @@ void PlayerThread::Packet15_PlayerBlockPlacement() {
 
 
 		/* Prevent: Set a block into a non fluid block/non air */
-		if (BlockAt.first != 0 && !pBlockAt->Fluid && !pBlockAt->isSpreadBlock) {
+		if (BlockAt.first != 0 && !pBlockAt->Fluid && !pBlockAt->isSpreadBlock) {			
 			spawnBlock(blockCoordinates,BlockAt);
 			return;
 		}
