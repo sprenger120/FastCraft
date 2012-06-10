@@ -35,7 +35,7 @@ _ServerSock(pServer->getPort()),
 _preparedServerFullMsg("")
 {
 	_pMinecraftServer = pServer;
-	_preparedServerFullMsg.append<unsigned char>(1,0xFF);
+	_preparedServerFullMsg.append(1,0xFF);
 	NetworkOut::addString(_preparedServerFullMsg,pServer->getServerFullMessage());
 
 	startThread(this);
@@ -124,7 +124,7 @@ void AcceptThread::run() {
 			}
 
 			/* Manage connection list + ban if needed */
-			vConnections.push_back(std::make_pair<string,Poco::Timestamp::TimeDiff>(sNewConnectionIP,Timer.elapsed()/1000)); /* Add connection to list */
+			vConnections.push_back(std::make_pair(sNewConnectionIP,Timer.elapsed()/1000L)); /* Add connection to list */
 			iCount = 0;
 			lowest = 30000;
 			fExit = false;
@@ -145,19 +145,11 @@ void AcceptThread::run() {
 				/* More than four connections in a timespan of 10 seconds -> ban IP */
 				if (iCount > 4 && lowest <= 10000) {
 					StrmSock.close();
-					vBannedIPs.push_back(std::make_pair<string,Poco::Timestamp::TimeDiff>(sNewConnectionIP,Timer.elapsed()/1000));
+					vBannedIPs.push_back(std::make_pair(sNewConnectionIP,Timer.elapsed()/1000));
 
 					/* Set banlenght */
 					if ((x = search(vBanLenght,sNewConnectionIP)) == -1) {
-						vBanLenght.push_back(
-							std::make_pair<	string,
-											std::pair<
-														Timestamp::TimeDiff,
-														Timestamp::TimeDiff
-													 >
-										>
-											(sNewConnectionIP,std::make_pair<Timestamp::TimeDiff,Timestamp::TimeDiff>(10000,Timer.elapsed()/1000 + 5*60*1000))
-						);
+						vBanLenght.push_back(std::make_pair(sNewConnectionIP,std::make_pair(10000,Timer.elapsed()/1000 + 5*60*1000)));
 						/*x = vBanLenght.size()-1;*/
 					}else{
 						vBanLenght[x].second.first *= 2;

@@ -38,10 +38,10 @@ void NBTTagList::write(string& rTarget,bool fMode,bool fHeaderless) {
 	int iSize = _vpElements.size();
 
 	if (!fHeaderless) {
-		rTarget.append<char>(1,FC_NBT_TYPE_LIST);
+		rTarget.append(1,FC_NBT_TYPE_LIST);
 		addHeaderlessString(rTarget,_sName); //Name
 	} 
-	rTarget.append<char>(1,_iElementType);
+	rTarget.append(1,_iElementType);
 	NetworkOut::addInt(rTarget,_vpElements.size());
 
 	if (iSize > 0) {

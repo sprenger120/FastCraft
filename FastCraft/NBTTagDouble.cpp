@@ -28,7 +28,7 @@ NBTTagDouble::~NBTTagDouble() {
 
 void NBTTagDouble::write(string& rTarget,bool fMode,bool fHeaderless) {
 	if (!fHeaderless) {
-		rTarget.append<char>(1,FC_NBT_TYPE_DOUBLE); //Tag Type
+		rTarget.append(1,FC_NBT_TYPE_DOUBLE); //Tag Type
 		addHeaderlessString(rTarget,_sName);//Name
 	} 
 	NetworkOut::addDouble(rTarget,nData);

@@ -190,7 +190,7 @@ void PlayerJoinEvent::Execute(vector<PlayerThread*>& rvPlayers,PlayerPool* pPlay
 
 		rvPlayers[x]->PlayerInfoList(true,_pSourcePlayer->getUsername()); /* spawn name to playerlist */
 
-		if (MathHelper::distance2D(rvPlayers[x]->getCoordinates(),_pSourcePlayer->getCoordinates()) > 100.0) {continue;} /* You're to distant */
+		if (MathHelper::distance2D(rvPlayers[x]->getCoordinates(),_pSourcePlayer->getCoordinates()) > 100.0) {continue;} /* You're too distant */
 		rvPlayers[x]->spawnEntity(&NewPlayer); /* Spawn entity */
 		
 		/* Spawn other players to new player */

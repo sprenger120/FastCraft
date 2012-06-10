@@ -16,14 +16,16 @@ GNU General Public License for more details.
 
 #ifndef _FASTCRAFTHEADER_FCRUNTIMEXCEPTION
 #define _FASTCRAFTHEADER_FCRUNTIMEXCEPTION
+#include <iostream>
+#include <string>
 #if defined(_WIN32)
-    #include <Windows.h>
-    #include <DbgHelp.h>
+	#include <Windows.h>
+	#include <DbgHelp.h>    
 #elif defined(__linux__)
     #include <execinfo.h>
 #endif
-#include <iostream>
-#include <string>
+
+
 using std::string;
 
 class FCRuntimeException {

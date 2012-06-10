@@ -28,7 +28,7 @@ NBTTagFloat::~NBTTagFloat() {
 
 void NBTTagFloat::write(string& rTarget,bool fMode,bool fHeaderless) {
 	if (!fHeaderless) {
-		rTarget.append<char>(1,FC_NBT_TYPE_FLOAT); //Tag Type
+		rTarget.append(1,FC_NBT_TYPE_FLOAT); //Tag Type
 		addHeaderlessString(rTarget,_sName);//Name
 	} 
 	NetworkOut::addFloat(rTarget,nData);

@@ -27,10 +27,10 @@ NBTTagByte::~NBTTagByte() {
 
 void NBTTagByte::write(string& rTarget,bool fMode,bool fHeaderless) {
 	if (!fHeaderless) {
-		rTarget.append<char>(1,FC_NBT_TYPE_BYTE); //Tag Type
+		rTarget.append(1,FC_NBT_TYPE_BYTE); //Tag Type
 		addHeaderlessString(rTarget,_sName); //Name
 	} 
-	rTarget.append<char>(1,iData); //Data
+	rTarget.append(1,iData); //Data
 }
 
 char& NBTTagByte::getDataRef() {

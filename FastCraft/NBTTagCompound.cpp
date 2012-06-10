@@ -48,7 +48,7 @@ void NBTTagCompound::write(string& rStr,bool fMode,bool fHeaderless) {
 	string& rTarget = ( fMode == FC_NBT_OUTPUT_RAW ? rStr : sTemp);
 	
 	if (!fHeaderless) {
-		rTarget.append<char>(1,FC_NBT_TYPE_COMPOUND);
+		rTarget.append(1,FC_NBT_TYPE_COMPOUND);
 		addHeaderlessString(rTarget,_sName);//Name 
 	} 
 
@@ -58,7 +58,7 @@ void NBTTagCompound::write(string& rStr,bool fMode,bool fHeaderless) {
 		}
 	}
 
-	rTarget.append<char>(1,0);
+	rTarget.append(1,0);
 	if(fMode == FC_NBT_OUTPUT_GZIP) { 
 		NBTTagBase::compress(rTarget); 
 		rStr.assign(rTarget);

@@ -30,24 +30,24 @@ NetworkOut::~NetworkOut() {
 }
 
 void NetworkOut::addByte(string& rBuff,char Byte) {
-	rBuff.append<char>(1,Byte);
+	rBuff.append(1,Byte);
 }
 
 void NetworkOut::addByte(string& rBuff,unsigned char Byte) {
-	rBuff.append<char>(1,Byte);
+	rBuff.append(1,Byte);
 }
 
 void NetworkOut::addBool(string& rBuff,bool Bool) {
 	if (Bool) {
-		rBuff.append<char>(1,1);
+		rBuff.append(1,1);
 	}else{
-		rBuff.append<char>(1,0);
+		rBuff.append(1,0);
 	}
 }
 
 void NetworkOut::addShort(string& rBuff,short Short) {
-	rBuff.append<char>(1, char(Short>>8)); 
-	rBuff.append<char>(1, char(Short));
+	rBuff.append(1, char(Short>>8)); 
+	rBuff.append(1, char(Short));
 }
 
 
@@ -94,26 +94,26 @@ void NetworkOut::addString(string& rBuff,string sString) {
 	if ( sString.length() == 0) {return;}
 
 	for (int x=0;x<=sString.length()-1;x++) {
-		rBuff.append<char>(1,0);
+		rBuff.append(1,0);
 		rBuff.append(sString,x,1);
 	}	
 }
 
 void NetworkOut::addByte(unsigned char Byte) {
-	_sNetworkBuffer.append<char>(1,Byte);
+	_sNetworkBuffer.append(1,Byte);
 }
 
 void NetworkOut::addBool(bool Bool) {
 	if (Bool) {
-		_sNetworkBuffer.append<char>(1,1);
+		_sNetworkBuffer.append(1,1);
 	}else{
-		_sNetworkBuffer.append<char>(1,0);
+		_sNetworkBuffer.append(1,0);
 	}
 }
 
 void NetworkOut::addShort(short Short) {
-	_sNetworkBuffer.append<char>(1, char(Short>>8)); 
-	_sNetworkBuffer.append<char>(1, char(Short));
+	_sNetworkBuffer.append(1, char(Short>>8)); 
+	_sNetworkBuffer.append(1, char(Short));
 }
 
 
@@ -153,7 +153,7 @@ void NetworkOut::addString(string sString) {
 	if ( sString.length() == 0) {return;}
 
 	for (int x=0;x<=sString.length()-1;x++) {
-		_sNetworkBuffer.append<char>(1,0);
+		_sNetworkBuffer.append(1,0);
 		_sNetworkBuffer.append(sString,x,1);
 	}	
 }

@@ -418,7 +418,7 @@ _vItems(0),
 
 			/*  Set the isSpreadBlock flag */
 			if (_vBlocks[x].Fluid) {
-				index = search(_vBlocks,std::make_pair<short,char>(_vBlocks[x].SpreadBlock,0));
+				index = search(_vBlocks,std::make_pair(_vBlocks[x].SpreadBlock,0));
 				_vBlocks[index].isSpreadBlock = true;
 			}
 		}
@@ -708,7 +708,7 @@ void ItemInformationProvider::isValid(BlockEntry Entry) {
 		if (Entry.Spread < 0) {throw FCRuntimeException("Spread is below 0");}
 		if (!isBlock(Entry.SpreadBlock)) {throw FCRuntimeException("SpreadBlock not registered/not a block");}
 		
-		index = search(_vBlocks,std::make_pair<short,char>(Entry.SpreadBlock,0));
+		index = search(_vBlocks,std::make_pair(Entry.SpreadBlock,0));
 		if (_vBlocks[index].Fluid) {throw FCRuntimeException("Spread blocks can't be fluids");}
 	}
 

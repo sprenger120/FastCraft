@@ -14,7 +14,6 @@ GNU General Public License for more details.
 */
 #define BUILD_VERSION ""
 #include <iostream>
-//#include <vld.h>
 #include <Poco/Thread.h>
 #include "FCRuntimeException.h"
 #include <Poco/Path.h>
@@ -23,14 +22,11 @@ GNU General Public License for more details.
 #include <vector>
 #include "Constants.h"
 #include "MinecraftServer.h"
-
+//#include <vld.h>
 //#include "EntityPlayer.h"
 //#include "PlayerPool.h"
 //#include "PlayerThread.h"
 //#include "EntityPickup.h"
-
-
-
 #if defined(_WIN32)
     #include <Windows.h>
     #include <DbgHelp.h>
@@ -58,7 +54,6 @@ int main(int argc, char *argv[]) {
 
 	
 	/*  Set up core components */
-
 	cout<<"--- Init core components---\n";
 	cout<<"SQLite...";
 	Poco::Data::SQLite::Connector::registerConnector();
@@ -143,7 +138,6 @@ int main(int argc, char *argv[]) {
 	cout<<std::endl<<"\n--- Done ---\n";
 
 	//Thread::sleep(5000);
-
 	////EntityLiving e(Constants::get("/Entity/Alive/TypeID/ZombiePigman"),vpServer[0],vpServer[0]->getWorldByName("world"));
 	////EntityPlayer e(vpServer[0],vpServer[0]->getWorldByName("world"),"testy");
 	//EntityPickup e(vpServer[0],vpServer[0]->getWorldByName("world"),std::make_pair<short,char>(35,15));

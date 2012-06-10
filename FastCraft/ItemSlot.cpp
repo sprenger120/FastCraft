@@ -199,7 +199,7 @@ void ItemSlot::readFromNetwork(NetworkIn& rNetwork) {
 			
 			switch (_pItemInfoProvider->isBlock(iItemID)) {
 			case true:
-				_Item = std::make_pair<short,char>(iItemID,char(Usage));
+				_Item = std::make_pair(iItemID,char(Usage));
 				_iUsage = 0;
 
 				//Check registration state
@@ -237,9 +237,9 @@ void ItemSlot::readFromNetwork(NetworkIn& rNetwork) {
 						//Rewrite Item cache
 						_pItemCache_Block = NULL;
 						_pItemCache_Item = pItem;
-						_Item = std::make_pair<short,char>(iItemID,0);
+						_Item = std::make_pair(iItemID,0);
 					}else{
-						_Item = std::make_pair<short,char>(iItemID,char(Usage));
+						_Item = std::make_pair(iItemID,char(Usage));
 
 						//Check registration state
 						if(!_pItemInfoProvider->isRegistered(_Item)) {

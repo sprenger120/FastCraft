@@ -27,7 +27,7 @@ NBTTagInt::~NBTTagInt() {
 
 void NBTTagInt::write(string& rTarget,bool fMode,bool fHeaderless) {
 	if (!fHeaderless) {
-		rTarget.append<char>(1,FC_NBT_TYPE_INT); //Tag Type
+		rTarget.append(1,FC_NBT_TYPE_INT); //Tag Type
 		addHeaderlessString(rTarget,_sName); //Name
 	}
 	NetworkOut::addInt(rTarget,iData);

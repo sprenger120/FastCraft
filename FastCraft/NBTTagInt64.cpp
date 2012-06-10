@@ -27,7 +27,7 @@ NBTTagInt64::~NBTTagInt64() {
 
 void NBTTagInt64::write(string& rTarget,bool fMode,bool fHeaderless) {
 	if (!fHeaderless) {
-		rTarget.append<char>(1,FC_NBT_TYPE_INT64); //Tag Type
+		rTarget.append(1,FC_NBT_TYPE_INT64); //Tag Type
 		addHeaderlessString(rTarget,_sName);//Name
 	} 
 	NetworkOut::addInt64(rTarget,iData);

@@ -27,7 +27,7 @@ NBTTagString::~NBTTagString() {
 
 void NBTTagString::write(string& rTarget,bool fMode,bool fHeaderless) {
 	if (!fHeaderless) {
-		rTarget.append<char>(1,FC_NBT_TYPE_STRING); //Tag Type
+		rTarget.append(1,FC_NBT_TYPE_STRING); //Tag Type
 		addHeaderlessString(rTarget,_sName);//Name
 	} 
 	addHeaderlessString(rTarget,sData); 

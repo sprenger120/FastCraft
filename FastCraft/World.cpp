@@ -70,7 +70,6 @@ MapChunk* World::generateChunk(int X,int Z) {
 	for (short y=0;y<=60;y++) {
 		for (int x=0;x<=15;x++) {
 			for (int z=0;z<=15;z++) {
-				//if (x==5 && y==60) {continue;}
 				pChunk->Blocks[ChunkMath::toIndex(x,y,z)] = 12;
 			}
 		}
