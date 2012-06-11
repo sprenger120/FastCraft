@@ -64,7 +64,7 @@ public:
 
 	/*
 	* Adds something to the given queue
-	* Will throw Poco::RuntimeException if Queue type is unknown
+	* Will throw FCRuntimeException if Queue type is unknown
 
 	Parameter:
 	@1 : Queue type (FC_QUEUE_LOW / FC_QUEUE_HIGH)

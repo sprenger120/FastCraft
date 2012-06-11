@@ -23,7 +23,7 @@ GNU General Public License for more details.
 #include <iostream>
 #include <vector>
 
-using Poco::RuntimeException;
+using FCRuntimeException;
 using std::queue;
 using std::vector;
 
@@ -83,7 +83,7 @@ inline void ThreadSafeQueue<T>::pop() {
 
 	if (_q.empty()) { 
 		std::cout<<"ThreadSafeQueue<T>::pop queue is empty"<<"\n";
-		throw Poco::RuntimeException("Queue is empty");
+		throw FCRuntimeException("Queue is empty");
 	}
 
 	_q.pop();
@@ -103,7 +103,7 @@ inline T& ThreadSafeQueue<T>::front() {
 	Poco::Mutex::ScopedLock SLock(_Mutex);
 	if (_q.empty()) { 
 		std::cout<<"ThreadSafeQueue<T>::front queue is empty"<<"\n";
-		throw Poco::RuntimeException("Queue is empty");
+		throw FCRuntimeException("Queue is empty");
 	}
 	//std::cout<<"front"<<std::endl;
 	return _q.front();

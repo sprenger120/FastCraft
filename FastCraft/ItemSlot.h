@@ -52,7 +52,7 @@ public:
 
 	/*
 	* Constructs with a ItemID and stack size
-	* Throws Poco::RuntimeException if something is incorrect 
+	* Throws FCRuntimeException if something is incorrect 
 
 	Parameter:
 	@1 : A ItemInformationProvider instance
@@ -70,7 +70,7 @@ public:
 
 	/*
 	* Adds an enchantment to item slot
-	* Will throw a Poco::RuntimeException if slot contains more than one item (itemstack) or an unenchantable item
+	* Will throw a FCRuntimeException if slot contains more than one item (itemstack) or an unenchantable item
 
 	Parameter:
 	@1 : Reference to a Enchantment struct
@@ -80,7 +80,7 @@ public:
 
 	/*
 	* Removes a enchantment
-	* Will throw a Poco::RuntimeException if array index is out of bound
+	* Will throw a FCRuntimeException if array index is out of bound
 
 	Parameter:
 	@1 : ID of enchantment
@@ -103,7 +103,7 @@ public:
 
 	/*
 	* Sets item data
-	* will throw Poco::RuntimeException, if item doesn't exists
+	* will throw FCRuntimeException, if item doesn't exists
 
 	Parameter:
 	@1 : new item data
@@ -134,7 +134,7 @@ public:
 	/*
 	* Increments usage by one
 	* Will clear item slot/decrease stack if usage of this item is exceeded
-	* throws Poco::RuntimeException if item hasn't have a usagebar 
+	* throws FCRuntimeException if item hasn't have a usagebar 
 	*/
 	void IncrementUsage();
 
@@ -142,7 +142,7 @@ public:
 	/*
 	* Sets actual usage
 	* If usage is bigger than maximal orginal item usage or lower than 0, the slot will be cleared / stack decreased
-	* throws Poco::RuntimeException if item hasn't have a usagebar 
+	* throws FCRuntimeException if item hasn't have a usagebar 
 
 	Parameter:
 	@1 : Usage count
@@ -164,7 +164,7 @@ public:
 
 	/*
 	* Reads slot information from NetworkIO
-	* Will throw Poco::RuntimeException, if connection gets aborded
+	* Will throw FCRuntimeException, if connection gets aborded
 	* Will overwrite existing data
 
 	Parameter:
@@ -175,7 +175,7 @@ public:
 
 	/*
 	* Writes it's item information to network
-	* Will throw Poco::RuntimeException, if connection gets aborded
+	* Will throw FCRuntimeException, if connection gets aborded
 
 	Parameter:
 	@1 : Reference to a vaild NetworkOut instance

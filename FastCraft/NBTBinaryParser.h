@@ -46,7 +46,7 @@ public:
 	/*
 	* Parses a binary or gzipped string and returns a pointer to a new NBTCompound
 	* Don't forget to release the memory, allocated by this function
-	* Throws Poco::RuntimeException if data is invalid
+	* Throws FCRuntimeException if data is invalid
 
 	Parameter:
 	@1 : Data source string

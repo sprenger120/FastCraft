@@ -209,7 +209,7 @@ public:
 
 	/*
 	* Spawns a player
-	* Will throw Poco::RuntimeException if ID is already spawned
+	* Will throw FCRuntimeException if ID is already spawned
 
 	Parameter:
 	@1 : Valid pointer to a Entity-derived class
@@ -239,7 +239,7 @@ public:
 
 	/*
 	* Despawns entity
-	* Will throw Poco::RuntimeException if entity isn't spawned so far
+	* Will throw FCRuntimeException if entity isn't spawned so far
 
 	Parameter:
 	@1 : EntityID
@@ -256,8 +256,8 @@ public:
 
 	/*
 	* Makes the given entity do a animation 
-	* Will throw Poco::RuntimeException if Entity isn't spawned 
-	* Throws Poco::RuntimeException if animation ID doesn't exists
+	* Will throw FCRuntimeException if Entity isn't spawned 
+	* Throws FCRuntimeException if animation ID doesn't exists
 	* Use only for swing arm!
 
 	Parameter:
@@ -269,7 +269,7 @@ public:
 
 	/*
 	* Makes the given entity do an action
-	* Will throw Poco::RuntimeException if Entity isn't spawned 
+	* Will throw FCRuntimeException if Entity isn't spawned 
 
 	Parameter:
 	@1 : EntityID
@@ -308,7 +308,7 @@ public:
 	/*
 	* Sets a block into players view circle
 	* Will ignore call if given chunk isn't spawned
-	* Will throw Poco::RuntimeException if block not exists
+	* Will throw FCRuntimeException if block not exists
 
 	Parameter:
 	@1 : Coordiantes of block
@@ -319,7 +319,7 @@ public:
 
 	/*
 	* Returns pointer to world who player is actually in
-	* Throws Poco::RuntimeException if player isn't logged in
+	* Throws FCRuntimeException if player isn't logged in
 	*/
 	World* getWorld();
 

@@ -59,7 +59,7 @@ public:
 
 	/*
 	* Sets slot 
-	* Will throw Poco::RuntimeException if slot id is invalid
+	* Will throw FCRuntimeException if slot id is invalid
 
 	Parameter:
 	@1 : Slot ID
@@ -70,7 +70,7 @@ public:
 
 	/*
 	* Returns Item struct of slot
-	* Will throw Poco::RuntimeException if slot id is invalid
+	* Will throw FCRuntimeException if slot id is invalid
 
 	Parameter:
 	@1 : SlotID
@@ -81,7 +81,7 @@ public:
 	/*
 	* Clears slot at given position
 	* Doesn't synchronize with player!
-	* Will throw Poco::RuntimeException if slot id is invalid
+	* Will throw FCRuntimeException if slot id is invalid
 
 	Parameter:
 	@1: Slot ID
@@ -104,7 +104,7 @@ public:
 
 	/*
 	* Handles Window click
-	* throws Poco::RuntimeException if connection gets aborded 
+	* throws FCRuntimeException if connection gets aborded 
 
 	Parameter:
 	@1 : this Pointer of class that calls this function
@@ -129,7 +129,7 @@ public:
 
 	/*
 	* Event function for selection change
-	* Throws Poco::RuntimeException if slot id is invalid
+	* Throws FCRuntimeException if slot id is invalid
 
 	Parameter:
 	@1 : New selected slot id

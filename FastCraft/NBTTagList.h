@@ -28,7 +28,7 @@ private:
 public:
 	/*
 	* Constructor
-	* Throws Poco::RuntimeException if given type is invalid
+	* Throws FCRuntimeException if given type is invalid
 
 	Parameter:
 	@1 : Name of element
@@ -58,7 +58,7 @@ public:
 	/*
 	* [ ] Operator
 	* Use it to get a element at specific position
-	* Will throw Poco::RuntimeException if index is out of bound or invalid
+	* Will throw FCRuntimeException if index is out of bound or invalid
 	*/
 	NBTTagBase* operator[] (int);
 
@@ -77,7 +77,7 @@ public:
 
 	/*
 	* Adds a new element to storage
-	* Throws Poco::RuntimeException if given element type doesn't fits into list type
+	* Throws FCRuntimeException if given element type doesn't fits into list type
 
 	Parameter:
 	@1 : Element to add
@@ -87,7 +87,7 @@ public:
 
 	/*
 	* Removes element with given id
-	* Throws Poco::RuntimeException if ID is out of bound or invalid
+	* Throws FCRuntimeException if ID is out of bound or invalid
 
 	Parameter:
 	@1 : Index of element to delete

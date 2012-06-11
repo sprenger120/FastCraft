@@ -34,7 +34,7 @@ protected:
 public:
 	/*
 	* Constructor
-	* Throws Poco::RuntimeException if EntityID/pointers/entity type is invalid
+	* Throws FCRuntimeException if EntityID/pointers/entity type is invalid
 
 	Parameter:
 	@1 : a valid MinecraftServer instance

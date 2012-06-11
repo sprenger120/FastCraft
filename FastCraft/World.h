@@ -63,7 +63,7 @@ public:
 	/*
 	* Look for a chunk and returns a pointer to it
 	* Generates chunk if not existing
-	* Will throw Poco::RuntimeException if generateChunks failed
+	* Will throw FCRuntimeException if generateChunks failed
 
 	Paramter:
 	@1 : X in chunkcoordinates
@@ -76,7 +76,7 @@ public:
 	* Converts WorldCoordinates to chunk coordinates and block index
 	* Will not check chunk existance
 	* Will not generate chunk
-	* Will throw Poco::RuntimeException if Y is out of bound
+	* Will throw FCRuntimeException if Y is out of bound
 
 	Parameter:
 	@1 : X in world coordiantes
@@ -121,8 +121,8 @@ public:
 	/*
 	* Sets block
 	* Generates chunk if not existing
-	* Will throw Poco::RuntimeException if generateChunks failed
-	* Will throw Poco::RuntimeException if block not exists
+	* Will throw FCRuntimeException if generateChunks failed
+	* Will throw FCRuntimeException if block not exists
 
 	Parameter:
 	@1 : X in world coordinates
@@ -136,7 +136,7 @@ public:
 	/*
 	* Gets block at given position
 	* Generates chunk if not existing
-	* Will throw Poco::RuntimeException if generateChunks failed
+	* Will throw FCRuntimeException if generateChunks failed
 
 	Parameter:
 	@1 : X in world coordinates
@@ -179,7 +179,7 @@ public:
 
 	/*
 	* Sets block light of given block
-	* Will throw Poco::RuntimeException if block light is invalid
+	* Will throw FCRuntimeException if block light is invalid
 	* Will rethrow all errors of getChunkByChunkCoordinates
 
 	Parameters:

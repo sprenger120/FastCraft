@@ -55,8 +55,8 @@ public:
 
 	/*
 	* Adds a sub element
-	* Throws Poco::RuntimeException if element name is already choosen (case sensitive search)
-	* Throws Poco::RuntimeException if name is empty
+	* Throws FCRuntimeException if element name is already choosen (case sensitive search)
+	* Throws FCRuntimeException if name is empty
 	*/
 	void addSubElement(NBTTagBase*);
 
@@ -64,7 +64,7 @@ public:
 	/*
 	* Removes element by given name
 	* Removing of an element will cause a destructing of all sub elements
-	* Throws Poco::RuntimeException if element wasn't found
+	* Throws FCRuntimeException if element wasn't found
 
 	Parameter:
 	@1 : Name of element to remove

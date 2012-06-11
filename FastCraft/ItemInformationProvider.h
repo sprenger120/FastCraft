@@ -104,7 +104,7 @@ public:
 
 	/*	
 	* Returns item name from given ID
-	* Will throw Poco::RuntimeException, if item wasn't found
+	* Will throw FCRuntimeException, if item wasn't found
 
 	Parameter:
 	@1 : ItemID
@@ -147,8 +147,8 @@ public:
 
 	/*
 	* Returs block by given ID
-	* Will throw Poco::RuntimeException if block not exists
-	* Will throw Poco::RuntimeException if ID isn't a block
+	* Will throw FCRuntimeException if block not exists
+	* Will throw FCRuntimeException if ID isn't a block
 
 	Parameter:
 	@1 : ItemID
@@ -159,8 +159,8 @@ public:
 
 	/*
 	* Returns Item by given ID
-	* Will throw Poco::RuntimeException if item not exists
-	* Will throw Poco::RuntimeException if ID isn't a item
+	* Will throw FCRuntimeException if item not exists
+	* Will throw FCRuntimeException if ID isn't a item
 
 	Parameter:
 	@1 : ItemID

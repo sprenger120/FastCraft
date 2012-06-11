@@ -84,7 +84,7 @@ private:
 public:
 	/*
 	* Constructor
-	* Throws Poco::RuntimeException if a module is unable to start
+	* Throws FCRuntimeException if a module is unable to start
 
 	Parameter:
 	@1 : Name of server instance

@@ -44,7 +44,7 @@ public:
 
 	/*
 	* Read functions
-	* Will throw Poco::RuntimeException if connection get aborted
+	* Will throw FCRuntimeException if connection get aborted
 	*/
 	char readByte(); 
 	bool readBool();

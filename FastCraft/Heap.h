@@ -64,7 +64,7 @@ public:
 		/*
 		* Access operator
 		* Returns last element if Iterator reaches the end
-		* Throws Poco::RuntimeException if heap doesn't contains any elements
+		* Throws FCRuntimeException if heap doesn't contains any elements
 		*/
 		tDataType* operator->();
 
@@ -72,7 +72,7 @@ public:
 		/*
 		* Returns pointer of actual element
 		* Returns last element if Iterator reaches the end
-		* Throws Poco::RuntimeException if heap doesn't contains any elements
+		* Throws FCRuntimeException if heap doesn't contains any elements
 		*/
 		tDataType* getPtr();
 
@@ -98,7 +98,7 @@ public:
 
 	/*
 	* Adds a new element to heap
-	* Throws Poco::RuntimeException if element already exists
+	* Throws FCRuntimeException if element already exists
 
 	Parameter:
 	@1 : ID of element 
@@ -442,7 +442,7 @@ void Heap<tDataType,tAdressType>::HeapIterator::operator++() {
 
 template<typename tDataType,typename tAdressType>
 tDataType* Heap<tDataType,tAdressType>::HeapIterator::operator->() {
-	if (_pActual == NULL) {throw Poco::RuntimeException("Doesn't contain any elements");} /* constructor moves to a valid element; keeps NULL if heap is empty */
+	if (_pActual == NULL) {throw FCRuntimeException("Doesn't contain any elements");} /* constructor moves to a valid element; keeps NULL if heap is empty */
 	return _pActual->pElement;
 }
 
@@ -453,7 +453,7 @@ bool Heap<tDataType,tAdressType>::HeapIterator::isEndReached() {
 
 template<typename tDataType,typename tAdressType>
 tDataType* Heap<tDataType,tAdressType>::HeapIterator::getPtr() {
-	if (_pActual == NULL) {throw Poco::RuntimeException("Doesn't contain any elements");} 
+	if (_pActual == NULL) {throw FCRuntimeException("Doesn't contain any elements");} 
 	return _pActual->pElement;
 }
 #endif

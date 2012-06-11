@@ -81,7 +81,7 @@ public:
 	/*
 	* Returns value of given key
 	* For all valid pathes, look into Constants.cpp
-	* Throws Poco::RuntimeException if key doesn't exists
+	* Throws FCRuntimeException if key doesn't exists
 
 	Parameter:
 	@1 : Key name

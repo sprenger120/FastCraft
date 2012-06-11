@@ -58,7 +58,7 @@ public:
 	/*
 	* [ ] Operator
 	* Use it to get a chat at specific position
-	* Will throw Poco::RuntimeException if index is out of bound or invalid
+	* Will throw FCRuntimeException if index is out of bound or invalid
 	*/
 	char operator[] (unsigned int);
 };
