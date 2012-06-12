@@ -52,73 +52,27 @@ void NetworkWriter::run() {
 			continue;
 		}
 
-		try{
-			//Process high level queue
+		try {
+			/* High priority packets */
 			while (!_rHighQueue.empty()) {
 				string & rStr = _rHighQueue.front();
-				try {
-					_rStrm.sendBytes(rStr.c_str(),rStr.length()); //Send
-				}catch(Poco::Net::ConnectionAbortedException) {
-					_rHighQueue.pop();
-					waitTillDisconnected();
-					continue;
-				}catch(Poco::Net::InvalidSocketException) {
-					_rHighQueue.pop();
-					waitTillDisconnected();
-					continue;
-				}catch(Poco::TimeoutException) {
-					_rHighQueue.pop();
-					waitTillDisconnected();
-					continue;
-				}catch(Poco::Net::ConnectionResetException) {
-					_rHighQueue.pop();
-					waitTillDisconnected();
-					continue;
-				}catch(Poco::IOException) {
-					_rHighQueue.pop();
-					waitTillDisconnected();
-					continue;
-				}
-
+				_rStrm.sendBytes(rStr.c_str(),rStr.length()); 
 				_rHighQueue.pop();
 			}
 
+
+			/* Low priority packets */
 			if (_rLowQueue.empty()) {
 				Thread::sleep(10);
 				continue;
 			}
 			string & rStr = _rLowQueue.front();
-			try {
-				_rStrm.sendBytes(rStr.c_str(),rStr.length()); //Send
-			}catch(Poco::Net::ConnectionAbortedException) {
-				_rLowQueue.pop();
-				waitTillDisconnected();
-				continue;
-			}catch(Poco::Net::InvalidSocketException) {
-				_rLowQueue.pop();
-				waitTillDisconnected();
-				continue;
-			}catch(Poco::TimeoutException) {
-				_rLowQueue.pop();
-				waitTillDisconnected();
-				continue;
-			}catch(Poco::Net::ConnectionResetException) {
-				_rLowQueue.pop();
-				waitTillDisconnected();
-				continue;
-			}catch(Poco::IOException) {
-				_rLowQueue.pop();
-				waitTillDisconnected();
-				continue;
-			}
-
-
+			_rStrm.sendBytes(rStr.c_str(),rStr.length()); 
 			_rLowQueue.pop();
-		}catch(FCRuntimeException& ex) {
-			std::cout<<"NetworkWriter::run exception:"<<ex.getMessage()<<"\n";
+		}catch(...) {
 			waitTillDisconnected();
-			continue; //Queue exception
-		}
+			continue;
+		}		
 	}
 	_iThreadStatus = FC_THREADSTATUS_DEAD;
 }
