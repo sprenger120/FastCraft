@@ -102,6 +102,7 @@ void PlayerPool::Assign(Poco::Net::StreamSocket& StrmSocket) {
 	if (iSlot == -1) {return;}
 
 	_vPlayerThreads[iSlot]->Connect(StrmSocket);
+	while(!_vPlayerThreads[iSlot]->isAssigned()) {Thread::sleep(10);} //Wait till assigned flag is set
 }
 
 
@@ -143,26 +144,6 @@ PlayerThread* PlayerPool::getPlayerByName(string Name,PlayerThread* pCaller) {
 
 	return NULL;
 }
-
-/*
-bool PlayerPool::willHurtOther(BlockCoordinates blockCoord,PlayerThread* pPlayer) {
-	if (_vPlayerThreads.empty()) {return false;}
-
-	BlockCoordinates playerCoord;
-
-	for ( int x = 0;x<=_vPlayerThreads.size()-1;x++){
-		if ((!_vPlayerThreads[x]->isAssigned()) || (!_vPlayerThreads[x]->isSpawned()) || _vPlayerThreads[x] == pPlayer) {continue;}
-
-		playerCoord = ChunkMath::toBlockCoords(_vPlayerThreads[x]->getCoordinates());
-
-		if ((playerCoord.X == blockCoord.X && playerCoord.Z == blockCoord.Z) && (playerCoord.Y == blockCoord.Y ||  playerCoord.Y+1 == blockCoord.Y)) {
-			return true;
-		}else{
-			return false;
-		}
-	}
-	return false;
-}*/
 
 short PlayerPool::getConnectedPlayerCount() {
 	if (_vPlayerThreads.empty()) {return 0;}
