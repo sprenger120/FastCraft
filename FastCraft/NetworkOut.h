@@ -37,7 +37,7 @@ public:
 	* Don't construct by yourself !  Let that NetworkOutRoot do!
 
 	Parameter:
-	@1 : class pointer from NetworkOutRoot
+	@1 : pointer from NetworkOutRoot
 	*/
 	NetworkOut(NetworkOutRoot*);
 

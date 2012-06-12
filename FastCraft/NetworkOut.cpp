@@ -19,14 +19,12 @@ GNU General Public License for more details.
 #include <cstring>
 #include "FCRuntimeException.h"
 
-NetworkOut::NetworkOut(NetworkOutRoot* p) :
-_pMaster(p),
-_sNetworkBuffer("")
+NetworkOut::NetworkOut(NetworkOutRoot* p) 
 {
+	_pMaster = p;
 }
 
 NetworkOut::~NetworkOut() {
-	_sNetworkBuffer.clear();
 }
 
 void NetworkOut::addByte(string& rBuff,char Byte) {
@@ -146,16 +144,15 @@ void NetworkOut::addDouble(double dVal) {
 
 void NetworkOut::addString(string sString) {
 	short iDataLength;
-
 	iDataLength = sString.length();
 	addShort(iDataLength);
 
-	if ( sString.length() == 0) {return;}
+	if (sString.empty()) {return;}
 
 	for (int x=0;x<=sString.length()-1;x++) {
 		_sNetworkBuffer.append(1,0);
-		_sNetworkBuffer.append(sString,x,1);
-	}	
+		_sNetworkBuffer.append(1,sString[x]);
+	}
 }
 
 string& NetworkOut::getStr() {
@@ -163,9 +160,7 @@ string& NetworkOut::getStr() {
 }
 
 void NetworkOut::Finalize(char iType) {
-	if (iType != FC_QUEUE_LOW && iType != FC_QUEUE_HIGH) {
-		throw FCRuntimeException("Unknown queue type");
-	}
+	if (iType != FC_QUEUE_LOW && iType != FC_QUEUE_HIGH) {throw FCRuntimeException("Unknown queue type");}
 	string & rStr = _sNetworkBuffer;
 	_pMaster->Add(iType,rStr);
 	_sNetworkBuffer.clear();
