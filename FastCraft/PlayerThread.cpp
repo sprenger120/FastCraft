@@ -195,6 +195,7 @@ void PlayerThread::Disconnect(string sReason,bool fShow) {
 	if (!isAssigned()) {return;}
 	if(isSpawned()) {
 		_fSpawned=false;
+		
 		_NetworkWriter.clearQueues();
 
 		stringstream strStrm;
@@ -217,8 +218,11 @@ void PlayerThread::Disconnect(string sReason,bool fShow) {
 		NetworkOut Out(&_NetworkOutRoot);
 		Out.addByte(0xFF);
 		Out.addString(sReason);
+		/*cout<<Out.getStr().length()<<"\n";*/
+
 		Out.Finalize(FC_QUEUE_HIGH);
 		ProcessQueue();
+		
 		Disconnect(FC_LEAVE_QUIT);
 	}
 }
@@ -243,7 +247,7 @@ void PlayerThread::Disconnect(char iLeaveMode) {
 		_pMinecraftServer->getPlayerPool()->addEvent(p);
 	}
 
-	_sName.append(" <leaved>");
+	_sName.clear();
 	_sLeaveMessage.clear();
 
 	_iEntityID	= FC_UNKNOWNEID;
@@ -256,15 +260,12 @@ void PlayerThread::Disconnect(char iLeaveMode) {
 	_Spawned_PlayerInfoList = 0;
 	_dRunnedMeters = 0.0;
 
-	_fSpawned       = false;
-	_fAssigned      = false;
-	_fHandshakeSent = false;
-	
+
 	_sIP.clear();
 	_Connection.close();
 	_iPlayerPing = -1;
 
-	if (iLeaveMode != FC_LEAVE_KICK) {_NetworkWriter.clearQueues();}
+	_NetworkWriter.clearQueues();
 
 	_heapSpawnedEntities.cleanupElements();
 
@@ -274,6 +275,10 @@ void PlayerThread::Disconnect(char iLeaveMode) {
 	_timer_lastArmSwing.reset();
 	_timer_lastPositionUpdateEvent.reset();
 	_timer_StartedEating.reset();
+
+	_fSpawned       = false;
+	_fHandshakeSent = false;
+	_fAssigned      = false;
 }
 
 
@@ -282,8 +287,6 @@ void PlayerThread::Connect(Poco::Net::StreamSocket& Sock) {
 		cout<<"***INTERNAL SERVER WARNING: PlayerPool tryed to assign an already assigned player thread"<<"\n";
 		Disconnect(FC_LEAVE_OTHER);
 	}
-	_fAssigned = true;
-
 	_Connection = Sock; 
 	_Connection.setLinger(true,5);
 	_Connection.setNoDelay(true);
@@ -293,6 +296,8 @@ void PlayerThread::Connect(Poco::Net::StreamSocket& Sock) {
 
 	_Inventory.clear();
 	_sIP.assign(_Connection.peerAddress().toString());
+
+	_fAssigned = true;
 }
 
 string PlayerThread::generateConnectionHash() {
@@ -391,23 +396,10 @@ void PlayerThread::ProcessQueue() {
 
 		try {
 			_Connection.sendBytes(rJob.c_str(),rJob.length()); //Send
-		}catch(Poco::Net::ConnectionAbortedException) {
-			Disconnect(FC_LEAVE_OTHER);
-			return;
-		}catch(Poco::Net::InvalidSocketException) {
-			Disconnect(FC_LEAVE_OTHER);
-			return;
-		}catch(Poco::TimeoutException) {
-			Disconnect(FC_LEAVE_OTHER);
-			return;
-		}catch(Poco::Net::ConnectionResetException) {
-			Disconnect(FC_LEAVE_OTHER);
-			return;
-		}catch(Poco::IOException) {
+		}catch(...) {
 			Disconnect(FC_LEAVE_OTHER);
 			return;
 		}
-
 
 		_NetworkOutRoot.getHighQueue().pop();
 	}
