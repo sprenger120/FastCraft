@@ -19,11 +19,10 @@ GNU General Public License for more details.
 #include <Poco/Mutex.h>
 #include <Poco/ScopedLock.h>
 #include <queue>
-#include <Poco/Exception.h>
+#include "FCRuntimeException.h"
 #include <iostream>
 #include <vector>
 
-using FCRuntimeException;
 using std::queue;
 using std::vector;
 
