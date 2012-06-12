@@ -55,8 +55,9 @@ AcceptThread::~AcceptThread() {
 
 void AcceptThread::run() {
 	Poco::Net::StreamSocket StrmSock;
-	string sNewConnectionIP;
 
+	#ifndef _DEBUG
+	string sNewConnectionIP;
 	vector<std::pair<string,Poco::Timestamp::TimeDiff>> vConnections,vBannedIPs;
 	vector<	std::pair<
 						string,  /* IP */
@@ -75,16 +76,16 @@ void AcceptThread::run() {
 	bool fExit;
 	
 	Timer.start();
-
+	#endif
 
 	_iThreadStatus = FC_THREADSTATUS_RUNNING;
 	while(_iThreadStatus==FC_THREADSTATUS_RUNNING) {
 		try {
 			_ServerSock.listen();
 			StrmSock = _ServerSock.acceptConnection(); 
+			
+			#ifndef _DEBUG
 			cutOffPort(StrmSock.peerAddress().toString(),sNewConnectionIP);
-			
-			
 			/* Check banlist */
 			if (!vBannedIPs.empty()) {
 				actual = (Timer.elapsed()/1000);
@@ -162,7 +163,7 @@ void AcceptThread::run() {
 				}
 			}
 			if (fExit) {continue;}
-			
+			#endif
 
 			if (!_pMinecraftServer->getPlayerPool()->isAnySlotFree()) { //There is no free slot
 				StrmSock.sendBytes(_preparedServerFullMsg.c_str(),_preparedServerFullMsg.length());
