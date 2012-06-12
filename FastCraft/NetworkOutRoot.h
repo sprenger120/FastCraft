@@ -45,12 +45,6 @@ public:
 
 
 	/*
-	* Initiales a new NetworkOut session
-	*/
-	NetworkOut New(void);
-
-
-	/*
 	* Returns a reference to the low queue
 	*/
 	ThreadSafeQueue<string> & getLowQueue();

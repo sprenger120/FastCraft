@@ -29,11 +29,6 @@ NetworkOutRoot::~NetworkOutRoot() {
 }
 
 
-NetworkOut NetworkOutRoot::New() {
-	NetworkOut Out(this);
-	return Out;
-}
-
 ThreadSafeQueue<string> & NetworkOutRoot::getLowQueue() {
 	return _lowQueue;
 }
