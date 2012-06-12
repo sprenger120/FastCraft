@@ -48,8 +48,9 @@ public:
 	@1 : type of entity (/Entity/Alive/TypeID/)
 	@2 : a valid MinecraftServer instance
 	@3 : pointer to a World class that the entity is in
+	@4 : set this to true if you want to grab a new EID, _iEntityID will be set to -1 otherwise
 	*/
-	EntityLiving(char,MinecraftServer*,World*);
+	EntityLiving(char,MinecraftServer*,World*,bool = true);
 
 
 	/*

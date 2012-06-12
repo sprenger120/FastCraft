@@ -21,8 +21,8 @@ GNU General Public License for more details.
 
 using std::vector;
 
-EntityLiving::EntityLiving(char iType,MinecraftServer* pServer,World* pWorld) try :
-Entity			(pServer,pWorld),
+EntityLiving::EntityLiving(char iType,MinecraftServer* pServer,World* pWorld,bool fGrabNew) try :
+Entity			(pServer,pWorld,fGrabNew),
 	_vpHeld			(5)
 {
 	if (!Constants::isDefined(iType,"/Entity/Alive/TypeID")) {throw FCRuntimeException("Entity type not defined!");}

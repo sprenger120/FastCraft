@@ -20,10 +20,14 @@ GNU General Public License for more details.
 #include <cmath>
 #include "FCRuntimeException.h"
 
-Entity::Entity(MinecraftServer* pServer,World* pWorld) {
+Entity::Entity(MinecraftServer* pServer,World* pWorld,bool fGRabNewEID) {
 	if (pServer == NULL || _pWorld == NULL) {throw FCRuntimeException("Nullpointer are not allowed");}
 	
-	_iEntityID = pServer->generateID();
+	if(fGRabNewEID) { 
+		_iEntityID = pServer->generateID();
+	}else{
+		_iEntityID = -1;
+	}
 	_iCreation = pServer->getInGameTime();
 	_pWorld = pWorld;
 	_pMCServer = pServer;

@@ -34,7 +34,7 @@ _sName				("")
 }
 
 EntityPlayer::EntityPlayer(PlayerThread* pPlayer) try :
-EntityLiving		(Constants::get("/Entity/Alive/TypeID/Player"),pPlayer->getMinecraftServer(),pPlayer->getWorld()),
+EntityLiving		(Constants::get("/Entity/Alive/TypeID/Player"),pPlayer->getMinecraftServer(),pPlayer->getWorld(),false),
 	_sName				(pPlayer->getUsername())
 {
 

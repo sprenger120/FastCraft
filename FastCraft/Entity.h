@@ -39,8 +39,9 @@ public:
 	Parameter:
 	@1 : a valid MinecraftServer instance
 	@2 : pointer to a World class that the entity is in
+	@3 : set this to true if you want to grab a new EID, _iEntityID will be set to -1 otherwise
 	*/
-	Entity(MinecraftServer*,World*);
+	Entity(MinecraftServer*,World*,bool = true);
 
 
 	/*
