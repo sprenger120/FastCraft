@@ -643,7 +643,7 @@ void PlayerThread::Packet10_Player() {
 }
 
 void PlayerThread::Packet11_Position() {
-	EntityCoordinates TmpCoord;
+	EntityCoordinates TmpCoord = _Coordinates;
 	
 	try {
 		//Read coordinates in a temporary variable
@@ -653,15 +653,15 @@ void PlayerThread::Packet11_Position() {
 		TmpCoord.Z = _NetworkInRoot.readDouble();
 		TmpCoord.OnGround = _NetworkInRoot.readBool();
 
-			_dRunnedMeters += MathHelper::distance2D(_Coordinates,TmpCoord);
-
-			_lastCoordinates = _Coordinates;
-			
-			_Coordinates.X = TmpCoord.X;
-			_Coordinates.Y = TmpCoord.Y;
-			_Coordinates.Stance = TmpCoord.Stance;
-			_Coordinates.Z = TmpCoord.Z;
-			_Coordinates.OnGround = TmpCoord.OnGround;
+		if (!MathHelper::isValid(TmpCoord)) {
+			cout<<_sName<<" tried to crash the server with illegal coordiantes\n";
+			Disconnect("Illegal Coordinates!");
+			return;
+		}
+	
+		_dRunnedMeters += MathHelper::distance2D(_Coordinates,TmpCoord);
+		_lastCoordinates = _Coordinates;
+		_Coordinates = TmpCoord;
 	} catch(FCRuntimeException) {
 		Disconnect(FC_LEAVE_OTHER);
 	}
@@ -677,9 +677,18 @@ void PlayerThread::Packet11_Position() {
 
 void PlayerThread::Packet12_Look() {
 	try {
-		_Coordinates.Yaw = _NetworkInRoot.readFloat();
-		_Coordinates.Pitch = _NetworkInRoot.readFloat();
-		_Coordinates.OnGround = _NetworkInRoot.readBool();
+		EntityCoordinates TmpCoord = _Coordinates;
+		TmpCoord.Yaw = _NetworkInRoot.readFloat();
+		TmpCoord.Pitch = _NetworkInRoot.readFloat();
+		TmpCoord.OnGround = _NetworkInRoot.readBool();
+
+		if (!MathHelper::isValid(TmpCoord)) {
+			cout<<_sName<<" tried to crash the server with illegal coordiantes\n";
+			Disconnect("Illegal Coordinates!");
+			return;
+		}
+
+		_Coordinates = TmpCoord;
 	} catch(FCRuntimeException) {
 		Disconnect(FC_LEAVE_OTHER);
 	}
@@ -701,6 +710,12 @@ void PlayerThread::Packet13_PosAndLook() {
 		TmpCoord.Yaw = _NetworkInRoot.readFloat();
 		TmpCoord.Pitch = _NetworkInRoot.readFloat();
 		TmpCoord.OnGround = _NetworkInRoot.readBool();
+
+		if (!MathHelper::isValid(TmpCoord)) {
+			cout<<_sName<<" tried to crash the server with illegal coordiantes\n";
+			Disconnect("Illegal Coordinates!");
+			return;
+		}
 
 		_dRunnedMeters += MathHelper::distance2D(_Coordinates,TmpCoord);
 		_lastCoordinates = _Coordinates;

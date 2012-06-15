@@ -14,6 +14,7 @@ GNU General Public License for more details.
 */
 #include "MathHelper.h"
 #include <cmath>
+#include <limits>
 
 MathHelper::MathHelper() {
 }
@@ -63,4 +64,34 @@ double MathHelper::distance2D(ChunkCoordinates s,ChunkCoordinates t) {
 						(s.Z-t.Z) * (s.Z-t.Z) 
 					   )
 	);
+}
+
+bool MathHelper::isValid(double nVal) {
+    //      NaN                 Infinity                                         -Infinity
+	if (nVal != nVal || nVal == std::numeric_limits<double>::infinity() || nVal == -std::numeric_limits<double>::infinity()) {
+		return false;
+	}else{
+		return true;
+	}
+}
+
+bool MathHelper::isValid(float nVal) {
+    //      NaN                 Infinity                                         -Infinity
+	if (nVal != nVal || nVal == std::numeric_limits<float>::infinity() || nVal == -std::numeric_limits<float>::infinity()) {
+		return false;
+	}else{
+		return true;
+	}
+}
+
+bool MathHelper::isValid(EntityCoordinates Coords) {
+	if (!isValid(Coords.HeadYaw) || !isValid(Coords.Pitch)  ||
+		!isValid(Coords.Yaw)     || !isValid(Coords.Stance) ||
+		!isValid(Coords.X)       || !isValid(Coords.Y)      ||
+		!isValid(Coords.Z))
+	{
+		return false;
+	}else{
+		return true;
+	}
 }

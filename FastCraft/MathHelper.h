@@ -69,5 +69,16 @@ public:
 	static double distance3D(double,double,double, double,double,double);
 	static double distance3D(EntityCoordinates,EntityCoordinates);
 	static double distance3D(BlockCoordinates,BlockCoordinates);
+
+
+	/*
+	* Checks if the value is NaN or (-)Infinity 
+
+	Parameter:
+	@1 : Value to check
+	*/
+	static bool isValid(double);
+	static bool isValid(float);
+	static bool isValid(EntityCoordinates); //Checks all fields
 };
 #endif
