@@ -18,29 +18,29 @@ GNU General Public License for more details.
 #include <Poco/Net/StreamSocket.h>
 #include <string>
 #include "Structs.h"
+
 using Poco::Net::StreamSocket;
 using std::string;
+class MinecraftServer;
 
 class NetworkIn {
 private:
 	IntToFloat _ItF;
 	Int64ToDouble _ItD;
-	StreamSocket & _rSocket;
 	char _sReadBuffer[8];
-	static unsigned long long _iReadTraffic;
+
+	StreamSocket & _rSocket;
+	MinecraftServer* _pMCServer;
 public:
 	/*
 	* Constructor
 
 	Parameter:
 	@1 : Reference to a StreamSocket
+	@2 : a MinecraftServer instance
 	*/
-	NetworkIn(StreamSocket&);
+	NetworkIn(StreamSocket&,MinecraftServer*);
 	
-	/*
-	* Destructor
-	*/
-	~NetworkIn();
 
 	/*
 	* Read functions
@@ -54,12 +54,6 @@ public:
 	float readFloat();
 	double readDouble();
 	string readString();
-
-
-	/*
-	* Returns byte count that have been readed so far
-	*/
-	static unsigned long long getReadTraffic();
 private:
 	void read(int);
 };

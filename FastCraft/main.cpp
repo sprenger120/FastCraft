@@ -30,8 +30,6 @@ GNU General Public License for more details.
 #if defined(_WIN32)
     #include <Windows.h>
     #include <DbgHelp.h>
-	#include "NetworkOutRoot.h"
-	#include "NetworkIn.h"
 #include <sstream>
 #endif
 
@@ -159,8 +157,16 @@ int main(int argc, char *argv[]) {
 	bool fSomethingRuns = false;	
 	while(1) {
 		#if defined(_WIN32)
+			unsigned long long iTraffic = 0L;
 			std::wstringstream wSS;
-			wSS<<"FastCraft    Traffic I/O:"<<   double(NetworkIn::getReadTraffic() + NetworkOutRoot::getWriteTraffic()) / double(1024 * 1024)<<" MB";
+
+			if (!vpServer.empty()) {
+				for (x=vpServer.size()-1;x>=0;x--) {
+					iTraffic += vpServer[x]->getReadTraffic() + vpServer[x]->getWriteTraffic();
+				}
+			}
+
+			wSS<<"FastCraft    Traffic I/O:"<<double(iTraffic) / double(1024 * 1024)<<" MB";
 			SetConsoleTitle(wSS.str().c_str());
 		#endif
 

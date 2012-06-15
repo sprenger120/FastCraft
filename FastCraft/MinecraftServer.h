@@ -25,7 +25,8 @@ GNU General Public License for more details.
 #include "ServerThreadBase.h"
 #include <Poco/Stopwatch.h>
 #include <Poco/Mutex.h>
-
+#include "NetworkIn.h"
+#include "NetworkOutRoot.h"
 
 //Forward definitions
 class AcceptThread;
@@ -42,6 +43,8 @@ using std::vector;
 typedef unsigned long long Tick;
 
 class MinecraftServer : public ServerThreadBase {
+	friend class NetworkIn;
+	friend class NetworkOutRoot;
 private:
 	/*Settings*/
 	unsigned short _iPort;
@@ -81,6 +84,8 @@ private:
 
 	/* Other */
 	bool _fMarkedForShutdown;
+	unsigned long long _iWriteTraffic;
+	unsigned long long _iReadTraffic;
 public:
 	/*
 	* Constructor
@@ -251,6 +256,12 @@ public:
 	* Generates a new unique ID
 	*/
 	int generateID();
+
+	/*
+	* This functions are returning the Network I/O traffic
+	*/
+	unsigned long long getReadTraffic();
+	unsigned long long getWriteTraffic();
 private:
 	bool Int2Bool(int&);
 	bool parseNodeInt(Poco::AutoPtr<Poco::XML::Document>,string,int&,int,int);

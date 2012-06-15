@@ -20,6 +20,7 @@ GNU General Public License for more details.
 #include <string>
 
 using std::string;
+class MinecraftServer;
 
 /*
 * This class represents a root for the NetworkOut classes
@@ -29,19 +30,15 @@ class NetworkOutRoot {
 private:
 	ThreadSafeQueue<string> _lowQueue;
 	ThreadSafeQueue<string> _highQueue;
-
-	static unsigned long long _iWriteTraffic;
+	MinecraftServer* _pMCServer;
 public:
 	/*
 	* Constructor
-	*/
-	NetworkOutRoot();
 
-
-	/*
-	* Destructor
+	Parameter:
+	@1 : a MinecraftServer instance
 	*/
-	~NetworkOutRoot();
+	NetworkOutRoot(MinecraftServer*);
 
 
 	/*
@@ -65,11 +62,5 @@ public:
 	@2 : Reference to string that have to pushed to queue
 	*/
 	void Add(char,string&);
-
-
-	/*
-	* Returns write traffic in bytes 
-	*/
-	static unsigned long long getWriteTraffic();
 };
 #endif

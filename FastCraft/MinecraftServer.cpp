@@ -59,6 +59,8 @@ _sServerName(""),
 	_pPlayerPool				= NULL;
 	_pItemInformationProvider	= NULL;
 	_fMarkedForShutdown			= false;
+	_iWriteTraffic				= 0L;
+	_iReadTraffic               = 0L;
 
 	_clockCreation.start();
 	_iID = 100;
@@ -442,4 +444,13 @@ void MinecraftServer::shutdown() {
 
 bool MinecraftServer::isMarkedForShutdown() {
 	return _fMarkedForShutdown;
+}
+
+
+unsigned long long MinecraftServer::getReadTraffic() {
+	return _iReadTraffic;
+}
+
+unsigned long long MinecraftServer::getWriteTraffic() {
+	return _iWriteTraffic;
 }

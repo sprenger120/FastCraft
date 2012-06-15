@@ -16,17 +16,13 @@ GNU General Public License for more details.
 #include "FCRuntimeException.h"
 #include <Poco/Net/NetException.h>
 #include <Poco/ByteOrder.h>
+#include "MinecraftServer.h"
 
 
-NetworkIn::NetworkIn(StreamSocket& r) :
+NetworkIn::NetworkIn(StreamSocket& r,MinecraftServer* pMCServer) :
 _rSocket(r)
 {
-}
-
-unsigned long long NetworkIn::_iReadTraffic = 0;
-
-
-NetworkIn::~NetworkIn() {
+	_pMCServer = pMCServer;
 }
 
 char NetworkIn::readByte() {
@@ -178,9 +174,5 @@ void NetworkIn::read(int iLenght) {
 			fUnderflow = true;
 		}
 	}
-	_iReadTraffic += iLenght;
-}
-
-unsigned long long NetworkIn::getReadTraffic() {
-	return _iReadTraffic;
+	_pMCServer->_iReadTraffic += iLenght;
 }

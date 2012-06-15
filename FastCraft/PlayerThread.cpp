@@ -42,8 +42,8 @@ ServerThreadBase("PlayerThread"),
 	_rPackingThread(rPackingThread),
 
 	_Connection(),
-	_NetworkOutRoot(),
-	_NetworkInRoot(_Connection),
+	_NetworkOutRoot(pServer),
+	_NetworkInRoot(_Connection,pServer),
 	_NetworkWriter(_NetworkOutRoot.getLowQueue(),_NetworkOutRoot.getHighQueue(),_Connection,this),
 
 

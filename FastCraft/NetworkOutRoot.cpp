@@ -16,16 +16,13 @@ GNU General Public License for more details.
 #include "Constants.h"
 #include <iostream>
 #include "FCRuntimeException.h"
+#include "MinecraftServer.h"
 
-NetworkOutRoot::NetworkOutRoot() :
+NetworkOutRoot::NetworkOutRoot(MinecraftServer* pMCServer) :
 _lowQueue(),
 _highQueue()
 {
-}
-
-unsigned long long NetworkOutRoot::_iWriteTraffic = 0;
-
-NetworkOutRoot::~NetworkOutRoot() {
+	_pMCServer = pMCServer;
 }
 
 
@@ -40,18 +37,14 @@ ThreadSafeQueue<string> & NetworkOutRoot::getHighQueue() {
 void NetworkOutRoot::Add(char iType,string& rData) {
 	switch(iType) {
 	case FC_QUEUE_LOW:
-		_iWriteTraffic+=rData.length();
+		_pMCServer->_iWriteTraffic+=rData.length();
 		_lowQueue.push(rData);
 		break;
 	case FC_QUEUE_HIGH:
-		_iWriteTraffic+=rData.length();
+		_pMCServer->_iWriteTraffic+=rData.length();
 		_highQueue.push(rData);
 		break;
 	default:
 		throw FCRuntimeException("Unknown queue type");
 	}
-}
-
-unsigned long long NetworkOutRoot::getWriteTraffic(){
-	return _iWriteTraffic;
 }
