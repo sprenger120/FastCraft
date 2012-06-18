@@ -14,13 +14,6 @@ GNU General Public License for more details.
 */
 #include "FCRuntimeException.h"
 
-FCRuntimeException::FCRuntimeException(bool fStackTrace) : 
-_sMessage("<not given>")
-{
-	if (fStackTrace){printStacktrace();}
-	_iCode = 0;
-}
-
 
 FCRuntimeException::FCRuntimeException(string sDesc,bool fStackTrace) : 
 _sMessage(sDesc)

@@ -46,7 +46,6 @@ public:
 	@2 : Error-Code
 	@3 : See above
 	*/
-	FCRuntimeException(bool = true);
 	FCRuntimeException(string,bool = true);
 	FCRuntimeException(string,int,bool = true);
 
