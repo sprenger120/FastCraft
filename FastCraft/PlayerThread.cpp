@@ -851,22 +851,10 @@ void PlayerThread::syncMovement() {
 	if (!isSpawned()) {return;}
 
 	if (!(_Coordinates == _lastCoordinates)) {
+		cleanupSpawnedPlayers();
+
 		PlayerEventBase* p = new PlayerMoveEvent(this,_Coordinates);
 		_pMinecraftServer->getPlayerPool()->addEvent(p);
-	}else{ //If position not changed after 1 second, push a movement event to player pool (Workaound for the invisable player bug)
-		
-		Poco::Timespan::TimeDiff time = _timer_lastPositionUpdateEvent.elapsed();
-
-		if (time == 0) {
-			_timer_lastPositionUpdateEvent.start();
-		}else{
-			if (time/1000 > 1000) {
-				PlayerEventBase* p = new PlayerMoveEvent(this,_Coordinates);
-				_pMinecraftServer->getPlayerPool()->addEvent(p);
-				
-				_timer_lastPositionUpdateEvent.restart();
-			}
-		}
 	}
 }
 
@@ -1445,4 +1433,15 @@ short PlayerThread::getPing() {
 
 MinecraftServer* PlayerThread::getMinecraftServer(){
 	return _pMinecraftServer;
+}
+
+void PlayerThread::cleanupSpawnedPlayers() {
+	auto it = _heapSpawnedEntities.begin();
+
+	while (!it.isEndReached()) {
+		if (MathHelper::distance2D(it->Position,_Coordinates) > FC_PLAYERSPAWNRADIUS) { /* too distant -> despawn */
+			despawnEntity(it->getEntiyID());
+		}
+		it++;
+	}
 }

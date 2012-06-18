@@ -394,6 +394,7 @@ private:
 	//Other
 	string generateConnectionHash(); //Generate a new connection hash, write it to _ConnectionHash	
 	void CheckPosition(); //checks players position and correct it. Will synchronize with player if bool is true
+	void cleanupSpawnedPlayers(); //Removes too distant spawned players
 };
 
 #endif
