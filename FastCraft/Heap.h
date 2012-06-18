@@ -66,7 +66,7 @@ public:
 		* Returns last element if Iterator reaches the end
 		* Throws FCRuntimeException if heap doesn't contains any elements
 		*/
-		tDataType* operator->();
+		tDataType operator->();
 
 
 		/*
@@ -74,7 +74,7 @@ public:
 		* Returns last element if Iterator reaches the end
 		* Throws FCRuntimeException if heap doesn't contains any elements
 		*/
-		tDataType* getPtr();
+		tDataType getPtr();
 
 
 		/*
@@ -441,7 +441,7 @@ void Heap<tDataType,tAdressType>::HeapIterator::operator++() {
 }
 
 template<typename tDataType,typename tAdressType>
-tDataType* Heap<tDataType,tAdressType>::HeapIterator::operator->() {
+tDataType Heap<tDataType,tAdressType>::HeapIterator::operator->() {
 	if (_pActual == NULL) {throw FCRuntimeException("Doesn't contain any elements");} /* constructor moves to a valid element; keeps NULL if heap is empty */
 	return _pActual->pElement;
 }
@@ -452,7 +452,7 @@ bool Heap<tDataType,tAdressType>::HeapIterator::isEndReached() {
 }
 
 template<typename tDataType,typename tAdressType>
-tDataType* Heap<tDataType,tAdressType>::HeapIterator::getPtr() {
+tDataType Heap<tDataType,tAdressType>::HeapIterator::getPtr() {
 	if (_pActual == NULL) {throw FCRuntimeException("Doesn't contain any elements");} 
 	return _pActual->pElement;
 }
