@@ -254,14 +254,21 @@ void PlayerMoveEvent::Execute(vector<PlayerThread*>& rvPlayers,PlayerPool* pPlay
 		if (!(rvPlayers[x]->isAssigned() && rvPlayers[x]->isSpawned())) {continue;} /* not spawned */
 		if (rvPlayers[x] == _pSourcePlayer) {continue;} /* filter yourself */
 
-		if (MathHelper::distance2D(rvPlayers[x]->getCoordinates(),_newCoordinates) > 100.0) { /* Too distant */
-			if (rvPlayers[x]->isEntitySpawned(_pSourcePlayer->getEntityID())) { /* despawn if spawned */
+		if (MathHelper::distance2D(rvPlayers[x]->getCoordinates(),_newCoordinates) > FC_PLAYERSPAWNRADIUS) { /* Too distant from other player*/
+			if (rvPlayers[x]->isEntitySpawned(_pSourcePlayer->getEntityID())) { /* despawn me*/
 				rvPlayers[x]->despawnEntity(_pSourcePlayer->getEntityID());
 			}
 			continue; 
+		}else{ /* Spawn other players into my view circle */
+			if (!_pSourcePlayer->isEntitySpawned(rvPlayers[x]->getEntityID())) { /* other is not spawned to me */
+				EntityPlayer otherPlayer(rvPlayers[x]);
+				_pSourcePlayer->spawnEntity(&otherPlayer);
+				continue;
+			}
 		}
 
-		if (!rvPlayers[x]->isEntitySpawned(_pSourcePlayer->getEntityID())) { //Spawn into players view circle
+		/* Update my position to other players  */
+		if (!rvPlayers[x]->isEntitySpawned(_pSourcePlayer->getEntityID())) { /* if I'm not spawned -> spawn me */
 			rvPlayers[x]->spawnEntity(&Player);
 		}else{ //Already spawned -> update position
 			rvPlayers[x]->updateEntityPosition(&Player);	  	
