@@ -59,6 +59,7 @@ public:
 		* Moves Iterator to next element
 		*/
 		void operator++();
+		void operator++(int);
 
 
 		/*
@@ -420,6 +421,11 @@ Heap<tDataType,tAdressType>::HeapIterator::HeapIterator(HeapElement* p) {
 	}else {
 		(*this)++;
 	}
+}
+
+template<typename tDataType,typename tAdressType>
+void Heap<tDataType,tAdressType>::HeapIterator::operator++(int) {
+	++(*this);
 }
 
 template<typename tDataType,typename tAdressType>
