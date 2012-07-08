@@ -294,19 +294,13 @@ void ItemSlot::writeToNetwork(NetworkOut& Out) {
 }
 
 bool ItemSlot::operator == (ItemSlot& other) {
-	if (_Item.first == other.getItem().first && _Item.second == other.getItem().second && _iStackSize == other.getStackSize() && _iUsage == other.getUsage()) {
-		return true;
-	}else{
-		return false;
-	}
+	if (_Item.first == other.getItem().first && _Item.second == other.getItem().second) {return true;}	
+	return false;
 }
 
 bool ItemSlot::operator != (ItemSlot& other) {
-	if (_Item.first == other.getItem().first && _Item.second == other.getItem().second && _iStackSize == other.getStackSize() && _iUsage == other.getUsage()) {
-		return false;
-	}else{
-		return true;
-	}
+	if ((*this) == other) {return false;}
+	return true;
 }
 
 bool ItemSlot::isBlock() {
