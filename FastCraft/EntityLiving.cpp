@@ -118,7 +118,7 @@ void EntityLiving::updateEquipment(NetworkOut& rOut,EquipmentArray& rOldEquip) {
 
 			rOut.addByte(0x5);
 			rOut.addInt(_iEntityID);
-			rOut.addShort(x);
+			rOut.addShort(x==0 ? 0 : 4-(x-1));
 			rOut.addShort(-1);
 			rOut.addShort(0);
 			rOut.Finalize(FC_QUEUE_HIGH);
@@ -135,7 +135,7 @@ void EntityLiving::updateEquipment(NetworkOut& rOut,EquipmentArray& rOldEquip) {
 
 			rOut.addByte(0x5);
 			rOut.addInt(_iEntityID);
-			rOut.addShort(x);
+			rOut.addShort(x==0 ? 0 : 4-(x-1));
 			if(_vpHeld[x]->isEmpty()) { //empty slot
 				rOut.addShort(-1);
 				rOut.addShort(0);
