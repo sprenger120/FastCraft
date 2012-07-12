@@ -32,7 +32,7 @@ GNU General Public License for more details.
 #include "ChunkProvider.h"
 #include "EntityFlags.h"
 #include "NetworkWriter.h"
-#include "PlayerInventory.h"
+#include "InventoryPlayer.h"
 #include "ItemSlot.h"
 #include "EntityCoordinates.h"
 #include "EntityPlayer.h"
@@ -101,7 +101,7 @@ private:
 
 
 	/* Other classes */
-	PlayerInventory _Inventory;
+	InventoryPlayer _Inventory;
 	MinecraftServer* _pMinecraftServer;
 	World* _pActualWorld;
 	Heap<EntityListEntry*,int> _heapSpawnedEntities;
@@ -111,9 +111,9 @@ private:
     Poco::Stopwatch _timer_Ping;
 	Poco::Stopwatch _timer_LastBlockPut;
 	Poco::Stopwatch _timer_StartedEating;
-	Poco::Stopwatch _timer_lastSpeedCalculation;
+	//Poco::Stopwatch _timer_lastSpeedCalculation;
 	Poco::Stopwatch _timer_lastArmSwing;
-	Poco::Stopwatch _timer_lastPositionUpdateEvent;
+	//Poco::Stopwatch _timer_lastPositionUpdateEvent;
 public:
 	/*
 	* Constructor
@@ -279,9 +279,9 @@ public:
 
 
 	/*
-	* Returns a reference to player's inventory
+	* Returns a reference to player's inventory instance
 	*/
-	PlayerInventory& getInventory();
+	InventoryPlayer& getInventory();
 
 
 	/*
@@ -345,6 +345,12 @@ public:
 	* Returns the pointer to the minecraft server instance
 	*/
 	MinecraftServer* getMinecraftServer();
+
+
+	/*
+	* Returns a pointer to players NetworkOutRoot instance
+	*/ 
+	NetworkOutRoot* getNetworkOutRoot();
 private:
 	//Interval functions
 	void Interval_KeepAlive();
