@@ -18,7 +18,6 @@ GNU General Public License for more details.
 #include "PackingThread.h"
 #include "EntityFlags.h"
 #include "MathHelper.h"
-#include "PlayerInventory.h"
 #include "EntityCoordinates.h"
 #include <Poco/Thread.h>
 #include "FCRuntimeException.h"

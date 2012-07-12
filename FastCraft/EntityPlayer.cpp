@@ -43,9 +43,9 @@ EntityLiving		(Constants::get("/Entity/Alive/TypeID/Player"),pPlayer->getMinecra
 	_iHealth = 20;
 	_iEntityID = pPlayer->getEntityID();
 
-	setEquipment(0,pPlayer->getInventory().getSelectedSlot().getItem());
+	setEquipment(0,pPlayer->getInventory().getSelectedSlot()->getItem());
 	for (char x=1;x<=4;x++) {
-		setEquipment(x, pPlayer->getInventory().getSlot(4+x).getItem());
+		setEquipment(x, pPlayer->getInventory()[4+x]->getItem());
 	}
 }catch(FCRuntimeException & ex) {
 	ex.rethrow();
