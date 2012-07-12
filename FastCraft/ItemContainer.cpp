@@ -115,35 +115,40 @@ void ItemContainer::readClickWindow(PlayerThread* pPlayer,NetworkIn& rIn) {
 		}
 
 		if (fRightClick)  {
-			if (!_pInHand->isEmpty() && isAllowedToPlace(iSlot,_pInHand->getItem())) {
-				/* Put one item into this empty slot */
-				if (_vSlots[iSlot]->isEmpty()) { 
-					_vSlots[iSlot]->setItem(_pInHand->getItem());
-					_vSlots[iSlot]->setStackSize(1);
-					_pInHand->DecrementStackSize();
-					return;
-				}
-
-				/* Add one item to same stack */
-				if ((*_vSlots[iSlot]) == (*_pInHand)) { 
-					char iMaxStackSize = 0;
-					if (_vSlots[iSlot]->isBlock()) {
-						iMaxStackSize = _vSlots[iSlot]->getBlockEntryCache()->MaxStackSize;
-					}else{
-						iMaxStackSize = _vSlots[iSlot]->getItemEntryCache()->MaxStackSize;
+			if (isAllowedToPlace(iSlot,_pInHand->getItem())) {
+				if (!_pInHand->isEmpty()) {
+					/* Put one item into this empty slot */
+					if (_vSlots[iSlot]->isEmpty()) { 
+						_vSlots[iSlot]->setItem(_pInHand->getItem());
+						_vSlots[iSlot]->setStackSize(1);
+						_pInHand->DecrementStackSize();
+						return;
 					}
-					if (_vSlots[iSlot]->getStackSize() + 1 > iMaxStackSize) {return;}
 
-					_vSlots[iSlot]->IncrementStackSize();
-					_pInHand->DecrementStackSize();
+					/* Add one item to same stack */
+					if ((*_vSlots[iSlot]) == (*_pInHand)) { 
+						char iMaxStackSize = 0;
+						if (_vSlots[iSlot]->isBlock()) {
+							iMaxStackSize = _vSlots[iSlot]->getBlockEntryCache()->MaxStackSize;
+						}else{
+							iMaxStackSize = _vSlots[iSlot]->getItemEntryCache()->MaxStackSize;
+						}
+						if (_vSlots[iSlot]->getStackSize() + 1 > iMaxStackSize) {return;}
+
+						_vSlots[iSlot]->IncrementStackSize();
+						_pInHand->DecrementStackSize();
+						return;
+					}
+
+					/* swap stacks */
+					std::swap(_vSlots[iSlot],_pInHand);
 					return;
 				}
-
-				/* swap stacks */
-				std::swap(_vSlots[iSlot],_pInHand);
+			}else{
+				NetworkOut Out(pPlayer->getNetworkOutRoot());
+				syncSlot(Out,iSlot);
 				return;
 			}
-
 			char iStackSize = _vSlots[iSlot]->getStackSize();
 
 			if (iStackSize%2) {
@@ -161,8 +166,11 @@ void ItemContainer::readClickWindow(PlayerThread* pPlayer,NetworkIn& rIn) {
 			return;
 		}
 
-		if (!isAllowedToPlace(iSlot,_pInHand->getItem())){return;}
-
+		if (!isAllowedToPlace(iSlot,_pInHand->getItem())) {
+			NetworkOut Out(pPlayer->getNetworkOutRoot());
+			syncSlot(Out,iSlot);
+			return;
+		}
 		mergeStacks(&_vSlots[iSlot],&_pInHand);
 	} catch(FCRuntimeException& ex) {
 		std::cout<<"PlayerInventory::HandleWindowClick exception:"<<ex.getMessage()<<"\n";
