@@ -106,6 +106,13 @@ void Constants::init() {
 	_Map["/Difficulty/Easy"]						= 1;
 	_Map["/Difficulty/Normal"]						= 2;
 	_Map["/Difficulty/Hard"]						= 3;
+
+	_Map["/InventoryType/Chest"]					= 0;
+	_Map["/InventoryType/Inventory"]				= 0;
+	_Map["/InventoryType/Workbench"]				= 1;
+	_Map["/InventoryType/Furnace"]					= 2;
+	_Map["/InventoryType/Dispencer"]				= 3;
+	_Map["/InventoryType/EnchantmentTable"]			= 4;
 }
 
 char Constants::get(std::string str) {
