@@ -166,10 +166,12 @@ void ItemContainer::readClickWindow(PlayerThread* pPlayer,NetworkIn& rIn) {
 			return;
 		}
 
-		if (!isAllowedToPlace(iSlot,_pInHand->getItem())) {
-			NetworkOut Out(pPlayer->getNetworkOutRoot());
-			syncSlot(Out,iSlot);
-			return;
+		if (!_pInHand->isEmpty()) {
+			if (!isAllowedToPlace(iSlot,_pInHand->getItem())) {
+				NetworkOut Out(pPlayer->getNetworkOutRoot());
+				syncSlot(Out,iSlot);
+				return;
+			}
 		}
 		mergeStacks(&_vSlots[iSlot],&_pInHand);
 	} catch(FCRuntimeException& ex) {
@@ -206,6 +208,10 @@ bool ItemContainer::insertItem(SlotRange* pRange,short iSlot) {
 
 bool ItemContainer::mergeStacks(ItemSlot** item1,ItemSlot** item2,bool fUseEmptySlot) {
 	if (item1 == NULL || item2 == NULL) {throw FCRuntimeException("Nullpointer");}
+	if ((*item1)->isEmpty() && (*item2)->isEmpty()){
+		cout<<"ItemContainer::mergeStacks logic error. Both are empty\n";
+		return false;
+	}
 
 	if (fUseEmptySlot) {
 		if (((*item1)->isEmpty() && !((*item2)->isEmpty())) ||      
