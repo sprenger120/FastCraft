@@ -102,6 +102,7 @@ char ItemSlot::getStackSize() {
 }
 
 void ItemSlot::setStackSize(char size) {
+	if (isEmpty()){return;}
 	if (size < 0){
 		_iStackSize = 0;
 		std::cout<<"ItemSlot::setStackSize Stacksize invalid."<<"\n";
@@ -181,11 +182,8 @@ void ItemSlot::clear() {
 }
 
 bool ItemSlot::isEmpty() {
-	if (_iStackSize == 0 || _Item.first == 0) {
-		return true;
-	}else{
-		return false;
-	}
+	if (_Item.first == 0) {return true;}
+	return false;
 }
 
 void ItemSlot::readFromNetwork(NetworkIn& rNetwork) {
@@ -319,4 +317,13 @@ BlockEntry* ItemSlot::getBlockEntryCache() {
 
 ItemEntry* ItemSlot::getItemEntryCache() {
 	return _pItemCache_Item;
+}
+
+void ItemSlot::DecrementStackSize() {
+	if (isEmpty()){return;}
+	setStackSize(_iStackSize-1);
+}
+
+void ItemSlot::IncrementStackSize() {
+	setStackSize(_iStackSize+1);
 }

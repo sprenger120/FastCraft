@@ -207,5 +207,11 @@ public:
 	* Returns the pointer to the block information cache
 	*/
 	BlockEntry* getBlockEntryCache();
+
+	/*
+	* Decrements/Increments the stack size by one
+	*/
+	void DecrementStackSize();
+	void IncrementStackSize();
 };
 #endif
