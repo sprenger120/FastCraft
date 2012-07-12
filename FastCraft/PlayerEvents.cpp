@@ -38,8 +38,7 @@ PlayerEventBase(pThread),
 	}
 }
 
-PlayerChatEvent::~PlayerChatEvent(){
-}
+
 
 
 ChatEvent::ChatEvent(string Message) : 
@@ -51,10 +50,6 @@ PlayerEventBase(NULL,true),
 	}
 }
 
-ChatEvent::~ChatEvent(){
-}
-
-
 
 
 PlayerJoinEvent::PlayerJoinEvent(PlayerThread* pThread) : 
@@ -62,8 +57,7 @@ PlayerEventBase(pThread)
 {
 }
 
-PlayerJoinEvent::~PlayerJoinEvent(){
-}
+
 
 
 PlayerDisconnectEvent::PlayerDisconnectEvent(PlayerThread* pThread,int iEID,string sUsername) :
@@ -75,10 +69,6 @@ PlayerEventBase(pThread),
 		throw FCRuntimeException("invalid EID");
 	}
 }
-
-PlayerDisconnectEvent::~PlayerDisconnectEvent(){
-}
-
 
 
 
@@ -93,8 +83,6 @@ PlayerEventBase(pThread),
 	}
 }
 
-PlayerAnimationEvent::~PlayerAnimationEvent(){
-}
 
 
 PlayerUpdateFlagsEvent::PlayerUpdateFlagsEvent(PlayerThread* pThread,EntityFlags Flags) :
@@ -103,8 +91,6 @@ PlayerEventBase(pThread),
 {
 }
 
-PlayerUpdateFlagsEvent::~PlayerUpdateFlagsEvent(){
-}
 
 PlayerMoveEvent::PlayerMoveEvent(PlayerThread* pThread,EntityCoordinates newCoordinates) : 
 PlayerEventBase(pThread),
@@ -112,35 +98,15 @@ PlayerEventBase(pThread),
 {
 }
 
-PlayerMoveEvent::~PlayerMoveEvent(){
-}
 
 
 
-PlayerChangeHeldEvent::PlayerChangeHeldEvent(PlayerThread* pThread,ItemID Item,short iSlot) :
-PlayerEventBase(pThread),
-	_Item(Item),
-	_iSlot(iSlot),
-	_fIgnore(false)
+PlayerChangeHeldEvent::PlayerChangeHeldEvent(PlayerThread* pThread) :
+PlayerEventBase(pThread)
 {
-	if (iSlot < 0 || iSlot > 4) {
-		throw FCRuntimeException("invalid SlotID");
-		_fIgnore=true;
-	}
-	if (Item.second < 0 || Item.second > 15) {
-		throw FCRuntimeException("invalid ID");
-		_fIgnore=true;
-	}
-	
-	if (!_pSourcePlayer->getMinecraftServer()->getItemInfoProvider()->isRegistered(Item)) {
-		throw FCRuntimeException("Item not registered");
-		_fIgnore=true;
-	}
-
 }
 
-PlayerChangeHeldEvent::~PlayerChangeHeldEvent(){
-}
+
 
 
 
@@ -152,8 +118,6 @@ PlayerEventBase(NULL,true),
 	_pWorld = pWorld;
 }
 
-PlayerSetBlockEvent::~PlayerSetBlockEvent(){
-}
 
 /*
 * Execute implementations
@@ -278,7 +242,6 @@ void PlayerMoveEvent::Execute(vector<PlayerThread*>& rvPlayers,PlayerPool* pPlay
 
 void PlayerChangeHeldEvent::Execute(vector<PlayerThread*>& rvPlayers,PlayerPool* pPlayerPool) {
 	if (rvPlayers.empty()) {return;}
-	if (_fIgnore) {return;}
 
 	EntityPlayer Player(_pSourcePlayer);
 

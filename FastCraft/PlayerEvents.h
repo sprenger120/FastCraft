@@ -42,7 +42,6 @@ public:
 	@3 : PlayersPosition at the moment of submission
 	*/
 	PlayerChatEvent(PlayerThread*,string,EntityCoordinates);
-	~PlayerChatEvent();
 
 	void Execute(vector<PlayerThread*>&,PlayerPool*);
 };
@@ -58,7 +57,6 @@ public:
 	@1 : Message
 	*/
 	ChatEvent(string);
-	~ChatEvent();
 
 	void Execute(vector<PlayerThread*>&,PlayerPool*);
 };
@@ -78,7 +76,6 @@ public:
 	@1 : pointer to PlayerThread class that pushes event
 	*/
 	PlayerJoinEvent(PlayerThread*);
-	~PlayerJoinEvent();
 
 	void Execute(vector<PlayerThread*>&,PlayerPool*);
 };
@@ -97,7 +94,6 @@ public:
 	@3 : Name of player
 	*/
 	PlayerDisconnectEvent(PlayerThread*,int,string);
-	~PlayerDisconnectEvent();
 
 	void Execute(vector<PlayerThread*>&,PlayerPool*);
 };
@@ -120,7 +116,6 @@ public:
 	@2 : Animation ID (Constants.h FC_ANIM_...)
 	*/
 	PlayerAnimationEvent(PlayerThread*,char);
-	~PlayerAnimationEvent();
 
 	void Execute(vector<PlayerThread*>&,PlayerPool*);
 };
@@ -137,7 +132,6 @@ public:
 	@2 : EntityFlags instance of player
 	*/
 	PlayerUpdateFlagsEvent(PlayerThread*,EntityFlags);
-	~PlayerUpdateFlagsEvent();
 
 	void Execute(vector<PlayerThread*>&,PlayerPool*);
 };
@@ -154,7 +148,6 @@ public:
 	@2 : new Position
 	*/
 	PlayerMoveEvent(PlayerThread*,EntityCoordinates);
-	~PlayerMoveEvent();
 
 	void Execute(vector<PlayerThread*>&,PlayerPool*);
 };
@@ -165,21 +158,14 @@ public:
 * Changing held items
 */
 class PlayerChangeHeldEvent : public PlayerEventBase {
-private:
-	ItemID _Item;
-	short _iSlot;
-	bool _fIgnore;
 public:
 	/*
 	* Constructor
 	
 	Parameter:
 	@1 : this pointer of PlayerThread class that pushes event
-	@2 : Item data of held
-	@3 : Slot (0=In hand, 1-4 = Amor)
 	*/
-	PlayerChangeHeldEvent(PlayerThread*,ItemID,short);
-	~PlayerChangeHeldEvent();
+	PlayerChangeHeldEvent(PlayerThread*);
 
 	void Execute(vector<PlayerThread*>&,PlayerPool*);
 };
@@ -205,7 +191,6 @@ public:
 	@3 : World who pushed this event
 	*/
 	PlayerSetBlockEvent(BlockCoordinates,ItemID,World*);
-	~PlayerSetBlockEvent();
 
 	void Execute(vector<PlayerThread*>&,PlayerPool*);
 };
