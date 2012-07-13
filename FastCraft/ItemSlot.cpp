@@ -18,6 +18,7 @@ GNU General Public License for more details.
 #include <iostream>
 #include "NetworkIn.h"
 #include "NetworkOut.h"
+#include <Poco/ScopedLock.h>
 
 ItemSlot::ItemSlot(ItemInformationProvider* pIIP): 
 _vEnchantments(0)
@@ -75,6 +76,8 @@ ItemID ItemSlot::getItem() {
 }
 
 void ItemSlot::setItem(ItemID id) {
+	Poco::ScopedLock<Poco::Mutex> scopelock(_Mutex);
+
 	try{
 		switch(_pItemInfoProvider->isBlock(id)) {
 		case true:
@@ -134,6 +137,7 @@ short ItemSlot::getUsage() {
 
 
 void ItemSlot::IncrementUsage() {
+	Poco::ScopedLock<Poco::Mutex> scopelock(_Mutex);
 	if (_pItemCache_Item == NULL || !_pItemCache_Item->Damageable) {
 		std::cout<<"ItemSlot::IncrementUsage Not a tool!"<<"\n";
 		throw FCRuntimeException("Not a tool");
@@ -154,6 +158,7 @@ void ItemSlot::IncrementUsage() {
 }
 
 void ItemSlot::setUsage(short iUsage){
+	Poco::ScopedLock<Poco::Mutex> scopelock(_Mutex);
 	if (_pItemCache_Item == NULL || !_pItemCache_Item->Damageable) {
 		std::cout<<"ItemSlot::IncrementUsage Not a tool!"<<"\n";
 		throw FCRuntimeException("Not a tool");
@@ -174,6 +179,7 @@ void ItemSlot::setUsage(short iUsage){
 }
 
 void ItemSlot::clear() {
+	Poco::ScopedLock<Poco::Mutex> scopelock(_Mutex);
 	_Item.first = _Item.second = 0;
 	_iStackSize = 0;
 	_iUsage = 0;
@@ -187,6 +193,7 @@ bool ItemSlot::isEmpty() {
 }
 
 void ItemSlot::readFromNetwork(NetworkIn& rNetwork) {
+	Poco::ScopedLock<Poco::Mutex> scopelock(_Mutex);
 	try	{
 		short iItemID;
 
@@ -275,6 +282,7 @@ void ItemSlot::readFromNetwork(NetworkIn& rNetwork) {
 }
 
 void ItemSlot::writeToNetwork(NetworkOut& Out) {
+	Poco::ScopedLock<Poco::Mutex> scopelock(_Mutex);
 	if (isEmpty()) {
 		Out.addShort(-1);
 		return;

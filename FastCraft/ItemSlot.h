@@ -19,6 +19,7 @@ GNU General Public License for more details.
 #include <vector>
 #include "Structs.h"
 #include "ItemInformationProvider.h"
+#include <Poco/Mutex.h>
 
 using std::vector;
 class NetworkIn;
@@ -40,6 +41,7 @@ private:
 
 	vector<Enchantment> _vEnchantments;
 	ItemInformationProvider* _pItemInfoProvider;
+	Poco::Mutex _Mutex;
 public:
 	/*
 	* Construct as a free slot
