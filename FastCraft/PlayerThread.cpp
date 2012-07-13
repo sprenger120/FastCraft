@@ -813,7 +813,6 @@ void PlayerThread::Packet102_WindowClick() {
 	_Inventory.readClickWindow(this,_NetworkInRoot);
 	NetworkOut Out(&_NetworkOutRoot);
 
-	_Inventory.syncInventory(Out);
 	_pMinecraftServer->getPlayerPool()->addEvent(new PlayerChangeHeldEvent(this));
 }
 
@@ -1001,7 +1000,10 @@ void PlayerThread::updateEntityEquipment(EntityLiving* pEntity) {
 
 void PlayerThread::CheckPosition() {
 	//if (_pActualWorld->isSuffocating(this)) {
-	//	/*cout<<_pMinecraftServer->getInGameTime()<<"\tsuffocating Y:"<<_Coordinates.Y<<"\n";*/
+	//	cout<<_pMinecraftServer->getInGameTime()<<"\tsuffocating Y:"<<_Coordinates.Y<<"\n";
+	//	
+	//	_Coordinates = _lastCoordinates;
+	//	sendClientPosition();
 	//}
 }
 
