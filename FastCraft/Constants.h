@@ -28,7 +28,6 @@ GNU General Public License for more details.
 //Various Constants
 #define FC_PLAYERSPAWNRADIUS			100.0
 #define FC_MAXLOGINTIME					10000 //10 Seconds to complete login procedure
-#define FC_EMPTYITEMID					std::make_pair<short,char>(-1,-1)
 #define FC_WORLDHEIGHT					128
 #define FC_VIEWDISTANCE					10
 #define FC_UNKNOWNEID					-1
