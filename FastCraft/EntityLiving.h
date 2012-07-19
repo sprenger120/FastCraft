@@ -29,7 +29,7 @@ class ItemSlot;
             2 = chestplate
             3 = leggins
             4 = boots
-* If a slot should be empty, set it to NULL
+* If a slot should be empty, just initialize ItemSlot without an itemID
 */
 typedef std::vector<ItemSlot*> EquipmentArray;
 

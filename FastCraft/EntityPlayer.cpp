@@ -52,12 +52,6 @@ EntityLiving		(Constants::get("/Entity/Alive/TypeID/Player"),pPlayer->getMinecra
 }
 
 
-EntityPlayer::~EntityPlayer() {
-	for(int x=0;x<=4;x++) {
-		delete _vpHeld[x];
-	}
-}
-
 float EntityPlayer::getHeight() {
 	return 1.8F;
 }

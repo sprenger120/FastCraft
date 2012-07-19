@@ -47,12 +47,6 @@ public:
 	EntityPlayer(MinecraftServer*,World*,string);
 	EntityPlayer(PlayerThread*);			
 
-	/*
-	* Destructor
-	* Will delete pHeld from heap
-	*/
-	~EntityPlayer();
-
 
 	/*
 	* Returns height

@@ -30,12 +30,13 @@ Entity			(pServer,pWorld,fGrabNew),
 	_iHealth = 0;
 	_iType = iType;
 
-	for(char x=0;x<=4;x++) {_vpHeld[x] = NULL;}
+	for(char x=0;x<=4;x++) {_vpHeld[x] = new ItemSlot(pServer->getItemInfoProvider());}
 }catch(FCRuntimeException& ex) {
 	ex.rethrow();
 }
 
 EntityLiving::~EntityLiving() {
+	for(char x=0;x<=4;x++) {delete _vpHeld[x];}
 }
 
 bool EntityLiving::isAlive() {
@@ -92,17 +93,12 @@ short EntityLiving::getMaxHealth() {
 
 void EntityLiving::sendEquipment(NetworkOut& rOut) {
 	for (char x=0;x<=4;x++) {
-		if (_vpHeld[x] == NULL) {continue;}
+		if (_vpHeld[x]->isEmpty()) {continue;}
 		rOut.addByte(0x5);
 		rOut.addInt(_iEntityID);
 		rOut.addShort( x==0 ? 0 : 4-(x-1) );
-		if(_vpHeld[x]->isEmpty()) { //empty slot
-			rOut.addShort(-1);
-			rOut.addShort(0);
-		}else{
-			rOut.addShort(_vpHeld[x]->getItem().first);
-			rOut.addShort(_vpHeld[x]->getItem().second);
-		}
+		rOut.addShort(_vpHeld[x]->getItem().first);
+		rOut.addShort(_vpHeld[x]->getItem().second);
 		rOut.Finalize(FC_QUEUE_HIGH);
 	}
 }
@@ -111,11 +107,11 @@ void EntityLiving::updateEquipment(NetworkOut& rOut,EquipmentArray& rOldEquip) {
 	if (rOldEquip.size() != 5) {throw FCRuntimeException("Illegal size");}
 
 	for (char x=0;x<=4;x++) {
-		if (_vpHeld[x] == NULL && rOldEquip[x] == NULL) {continue;}
-		if (_vpHeld[x] == NULL && rOldEquip[x] != NULL) {
-			delete rOldEquip[x];
-			rOldEquip[x] = NULL;
+		if (_vpHeld[x]->isEmpty() && rOldEquip[x]->isEmpty()) {continue;} //Both are empty - nothing changed
 
+		if (_vpHeld[x]->isEmpty() && !rOldEquip[x]->isEmpty()) { //A slot was cleared
+			rOldEquip[x]->clear();
+			
 			rOut.addByte(0x5);
 			rOut.addInt(_iEntityID);
 			rOut.addShort(x==0 ? 0 : 4-(x-1));
@@ -126,23 +122,14 @@ void EntityLiving::updateEquipment(NetworkOut& rOut,EquipmentArray& rOldEquip) {
 		}
 		 
 
-		if (_vpHeld[x] != NULL && rOldEquip[x] == NULL) {rOldEquip[x] = new ItemSlot(*_vpHeld[x]);}
-
-
-		if (_vpHeld[x]->getItem().first != rOldEquip[x]->getItem().first || 
-			_vpHeld[x]->getItem().second != rOldEquip[x]->getItem().second) {
+		if ((*_vpHeld[x]) != (*rOldEquip[x])) { //ItemID change
 			rOldEquip[x]->setItem(_vpHeld[x]->getItem());
 
 			rOut.addByte(0x5);
 			rOut.addInt(_iEntityID);
 			rOut.addShort(x==0 ? 0 : 4-(x-1));
-			if(_vpHeld[x]->isEmpty()) { //empty slot
-				rOut.addShort(-1);
-				rOut.addShort(0);
-			}else{
-				rOut.addShort(_vpHeld[x]->getItem().first);
-				rOut.addShort(_vpHeld[x]->getItem().second);
-			}
+			rOut.addShort(_vpHeld[x]->getItem().first);
+			rOut.addShort(_vpHeld[x]->getItem().second);
 			rOut.Finalize(FC_QUEUE_HIGH);
 			continue;
 		}
@@ -153,22 +140,14 @@ void EntityLiving::updateEquipment(NetworkOut& rOut,EquipmentArray& rOldEquip) {
 void EntityLiving::setEquipment(char index,ItemID id) {
 	if (index < 0 || index > 4) {throw FCRuntimeException("Illegal index");}
 
-	if (id.first == -1 && id.second == -1) {
-		if (_vpHeld[index] == NULL) {return;}
-
-		delete _vpHeld[index];
-		_vpHeld[index] = NULL;
-
+	if (id.isEmpty()) {
+		_vpHeld[index]->clear();
 		return;
 	}
 
 	try {
-		if (_vpHeld[index] == NULL) {
-			_vpHeld[index] = new ItemSlot(_pMCServer->getItemInfoProvider(),id,1);
-		}else{
-			_vpHeld[index]->setItem(id);
-			_vpHeld[index]->setStackSize(1);
-		}
+		_vpHeld[index]->setItem(id);
+		_vpHeld[index]->setStackSize(1);
 	}catch(FCRuntimeException & ex) {
 		ex.rethrow();
 	}
@@ -176,7 +155,7 @@ void EntityLiving::setEquipment(char index,ItemID id) {
 
 ItemID EntityLiving::getEquipment(char index) {
 	if (index < 0 || index > 4) {throw FCRuntimeException("Illegal index");}
-	return (_vpHeld[index] == NULL ? FC_EMPTYITEMID : _vpHeld[index]->getItem());
+	return _vpHeld[index]->getItem();
 }
 
 
