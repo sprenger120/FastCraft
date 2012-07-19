@@ -311,10 +311,10 @@ public:
 	* Will throw FCRuntimeException if block not exists
 
 	Parameter:
-	@1 : Coordiantes of block
-	@2 : Block ID
+	@1 : reference to coordiantes of block
+	@2 : reference to block ID
 	*/
-	void spawnBlock(BlockCoordinates,ItemID);
+	void spawnBlock(BlockCoordinates&,ItemID&);
 
 
 	/*

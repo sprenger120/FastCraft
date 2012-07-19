@@ -32,6 +32,7 @@ _vEnchantments(0)
 	_pItemCache_Item = NULL;
 }
 
+
 ItemSlot::ItemSlot(ItemInformationProvider* pIIP,ItemID id,char iStackSize) { 
 	_pItemInfoProvider = pIIP;
 	_iStackSize = iStackSize;
@@ -76,7 +77,7 @@ ItemID ItemSlot::getItem() {
 }
 
 void ItemSlot::setItem(ItemID id) {
-	Poco::ScopedLock<Poco::Mutex> scopelock(_Mutex);
+	/*Poco::Mutex::ScopedLock scopelock(_Mutex);*/
 
 	try{
 		switch(_pItemInfoProvider->isBlock(id)) {
@@ -137,7 +138,7 @@ short ItemSlot::getUsage() {
 
 
 void ItemSlot::IncrementUsage() {
-	Poco::ScopedLock<Poco::Mutex> scopelock(_Mutex);
+	/*Poco::Mutex::ScopedLock scopelock(_Mutex);*/
 	if (_pItemCache_Item == NULL || !_pItemCache_Item->Damageable) {
 		std::cout<<"ItemSlot::IncrementUsage Not a tool!"<<"\n";
 		throw FCRuntimeException("Not a tool");
@@ -158,7 +159,7 @@ void ItemSlot::IncrementUsage() {
 }
 
 void ItemSlot::setUsage(short iUsage){
-	Poco::ScopedLock<Poco::Mutex> scopelock(_Mutex);
+	//Poco::Mutex::ScopedLock scopelock(_Mutex);
 	if (_pItemCache_Item == NULL || !_pItemCache_Item->Damageable) {
 		std::cout<<"ItemSlot::IncrementUsage Not a tool!"<<"\n";
 		throw FCRuntimeException("Not a tool");
@@ -179,7 +180,7 @@ void ItemSlot::setUsage(short iUsage){
 }
 
 void ItemSlot::clear() {
-	Poco::ScopedLock<Poco::Mutex> scopelock(_Mutex);
+	/*Poco::Mutex::ScopedLock scopelock(_Mutex);*/
 	_Item.first = _Item.second = 0;
 	_iStackSize = 0;
 	_iUsage = 0;
@@ -193,7 +194,7 @@ bool ItemSlot::isEmpty() {
 }
 
 void ItemSlot::readFromNetwork(NetworkIn& rNetwork) {
-	Poco::ScopedLock<Poco::Mutex> scopelock(_Mutex);
+	/*Poco::Mutex::ScopedLock scopelock(_Mutex);*/
 	try	{
 		short iItemID;
 
@@ -204,7 +205,7 @@ void ItemSlot::readFromNetwork(NetworkIn& rNetwork) {
 			
 			switch (_pItemInfoProvider->isBlock(iItemID)) {
 			case true:
-				_Item = std::make_pair(iItemID,char(Usage));
+				_Item = ItemID(iItemID,char(Usage));
 				_iUsage = 0;
 
 				//Check registration state
@@ -242,9 +243,9 @@ void ItemSlot::readFromNetwork(NetworkIn& rNetwork) {
 						//Rewrite Item cache
 						_pItemCache_Block = NULL;
 						_pItemCache_Item = pItem;
-						_Item = std::make_pair(iItemID,0);
+						_Item = ItemID(iItemID,0);
 					}else{
-						_Item = std::make_pair(iItemID,char(Usage));
+						_Item = ItemID(iItemID,char(Usage));
 
 						//Check registration state
 						if(!_pItemInfoProvider->isRegistered(_Item)) {
@@ -259,7 +260,7 @@ void ItemSlot::readFromNetwork(NetworkIn& rNetwork) {
 				}
 			}
 		}else{
-			_Item = FC_EMPTYITEMID;
+			_Item = ItemID();
 			_iStackSize = 0;
 			_iUsage = 0;
 			return;
@@ -282,7 +283,7 @@ void ItemSlot::readFromNetwork(NetworkIn& rNetwork) {
 }
 
 void ItemSlot::writeToNetwork(NetworkOut& Out) {
-	Poco::ScopedLock<Poco::Mutex> scopelock(_Mutex);
+	//Poco::Mutex::ScopedLock scopelock(_Mutex);
 	if (isEmpty()) {
 		Out.addShort(-1);
 		return;
@@ -300,12 +301,12 @@ void ItemSlot::writeToNetwork(NetworkOut& Out) {
 }
 
 bool ItemSlot::operator == (ItemSlot& other) {
-	if (_Item.first == other.getItem().first && _Item.second == other.getItem().second) {return true;}	
+	if (_Item == other.getItem()) {return true;}	
 	return false;
 }
 
 bool ItemSlot::operator != (ItemSlot& other) {
-	if ((*this) == other) {return false;}
+	if (_Item == other.getItem()) {return false;}	
 	return true;
 }
 

@@ -811,7 +811,11 @@ void PlayerThread::Packet101_CloseWindow() {
 
 void PlayerThread::Packet102_WindowClick() {
 	_Inventory.readClickWindow(this,_NetworkInRoot);
+	
+#ifdef _DEBUG
 	NetworkOut Out(&_NetworkOutRoot);
+	_Inventory.syncInventory(Out);
+#endif
 
 	_pMinecraftServer->getPlayerPool()->addEvent(new PlayerChangeHeldEvent(this));
 }
@@ -1036,7 +1040,7 @@ void PlayerThread::Packet15_PlayerBlockPlacement() {
 
 		ItemSlot* InHand = _Inventory.getSelectedSlot();
 
-		ItemID idSelectedBlock = std::make_pair(0,0);
+		ItemID idSelectedBlock;
 		if (InHand->isEmpty()) { /* No item in hand */
 			InHand->clear();
 			return;
@@ -1069,7 +1073,7 @@ void PlayerThread::Packet15_PlayerBlockPlacement() {
 
 				/* Special actions are not allowed with blocks */
 				if (InHand->isBlock()) {
-					spawnBlock(blockCoordinates,std::make_pair(0,0));
+					spawnBlock(blockCoordinates,ItemID(0,0));
 					return;
 				}
 
@@ -1132,14 +1136,14 @@ void PlayerThread::Packet15_PlayerBlockPlacement() {
 				ItemID Block = _pActualWorld->getBlock(blockCoordinates);
 
 				if (Block.first == 9 || Block.first == 11) {
-					_pActualWorld->setBlock(blockCoordinates,std::make_pair(0,0));
+					_pActualWorld->setBlock(blockCoordinates,ItemID(0,0));
 
 					switch(Block.first) {
 					case 9: //Water
-						InHand->setItem( std::make_pair(326,0));
+						InHand->setItem(ItemID(326,0));
 						break;
 					case 11: //Lava
-						InHand->setItem( std::make_pair(327,0));
+						InHand->setItem( ItemID(327,0));
 						break;
 					}
 				}
@@ -1149,7 +1153,7 @@ void PlayerThread::Packet15_PlayerBlockPlacement() {
 
 			ItemEntry* Entry = InHand->getItemEntryCache();
 			if (Entry->ConnectedBlock.first == -1 && Entry->ConnectedBlock.second == -1) { //No connected item
-				spawnBlock(blockCoordinates,std::make_pair(0,0));
+				spawnBlock(blockCoordinates,ItemID(0,0));
 				return; 
 			}
 			idSelectedBlock = Entry->ConnectedBlock;
@@ -1185,7 +1189,7 @@ void PlayerThread::Packet15_PlayerBlockPlacement() {
 
 		/* Prevent: Set not placeable blocks */
 		if (!pSelectedBlock->Placeable) {
-			spawnBlock(blockCoordinates,std::make_pair(0,0));
+			spawnBlock(blockCoordinates,ItemID(0,0));
 			return;
 		}
 
@@ -1206,7 +1210,7 @@ void PlayerThread::Packet15_PlayerBlockPlacement() {
 					(coords.Y == blockCoordinates.Y ||coords.Y+1 == blockCoordinates.Y)
 					)
 				{ /* it will hurt someone */
-					spawnBlock(blockCoordinates,std::make_pair(0,0));
+					spawnBlock(blockCoordinates,ItemID(0,0));
 					return;
 				}
 			}
@@ -1223,7 +1227,7 @@ void PlayerThread::Packet15_PlayerBlockPlacement() {
 				BlockBelow.first != idSelectedBlock.first /* Bottom block is not the same one than the to be set one*/
 				)
 			{
-				spawnBlock(blockCoordinates,std::make_pair(0,0));
+				spawnBlock(blockCoordinates,ItemID(0,0));
 				return;
 			}
 		}
@@ -1249,7 +1253,7 @@ int PlayerThread::getChunksInQueue() {
 	return _NetworkOutRoot.getLowQueue().size();
 }
 
-void PlayerThread::spawnBlock(BlockCoordinates blockCoords,ItemID Item) {
+void PlayerThread::spawnBlock(BlockCoordinates& blockCoords,ItemID& Item) {
 	if (!_pMinecraftServer->getItemInfoProvider()->isRegistered(Item)) {
 		throw FCRuntimeException("Block not registered");
 	}

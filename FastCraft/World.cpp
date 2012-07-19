@@ -159,7 +159,7 @@ bool World::isSuffocating(PlayerThread* pPlayerThread) {
 } 
 
 
-bool World::isSuffocating(EntityCoordinates Coords,float dHeight) {
+bool World::isSuffocating(EntityCoordinates& Coords,float dHeight) {
 	if (Coords.Y > ((double)FC_WORLDHEIGHT)-1.0) {return false;} /* Above the map */
 
 	MapChunk* pChunk;
@@ -189,7 +189,7 @@ bool World::isSuffocating(EntityCoordinates Coords,float dHeight) {
 	return false;
 }
 
-void World::setBlock(int X,short Y,int Z,ItemID Block) {
+void World::setBlock(int X,short Y,int Z,ItemID& Block) {
 	if (!_pMinecraftServer->getItemInfoProvider()->isRegistered(Block)) {
 		throw FCRuntimeException("Block not registered");
 	}
@@ -244,14 +244,14 @@ ItemID World::getBlock(int X,short Y,int Z) {
 	} catch (FCRuntimeException& ex) {
 		ex.rethrow();
 	}
-	return std::make_pair(0,0);
+	return ItemID(0,0);
 }
 
-ItemID World::getBlock(BlockCoordinates Coords) {
+ItemID World::getBlock(BlockCoordinates& Coords) {
 	return getBlock(Coords.X,(short)Coords.Y,Coords.Z);
 } 
 
-bool World::isSurroundedByAir(BlockCoordinates TargetBlock) {
+bool World::isSurroundedByAir(BlockCoordinates& TargetBlock) {
 	BlockCoordinates Temp = TargetBlock;
 
 	try {
@@ -296,7 +296,7 @@ bool World::isSurroundedByAir(BlockCoordinates TargetBlock) {
 	return true;
 }
 
-void World::Load(Poco::Path worldPath) {
+void World::Load(Poco::Path& worldPath) {
 	cout<<"Loading: "<<worldPath[worldPath.depth()-1]<<"\n";
 }
 
@@ -352,11 +352,11 @@ void World::setBlockLight(int X,short Y,int Z,char iLightLevel) {
 	}
 }
 
-void World::setBlockLight(BlockCoordinates Coords,char iLL) {
+void World::setBlockLight(BlockCoordinates& Coords,char iLL) {
 	setBlockLight(Coords.X,Coords.Y,Coords.Z,iLL);
 }
 
-void World::setBlock(BlockCoordinates Coords,ItemID Data) {
+void World::setBlock(BlockCoordinates& Coords,ItemID& Data) {
 	setBlock(Coords.X,Coords.Y,Coords.Z,Data);
 }
 

@@ -45,7 +45,7 @@ _vItems(0),
 	BEntry.Height			= 1.0F;
 	BEntry.Stackable		= true; /* You can place a block of same type above or under */
 	BEntry.CanFloat			= true;
-	BEntry.ConnectedItem	= FC_EMPTYITEMID; /* if this field is set to another value as -1, the given ITEM will pop off on breaking*/
+	BEntry.ConnectedItem	= ItemID(); /* if this field is set to another value as -1, the given ITEM will pop off on breaking*/
 	BEntry.BlastResistance  = 1.0F;
 	BEntry.hasSubBlocks		= false;
 	BEntry.noLoot			= false;
@@ -56,7 +56,7 @@ _vItems(0),
 	BEntry.Speed			= 0;
 
 	IEntry.Eatable			= false;
-	IEntry.ConnectedBlock	= FC_EMPTYITEMID; /* if this field is set to another value as -1, the given BLOCK will placed*/
+	IEntry.ConnectedBlock	= ItemID(); /* if this field is set to another value as -1, the given BLOCK will placed*/
 	IEntry.Weapon			= false;
 	IEntry.Damage			= 1;
 	IEntry.FoodValue		= 0;
@@ -384,7 +384,7 @@ _vItems(0),
 			if (_vItems[x].hasSubItems) {continue;}
 
 			for (i = 1;i<=15;i++) {
-				index = search(_vItems,  std::make_pair(_vItems[x].ID,i));
+				index = search(_vItems,ItemID(_vItems[x].ID,i));
 				if (index != -1) {
 					fhasSub = true;
 					_vItems[index].hasSubItems = true;
@@ -403,7 +403,7 @@ _vItems(0),
 			/* hasSubBlocks */
 			if (!_vBlocks[x].hasSubBlocks) {
 				for (i = 1;i<=15;i++) {
-					index = search(_vBlocks,std::make_pair(_vBlocks[x].ID,i));
+					index = search(_vBlocks,ItemID(_vBlocks[x].ID,i));
 					if (index != -1) {
 						fhasSub = true;
 						_vBlocks[index].hasSubBlocks = true;
@@ -418,7 +418,7 @@ _vItems(0),
 
 			/*  Set the isSpreadBlock flag */
 			if (_vBlocks[x].Fluid) {
-				index = search(_vBlocks,std::make_pair(_vBlocks[x].SpreadBlock,0));
+				index = search(_vBlocks,ItemID(_vBlocks[x].SpreadBlock,0));
 				_vBlocks[index].isSpreadBlock = true;
 			}
 		}
@@ -494,8 +494,8 @@ bool ItemInformationProvider::isRegistered(ItemID ID) {
 }
 
 bool ItemInformationProvider::isRegistered(short ID) {
-	if (search(_vBlocks,  std::make_pair(ID,0)) == -1 && 
-		search(_vItems,  std::make_pair(ID,0)) == -1) {
+	if (search(_vBlocks,ItemID(ID,0)) == -1 && 
+		search(_vItems,ItemID(ID,0)) == -1) {
 			return false;
 	}else{
 		return true;
@@ -572,7 +572,7 @@ BlockEntry* ItemInformationProvider::getBlock(short iID) {
 	if (_vBlocks.empty()) { throw FCRuntimeException("Not found!"); }
 	if (!isBlock(iID)) { throw FCRuntimeException("Not a block!"); }
 
-	int index = search(_vBlocks, std::make_pair(iID,0));
+	int index = search(_vBlocks, ItemID(iID,0));
 	if (index == -1) {
 		throw FCRuntimeException("Not found!");
 	}
@@ -596,7 +596,7 @@ ItemEntry* ItemInformationProvider::getItem(short iID) {
 	if (_vItems.empty()) { throw FCRuntimeException("Not found!"); }
 	if (isBlock(iID)) { throw FCRuntimeException("Not a item!"); }
 
-	int index = search(_vItems, std::make_pair(iID,0));
+	int index = search(_vItems, ItemID(iID,0));
 	if (index == -1) {
 		throw FCRuntimeException("Not found!");
 	}
@@ -708,7 +708,7 @@ void ItemInformationProvider::isValid(BlockEntry Entry) {
 		if (Entry.Spread < 0) {throw FCRuntimeException("Spread is below 0");}
 		if (!isBlock(Entry.SpreadBlock)) {throw FCRuntimeException("SpreadBlock not registered/not a block");}
 		
-		index = search(_vBlocks,std::make_pair(Entry.SpreadBlock,0));
+		index = search(_vBlocks,ItemID(Entry.SpreadBlock,0));
 		if (_vBlocks[index].Fluid) {throw FCRuntimeException("Spread blocks can't be fluids");}
 	}
 

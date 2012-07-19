@@ -115,7 +115,7 @@ public:
 	*/
 	bool isSuffocating(Entity*);
 	bool isSuffocating(PlayerThread*);
-	bool isSuffocating(EntityCoordinates,float);
+	bool isSuffocating(EntityCoordinates&,float);
 
 
 	/*
@@ -128,10 +128,10 @@ public:
 	@1 : X in world coordinates
 	@2 : Y in world coordinates
 	@3 : Z in world coordinates
-	@4 : Block information
+	@4 : block ID
 	*/
-	void setBlock(int,short,int,ItemID);
-	void setBlock(BlockCoordinates,ItemID);
+	void setBlock(int,short,int,ItemID&);
+	void setBlock(BlockCoordinates&,ItemID&);
 
 	/*
 	* Gets block at given position
@@ -144,7 +144,7 @@ public:
 	@3 : Z in world coordinates
 	*/
 	ItemID getBlock(int,short,int);
-	ItemID getBlock(BlockCoordinates);
+	ItemID getBlock(BlockCoordinates&);
 
 
 	/*
@@ -153,7 +153,7 @@ public:
 	Parameters:
 	@1 : BlockCoordinates of target block
 	*/
-	bool isSurroundedByAir(BlockCoordinates);
+	bool isSurroundedByAir(BlockCoordinates&);
 
 
 	/*
@@ -162,7 +162,7 @@ public:
 	Parameter:
 	@1 : Path to world folder (contains directories: region,players, level.dat)
 	*/
-	void Load(Poco::Path);
+	void Load(Poco::Path&);
 
 
 	/*
@@ -189,7 +189,7 @@ public:
 	@4 : new light level
 	*/
 	void setBlockLight(int,short,int,char);
-	void setBlockLight(BlockCoordinates,char);
+	void setBlockLight(BlockCoordinates&,char);
 
 
 	/*

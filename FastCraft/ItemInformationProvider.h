@@ -17,16 +17,14 @@ GNU General Public License for more details.
 #define _FASTCRAFTHEADER_ITEMINFORMATIONPROVIDER
 #include <vector>
 #include <string>
-#include <utility>
 #include <Poco/Path.h>
 #include <Poco/Data/Common.h>
 #include <iostream>
+#include "ItemID.h"
 
 using std::vector;
 using std::string;
-using std::pair;
 
-typedef std::pair<short,char> ItemID;
 
 struct ItemEntry {
 	short ID;

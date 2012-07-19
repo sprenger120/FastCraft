@@ -41,7 +41,7 @@ private:
 
 	vector<Enchantment> _vEnchantments;
 	ItemInformationProvider* _pItemInfoProvider;
-	Poco::Mutex _Mutex;
+	/*Poco::Mutex _Mutex;*/
 public:
 	/*
 	* Construct as a free slot
