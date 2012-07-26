@@ -66,6 +66,7 @@ void InventoryPlayer::DecreaseInHandStack() {
 	}else{
 		getSelectedSlot()->setStackSize(iSize-1);
 	}
+	syncInHandStack();
 }
 
 bool InventoryPlayer::isAllowedToPlace(short iSlot,ItemID itemID) {
@@ -111,4 +112,9 @@ bool InventoryPlayer::isAllowedToPlace(short iSlot,ItemID itemID) {
 	default:
 		return true;
 	}
+}
+
+void InventoryPlayer::syncInHandStack() {
+	NetworkOut Out(_pPlayer->getNetworkOutRoot());
+	syncSlot(Out,36+_iActionBarSelection);
 }

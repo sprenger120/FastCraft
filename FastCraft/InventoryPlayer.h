@@ -88,6 +88,12 @@ public:
 	@1 : slotID
 	@2 : Item
 	*/
-	bool InventoryPlayer::isAllowedToPlace(short,ItemID);
+	bool isAllowedToPlace(short,ItemID);
+
+
+	/*
+	* Synchronizes the actual hold stack with client
+	*/
+	void syncInHandStack();
 };
 #endif
