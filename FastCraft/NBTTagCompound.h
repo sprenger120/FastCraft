@@ -47,10 +47,10 @@ public:
 
 	Parameter:
 	@1 : Reference to target string
-	@2 : Output Type: FC_NBT_OUTPUT_RAW or FC_NBT_OUTPUT_GZIP
+	@2 : Output Type: (FC_NBT_IO_RAW, FC_NBT_IO_GZIP,FC_NBT_IO_ZLIB)
 	@3 : Headerless flag (won't write name and type field if is set to true)
 	*/
-	void write(string&,bool,bool = false);
+	void write(string&,char,bool = false);
 
 
 	/*

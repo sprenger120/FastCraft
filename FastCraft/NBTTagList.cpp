@@ -18,11 +18,11 @@ GNU General Public License for more details.
 #include "FCRuntimeException.h"
 
 NBTTagList::NBTTagList(string sName,char iListType) : 
-NBTTagBase(sName,FC_NBT_TYPE_LIST),
+	NBTTagBase(sName,FC_NBT_TYPE_LIST),
 	_iElementType(iListType),
 	_vpElements(0)
 {
-	if (iListType < 1 || iListType > 10) {throw FCRuntimeException("Invalid tag type"); }
+	if (iListType < 1 || iListType > 11) {throw FCRuntimeException("Invalid tag type"); }
 }
 
 NBTTagList::~NBTTagList(){
@@ -30,11 +30,13 @@ NBTTagList::~NBTTagList(){
 		for (unsigned int x=0;x<=_vpElements.size()-1;x++) {
 			delete _vpElements[x];
 		}
+		_vpElements.clear();
 	}
-	_vpElements.clear();
 }
 
-void NBTTagList::write(string& rTarget,bool fMode,bool fHeaderless) {
+void NBTTagList::write(string& rStr,char iType,bool fHeaderless)  {
+	string sTemp("");
+	string& rTarget = ( iType == FC_NBT_IO_RAW ? rStr : sTemp);
 	int iSize = _vpElements.size();
 
 	if (!fHeaderless) {
@@ -46,8 +48,17 @@ void NBTTagList::write(string& rTarget,bool fMode,bool fHeaderless) {
 
 	if (iSize > 0) {
 		for (int i = 0; i<= iSize-1;i++) {
-			_vpElements[i]->write(rTarget,FC_NBT_OUTPUT_RAW,FC_NBT_FLAG_HEADERLESS);
+			_vpElements[i]->write(rTarget,FC_NBT_IO_RAW,FC_NBT_FLAG_HEADERLESS);
 		}
+	}
+
+	if(iType != FC_NBT_IO_RAW) {
+		try {
+			NBTTagBase::compress(rTarget,iType); 
+		}catch(FCRuntimeException& ex) {
+			ex.rethrow();
+		}
+		rStr.assign(rTarget);
 	}
 }
 

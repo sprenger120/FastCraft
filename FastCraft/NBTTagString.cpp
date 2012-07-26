@@ -15,22 +15,35 @@ GNU General Public License for more details.
 #include "NBTTagString.h"
 #include "NBTConstants.h"
 #include "NetworkOut.h"
+#include "FCRuntimeException.h"
 
 NBTTagString::NBTTagString(string sName) :
-NBTTagBase(sName,FC_NBT_TYPE_STRING),
-sData("")
+	NBTTagBase(sName,FC_NBT_TYPE_STRING),
+	sData("")
 {
 }
 
 NBTTagString::~NBTTagString() {
 }
 
-void NBTTagString::write(string& rTarget,bool fMode,bool fHeaderless) {
+void NBTTagString::write(string& rStr,char iType,bool fHeaderless)  {
+	string sTemp("");
+	string& rTarget = ( iType == FC_NBT_IO_RAW ? rStr : sTemp);
+
 	if (!fHeaderless) {
 		rTarget.append(1,FC_NBT_TYPE_STRING); //Tag Type
 		addHeaderlessString(rTarget,_sName);//Name
 	} 
 	addHeaderlessString(rTarget,sData); 
+
+	if(iType != FC_NBT_IO_RAW) {
+		try {
+			NBTTagBase::compress(rTarget,iType); 
+		}catch(FCRuntimeException& ex) {
+			ex.rethrow();
+		}
+		rStr.assign(rTarget);
+	}
 }
 
 string& NBTTagString::getDataRef() {

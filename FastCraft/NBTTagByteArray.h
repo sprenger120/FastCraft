@@ -20,39 +20,45 @@ using std::string;
 
 class NBTTagByteArray : public  NBTTagBase {
 private:
-	string sData;
+	char* _pData;
+	int _iLen;
 public:
 	/*
 	* Constructor
-	
+	* Throws FCRuntimeException if 
+	  - Data pointer is NULL
+	  - Lenght is <= 0
+
 	Parameter:
 	@1 : Name of element
+	@2 : Data (allocated with new)
+	@3 : Lenght
 	*/
-	NBTTagByteArray(string);
+	NBTTagByteArray(string,char*,int);
 
 
 	/*
 	* Destructor
+	* Deletes pData 
 	*/
 	~NBTTagByteArray();
 
 
 	/*
-	* Writes own content to string
-	* FC_NBT_OUTPUT_GZIP will be ignored 
+	* Writes content to target string
 
 	Parameter:
-	@1 : Reference to target string
-	@2 : Output Type: FC_NBT_OUTPUT_RAW or FC_NBT_OUTPUT_GZIP
-	@3 : Headerless flag (won't write name and type field if is set to true)
+	@1 : Target string
+	@2 : Output Type: (FC_NBT_IO_RAW, FC_NBT_IO_GZIP,FC_NBT_IO_ZLIB)
+	@3 : Nameless flag (won't write name field if is set to true)
 	*/
-	void write(string&,bool,bool = false);
+	void write(string&,char,bool = false);
 
 
 	/*
 	* Returns a reference to internal data
 	*/
-	string& getDataRef();
+	char* getDataRef();
 
 
 	/*
@@ -60,6 +66,6 @@ public:
 	* Use it to get a chat at specific position
 	* Will throw FCRuntimeException if index is out of bound or invalid
 	*/
-	char operator[] (unsigned int);
+	char operator[] (int);
 };
 #endif

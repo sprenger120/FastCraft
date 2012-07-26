@@ -15,10 +15,10 @@ GNU General Public License for more details.
 #include "NBTTagDouble.h"
 #include "NBTConstants.h"
 #include "NetworkOut.h"
-
+#include "FCRuntimeException.h"
 
 NBTTagDouble::NBTTagDouble(string sName) :
-NBTTagBase(sName,FC_NBT_TYPE_DOUBLE)
+	NBTTagBase(sName,FC_NBT_TYPE_DOUBLE)
 {
 	nData = 0;
 }
@@ -26,12 +26,24 @@ NBTTagBase(sName,FC_NBT_TYPE_DOUBLE)
 NBTTagDouble::~NBTTagDouble() {
 }
 
-void NBTTagDouble::write(string& rTarget,bool fMode,bool fHeaderless) {
+void NBTTagDouble::write(string& rStr,char iType,bool fHeaderless)  {
+	string sTemp("");
+	string& rTarget = ( iType == FC_NBT_IO_RAW ? rStr : sTemp);
+
 	if (!fHeaderless) {
 		rTarget.append(1,FC_NBT_TYPE_DOUBLE); //Tag Type
 		addHeaderlessString(rTarget,_sName);//Name
 	} 
 	NetworkOut::addDouble(rTarget,nData);
+
+	if(iType != FC_NBT_IO_RAW) {
+		try {
+			NBTTagBase::compress(rTarget,iType); 
+		}catch(FCRuntimeException& ex) {
+			ex.rethrow();
+		}
+		rStr.assign(rTarget);
+	}
 }
 
 double& NBTTagDouble::getDataRef() {

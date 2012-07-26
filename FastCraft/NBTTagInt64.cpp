@@ -15,9 +15,10 @@ GNU General Public License for more details.
 #include "NBTTagInt64.h"
 #include "NBTConstants.h"
 #include "NetworkOut.h"
+#include "FCRuntimeException.h"
 
 NBTTagInt64::NBTTagInt64(string sName) :
-NBTTagBase(sName,FC_NBT_TYPE_INT64)
+	NBTTagBase(sName,FC_NBT_TYPE_INT64)
 {
 	iData = 0L;
 }
@@ -25,12 +26,24 @@ NBTTagBase(sName,FC_NBT_TYPE_INT64)
 NBTTagInt64::~NBTTagInt64() {
 }
 
-void NBTTagInt64::write(string& rTarget,bool fMode,bool fHeaderless) {
+void NBTTagInt64::write(string& rStr,char iType,bool fHeaderless)  {
+	string sTemp("");
+	string& rTarget = ( iType == FC_NBT_IO_RAW ? rStr : sTemp);
+
 	if (!fHeaderless) {
 		rTarget.append(1,FC_NBT_TYPE_INT64); //Tag Type
 		addHeaderlessString(rTarget,_sName);//Name
 	} 
 	NetworkOut::addInt64(rTarget,iData);
+
+	if(iType != FC_NBT_IO_RAW) {
+		try {
+			NBTTagBase::compress(rTarget,iType); 
+		}catch(FCRuntimeException& ex) {
+			ex.rethrow();
+		}
+		rStr.assign(rTarget);
+	}
 }
 
 long long& NBTTagInt64::getDataRef() {

@@ -26,12 +26,11 @@ GNU General Public License for more details.
 #define FC_NBT_TYPE_STRING					8
 #define FC_NBT_TYPE_LIST					9
 #define FC_NBT_TYPE_COMPOUND				10
+#define FC_NBT_TYPE_INTARRAY				11
 
-#define FC_NBT_OUTPUT_RAW					false
-#define FC_NBT_OUTPUT_GZIP					true
-
-#define FC_NBT_INPUT_RAW					false
-#define FC_NBT_INPUT_GZIP					true
+#define FC_NBT_IO_RAW						-1
+#define FC_NBT_IO_GZIP						1
+#define FC_NBT_IO_ZLIB						0	
 
 #define FC_NBT_FLAG_HEADERLESS				true
 #endif

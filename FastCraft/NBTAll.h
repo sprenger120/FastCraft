@@ -27,4 +27,5 @@ GNU General Public License for more details.
 #include "NBTTagString.h"
 #include "NBTTagByteArray.h"
 #include "NBTBinaryParser.h"
+#include "NBTTagIntArray.h"
 #endif

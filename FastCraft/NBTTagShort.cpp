@@ -15,9 +15,10 @@ GNU General Public License for more details.
 #include "NBTTagShort.h"
 #include "NBTConstants.h"
 #include "NetworkOut.h"
+#include "FCRuntimeException.h"
 
 NBTTagShort::NBTTagShort(string sName) :
-NBTTagBase(sName,FC_NBT_TYPE_SHORT)
+	NBTTagBase(sName,FC_NBT_TYPE_SHORT)
 {
 	iData = 0;
 }
@@ -25,12 +26,24 @@ NBTTagBase(sName,FC_NBT_TYPE_SHORT)
 NBTTagShort::~NBTTagShort() {
 }
 
-void NBTTagShort::write(string& rTarget,bool fMode,bool fHeaderless) {
+void NBTTagShort::write(string& rStr,char iType,bool fHeaderless)  {
+	string sTemp("");
+	string& rTarget = ( iType == FC_NBT_IO_RAW ? rStr : sTemp);
+
 	if (!fHeaderless) {
 		rTarget.append(1,FC_NBT_TYPE_SHORT); //Tag Type
 		addHeaderlessString(rTarget,_sName); //Name
 	} 
 	NetworkOut::addShort(rTarget,iData);
+
+	if(iType != FC_NBT_IO_RAW) {
+		try {
+			NBTTagBase::compress(rTarget,iType); 
+		}catch(FCRuntimeException& ex) {
+			ex.rethrow();
+		}
+		rStr.assign(rTarget);
+	}
 }
 
 short& NBTTagShort::getDataRef() {

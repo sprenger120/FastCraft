@@ -17,29 +17,45 @@ GNU General Public License for more details.
 #include "NetworkOut.h"
 #include "FCRuntimeException.h"
 
-NBTTagByteArray::NBTTagByteArray(string sName) :
-NBTTagBase(sName,FC_NBT_TYPE_BYTEARRAY),
-sData("")
+NBTTagByteArray::NBTTagByteArray(string sName,char * pData,int iLen) :
+	NBTTagBase(sName,FC_NBT_TYPE_BYTEARRAY)
 {
+	if (pData == NULL) {throw FCRuntimeException("Nullpointer");}
+	if (iLen <= 0) {throw FCRuntimeException("Illegal lenght");}
+	_pData = pData;
+	_iLen = iLen;
 }
 
 NBTTagByteArray::~NBTTagByteArray() {
+	delete [] _pData;
 }
 
-void NBTTagByteArray::write(string& rTarget,bool fMode,bool fHeaderless) {
+void NBTTagByteArray::write(string& rStr,char iType,bool fHeaderless)  {
+	string sTemp("");
+	string& rTarget = ( iType == FC_NBT_IO_RAW ? rStr : sTemp);
+
 	if (!fHeaderless) {
 		rTarget.append(1,FC_NBT_TYPE_BYTEARRAY); //Tag Type
 		addHeaderlessString(rTarget,_sName);//Name
 	} 
-	NetworkOut::addInt(rTarget,sData.length());
-	rTarget.append(sData);
+	NetworkOut::addInt(rTarget,_iLen);
+	rTarget.append(_pData,_iLen);
+
+	if(iType != FC_NBT_IO_RAW) {
+		try {
+			NBTTagBase::compress(rTarget,iType); 
+		}catch(FCRuntimeException& ex) {
+			ex.rethrow();
+		}
+		rStr.assign(rTarget);
+	}
 }
 
-string& NBTTagByteArray::getDataRef() {
-	return sData;
+char* NBTTagByteArray::getDataRef() {
+	return _pData;
 }
 
-char NBTTagByteArray::operator[] (unsigned int index) {
-	if (index > sData.length()) { throw FCRuntimeException("Index out of bound!"); }
-	return sData.at(index);
+char NBTTagByteArray::operator[] (int index) {
+	if (index > _iLen-1) { throw FCRuntimeException("Index out of bound!"); }
+	return _pData[index];
 }

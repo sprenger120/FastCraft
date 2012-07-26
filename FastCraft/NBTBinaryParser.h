@@ -17,6 +17,9 @@ GNU General Public License for more details.
 #include <string>
 #include <stack>
 
+/* This class is not thread-safe! */ 
+
+
 union NBTU_Short {
 	char sData[2];
 	short iData;
@@ -40,32 +43,55 @@ class NBTTagCompound;
 
 class NBTBinaryParser {
 private:
-	NBTBinaryParser();
-	~NBTBinaryParser();
+	int _iSize;
+	int _byteIndex;
+	char* _pStr;
+	
+	stack<NBTTagBase*> _storageStack;
+
+	NBTU_Short _unionShort;
+	NBTU_Int _unionInt;
+	NBTU_Int64 _unionInt64;
 public:
 	/*
-	* Parses a binary or gzipped string and returns a pointer to a new NBTCompound
+	* Parses string and returns a pointer to a new NBTCompound
 	* Don't forget to release the memory, allocated by this function
 	* Throws FCRuntimeException if data is invalid
 
 	Parameter:
 	@1 : Data source string
-	@2 : Input type (FC_NBT_INPUT_RAW or FC_NBT_INPUT_GZIP)
+	@2 : Input type (FC_NBT_IO_RAW, FC_NBT_IO_GZIP,FC_NBT_IO_ZLIB)
 	*/
-	static NBTTagCompound* parse(string&,bool);
+	NBTTagCompound* parse(char*,char,int);
+	NBTTagCompound* parse(string&,char);
 private:
-	static void nextElement(string&,stack<NBTTagBase*>&,int&,char,bool = true);
-	static void readName(string&,int&,string&);
+	void nextElement(char,bool = true);
+	string readName();
+	int readInt();
 
-	static void handleByte(		string&,	int&,	NBTTagBase*,	bool = true);
-	static void handleShort(	string&,	int&,	NBTTagBase*,	bool = true);
-	static void handleInt(		string&,	int&,	NBTTagBase*,	bool = true);
-	static void handleInt64(	string&,	int&,	NBTTagBase*,	bool = true);
-	static void handleDouble(	string&,	int&,	NBTTagBase*,	bool = true);
-	static void handleFloat(	string&,	int&,	NBTTagBase*,	bool = true);
-	static void handleList(		string&,	int&,	NBTTagBase*,	stack<NBTTagBase*>&,	bool = true);
-	static void handleString(	string&,	int&,	NBTTagBase*,	bool = true);
-	static void handleByteArray(string&,	int&,	NBTTagBase*,	bool = true);
-	static NBTTagCompound* handleCompound(string&,int&,NBTTagBase*,	bool = true);
+	/*
+	Parameter
+	14 : True if function has to parse it's own header
+	*/ 
+	void handleByte(bool = true);
+	void handleShort(bool = true);
+	void handleInt(bool = true);
+	void handleInt64(bool = true);
+	void handleDouble(bool = true);
+	void handleFloat(bool = true);
+	void handleList(bool = true);
+	void handleString(bool = true);
+	void handleByteArray(bool = true);
+	void handleIntArray (bool = true);
+	NBTTagCompound* handleCompound(bool = true);
 };
 #endif
+
+
+//NBTTagShort* pElement = NULL;
+//
+//if (pElement) {delete pElement;}
+//
+//
+//
+//if (_byteIndex + 2 > _iSize-1)

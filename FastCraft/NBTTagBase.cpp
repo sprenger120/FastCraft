@@ -16,6 +16,8 @@ GNU General Public License for more details.
 #include "NetworkOut.h"
 #include <Poco/DeflatingStream.h>
 #include <sstream>
+#include "NBTConstants.h"
+#include "FCRuntimeException.h"
 
 NBTTagBase::NBTTagBase(string Name,char iType) :
 _sName(Name),
@@ -26,9 +28,22 @@ _iElementType(iType)
 NBTTagBase::~NBTTagBase(){
 }
 
-void NBTTagBase::compress(string& rSource) {
+void NBTTagBase::compress(string& rSource,char iType) {
 	std::stringstream ssTarget;
-	Poco::DeflatingOutputStream deflator(ssTarget,Poco::DeflatingStreamBuf::STREAM_GZIP,-1);
+	Poco::DeflatingStreamBuf::StreamType compressType;
+
+	switch(iType) {
+	case FC_NBT_IO_GZIP:
+		compressType = Poco::DeflatingStreamBuf::STREAM_GZIP;
+		break;
+	case FC_NBT_IO_ZLIB:
+		compressType = Poco::DeflatingStreamBuf::STREAM_ZLIB;
+		break;
+	default:
+		throw FCRuntimeException("Illegal compression type");
+	}
+
+	Poco::DeflatingOutputStream deflator(ssTarget,compressType,-1);
 
 	deflator.write(rSource.c_str(),rSource.length());  /* compress */
 	deflator.flush();

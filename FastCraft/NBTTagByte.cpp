@@ -15,9 +15,11 @@ GNU General Public License for more details.
 #include "NBTTagByte.h"
 #include "NBTConstants.h"
 #include "NetworkOut.h"
+#include "FCRuntimeException.h"
+#include "NBTConstants.h"
 
 NBTTagByte::NBTTagByte(string sName) :
-NBTTagBase(sName,FC_NBT_TYPE_BYTE)
+	NBTTagBase(sName,FC_NBT_TYPE_BYTE)
 {
 	iData = 0;
 }
@@ -25,13 +27,26 @@ NBTTagBase(sName,FC_NBT_TYPE_BYTE)
 NBTTagByte::~NBTTagByte() {
 }
 
-void NBTTagByte::write(string& rTarget,bool fMode,bool fHeaderless) {
+void NBTTagByte::write(string& rStr,char iType,bool fHeaderless)  {
+	string sTemp("");
+	string& rTarget = ( iType == FC_NBT_IO_RAW ? rStr : sTemp);
+
 	if (!fHeaderless) {
 		rTarget.append(1,FC_NBT_TYPE_BYTE); //Tag Type
 		addHeaderlessString(rTarget,_sName); //Name
 	} 
 	rTarget.append(1,iData); //Data
+
+	if(iType != FC_NBT_IO_RAW) {
+		try {
+			NBTTagBase::compress(rTarget,iType); 
+		}catch(FCRuntimeException& ex) {
+			ex.rethrow();
+		}
+		rStr.assign(rTarget);
+	}
 }
+
 
 char& NBTTagByte::getDataRef() {
 	return iData;

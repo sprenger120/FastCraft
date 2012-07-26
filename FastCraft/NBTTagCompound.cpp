@@ -43,24 +43,29 @@ void NBTTagCompound::removeSubElement(string sName) {
 	_vpElements.erase(_vpElements.begin()+index);
 }
 
-void NBTTagCompound::write(string& rStr,bool fMode,bool fHeaderless) {
+void NBTTagCompound::write(string& rStr,char iType,bool fHeaderless) {
 	string sTemp("");
-	string& rTarget = ( fMode == FC_NBT_OUTPUT_RAW ? rStr : sTemp);
-	
+	string& rTarget = ( iType == FC_NBT_IO_RAW ? rStr : sTemp);
+
 	if (!fHeaderless) {
 		rTarget.append(1,FC_NBT_TYPE_COMPOUND);
 		addHeaderlessString(rTarget,_sName);//Name 
 	} 
 
-	if (!_vpElements.empty()) {
+	if (!_vpElements.empty()) { /* Write elements */ 
 		for (unsigned int x=0;x<=_vpElements.size()-1;x++){
-			_vpElements[x]->write(rTarget,FC_NBT_OUTPUT_RAW);
+			_vpElements[x]->write(rTarget,FC_NBT_IO_RAW);
 		}
 	}
 
 	rTarget.append(1,0);
-	if(fMode == FC_NBT_OUTPUT_GZIP) { 
-		NBTTagBase::compress(rTarget); 
+
+	if(iType != FC_NBT_IO_RAW) {
+		try {
+			NBTTagBase::compress(rTarget,iType); 
+		}catch(FCRuntimeException& ex) {
+			ex.rethrow();
+		}
 		rStr.assign(rTarget);
 	}
 }
@@ -77,7 +82,7 @@ int NBTTagCompound::getElementIndex(string sName) {
 NBTTagBase* NBTTagCompound::search(string sPath, char iType) {
 	if (iType < 1 || iType > 10) {throw FCRuntimeException("Invalid tag type"); }
 	if (sPath.empty() || sPath[0] != '/') { throw FCRuntimeException("Invalid Path"); }
-	
+
 	vector<string> aPathElements(0);
 	string sTemp("");
 	unsigned int iStartSlash=0,iEndSlash;
@@ -101,25 +106,27 @@ NBTTagBase* NBTTagCompound::search(string sPath, char iType) {
 		iStartSlash = iEndSlash;
 	}
 
-	int iVecIndex = 0;
-	NBTTagBase*			pLastElement = NULL;
-	NBTTagCompound*		pLastCompound = this;
-	
+	int iPathLevel = 0;
+	int iExitLevel = aPathElements.size()-1;
+	NBTTagCompound* pActualCompound = this;
+	NBTTagBase* pReturn = NULL;
+
 	while (1) {
-		pLastElement = pLastCompound->getElementByName(aPathElements[iVecIndex]);
-		if (pLastElement==NULL) {throw FCRuntimeException("Not found");}
+		pReturn = pActualCompound->getElementByName(aPathElements[iPathLevel]);
 
-
-		if (iVecIndex == aPathElements.size()-1) {
-			if (pLastElement->getTagType() != iType) {throw FCRuntimeException("Not found");}
-			break;
-		}else{
-			if (pLastElement->getTagType() != FC_NBT_TYPE_COMPOUND) {throw FCRuntimeException("Not found");}
-			pLastCompound = (NBTTagCompound*)pLastElement;
-			iVecIndex++;
+		if (pReturn == NULL || 
+			(pReturn->getTagType() != FC_NBT_TYPE_COMPOUND && 
+			iPathLevel != iExitLevel)
+			)
+		{
+			throw FCRuntimeException("Not found");
 		}
+		if (iPathLevel == iExitLevel) {break;}
+
+		iPathLevel++;
+		pActualCompound = (NBTTagCompound*)pReturn;
 	}
-	return pLastElement;
+	return pReturn;
 }
 
 

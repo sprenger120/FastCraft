@@ -23,99 +23,144 @@ GNU General Public License for more details.
 #include <iostream>
 using std::cout;
 
-NBTBinaryParser::NBTBinaryParser(){
+
+NBTTagCompound* NBTBinaryParser::parse(string& rString, char iInputType) {
+	try {
+		return parse((char*)rString.c_str(),iInputType,rString.length());
+	}catch(FCRuntimeException& ex) {
+		ex.rethrow();
+	}
+	return NULL; /* Compiler warning fix */
 }
 
-NBTBinaryParser::~NBTBinaryParser(){
-}
+NBTTagCompound* NBTBinaryParser::parse(char* pStr, char iInputType,int iLen) {
+	Poco::InflatingStreamBuf::StreamType type;
 
+	switch (iInputType) {
+	case FC_NBT_IO_ZLIB:
+		type = Poco::InflatingStreamBuf::STREAM_ZLIB;
+		break;
+	case FC_NBT_IO_GZIP:
+		type = Poco::InflatingStreamBuf::STREAM_GZIP;
+		break;
+	case FC_NBT_IO_RAW:
+		break;
+	default:
+		throw FCRuntimeException("Unknown compression type");
+	}
 
-NBTTagCompound* NBTBinaryParser::parse(string& rStr, bool fType) {
-	
-	if (fType == FC_NBT_INPUT_GZIP) {
+	/* Decompress */
+	if (iInputType != FC_NBT_IO_RAW) {
 		std::stringstream ssOutput;
-		Poco::InflatingOutputStream inflator(ssOutput,Poco::InflatingStreamBuf::STREAM_GZIP);
-		inflator.write(rStr.c_str(),rStr.length());
+		Poco::InflatingOutputStream inflator(ssOutput,type);
+		inflator.write(pStr,iLen);
 		inflator.flush();
 		inflator.clear();
 		inflator.close();
-		rStr.assign(ssOutput.str());
+
+		_iSize = ssOutput.str().length();
+		if (_iSize <= 0) {FCRuntimeException("Unable to extract data");}
+
+		pStr = new char[_iSize];
+		memcpy(pStr,ssOutput.str().c_str(),_iSize);
+	}else{
+		if (iLen <= 0) {FCRuntimeException("Illegal lenght");}
+		_iSize = iLen;
 	}
-	if (rStr[0] != 0xA) { throw FCRuntimeException("Start compound not found!");}
+
+	/* First check */
+	if (pStr[0] != 0xA) { throw FCRuntimeException("Start compound not found!");}
+
+
+	/* Init local variables */
+	_pStr = pStr;
+	_byteIndex = 0;
+	while(!_storageStack.empty()){_storageStack.pop();}
 
 	NBTTagCompound *pRootCompound;
-	stack<NBTTagBase*> storageStack;
-	string sName("");
-	int byteIndex = 1;
-
 	try {
-		readName(rStr,byteIndex,sName);
-		pRootCompound = new NBTTagCompound(sName);
-		storageStack.push(pRootCompound);
+		pRootCompound = new NBTTagCompound(readName());
+		_storageStack.push(pRootCompound);
 
 		while (1) {
-			if (byteIndex+1 > rStr.length()-1) {throw FCRuntimeException("End of file!");}
-			nextElement(rStr,storageStack,byteIndex,rStr[byteIndex+1]);
-			if (storageStack.empty()) {return pRootCompound;}
+			if (_storageStack.empty()) {
+				if (iInputType != FC_NBT_IO_RAW) {delete [] pStr;}
+				return pRootCompound;
+			}
+
+			if (_byteIndex+1 > _iSize-1) {throw FCRuntimeException("End of file!");}
+			_byteIndex++;
+			nextElement(pStr[_byteIndex]);
 		}
 	}catch(FCRuntimeException& ex) {
+		if (iInputType != FC_NBT_IO_RAW) {delete [] pStr;}
+		delete pRootCompound;
 		ex.rethrow();
 	}
 	return NULL;
 }
 
 
-void NBTBinaryParser::nextElement(string& rTarget,stack<NBTTagBase*>& StorageStack,int& byteIndex,char iType,bool fParseHeader) {
-	if (StorageStack.empty()) {return;}
-	NBTTagBase* pLastStorage = StorageStack.top();
+void NBTBinaryParser::nextElement(char iType,bool fParseHeader) {
+	if (_storageStack.empty()) {return;}
+	NBTTagBase* pLastStorage = _storageStack.top();
 
-
-	//cout<<"stack size:"<<StorageStack.size()<<"\n";
-	/*for (int x=1;x<=StorageStack.size()-1;x++) {
-		cout<<"\t";
+	/*cout<<"stack size:"<<StorageStack.size()<<"\n";
+	for (int x=1;x<=StorageStack.size()-1;x++) {
+	cout<<"\t";
 	}*/
+
+	/*cout<<"nextElement:"<<int(iType)<<"\n";*/
+
 	try {
 		switch(iType) {
 		case FC_NBT_TYPE_BYTE:
-			handleByte(rTarget,byteIndex,pLastStorage,fParseHeader);
+			handleByte(fParseHeader);
 			break;
 		case FC_NBT_TYPE_SHORT:
-			handleShort(rTarget,byteIndex,pLastStorage,fParseHeader);
+			handleShort(fParseHeader);
 			break;
 		case FC_NBT_TYPE_INT:
-			handleInt(rTarget,byteIndex,pLastStorage,fParseHeader);
+			handleInt(fParseHeader);
 			break;
 		case FC_NBT_TYPE_INT64:
-			handleInt64(rTarget,byteIndex,pLastStorage,fParseHeader);
+			handleInt64(fParseHeader);
 			break;
 		case FC_NBT_TYPE_FLOAT:
-			handleFloat(rTarget,byteIndex,pLastStorage,fParseHeader);
+			handleFloat(fParseHeader);
 			break;
 		case FC_NBT_TYPE_DOUBLE:
-			handleDouble(rTarget,byteIndex,pLastStorage,fParseHeader);
+			handleDouble(fParseHeader);
 			break;
 		case FC_NBT_TYPE_BYTEARRAY:
-			handleByteArray(rTarget,byteIndex,pLastStorage,fParseHeader);
+			handleByteArray(fParseHeader);
 			break;
 		case FC_NBT_TYPE_STRING:
-			handleString(rTarget,byteIndex,pLastStorage,fParseHeader);
+			handleString(fParseHeader);
 			break;
 		case FC_NBT_TYPE_LIST:
-			handleList(rTarget,byteIndex,pLastStorage,StorageStack,fParseHeader);
+			handleList(fParseHeader);
 			break;
 		case FC_NBT_TYPE_COMPOUND:
-			pLastStorage = handleCompound(rTarget,byteIndex,pLastStorage,fParseHeader);
-			StorageStack.push(pLastStorage);
+			handleCompound(fParseHeader);
+			break;
+		case FC_NBT_TYPE_INTARRAY:
+			handleIntArray(fParseHeader);
 			break;
 		case 0: //Compound end tag
-			//cout<<"compound end "<<StorageStack.top()->getName()<<"\n";
-			if (byteIndex + 1 > rTarget.length()-1) {throw FCRuntimeException("End of file!");}
-			if (StorageStack.top()->getTagType() != FC_NBT_TYPE_COMPOUND) {throw FCRuntimeException("Not a compound");}
-			StorageStack.pop();
-			byteIndex++;
-			if (StorageStack.empty()) {return;  /*End reached */ } 
+			if (_storageStack.top()->getTagType() != FC_NBT_TYPE_COMPOUND) {throw FCRuntimeException("Not a compound");}
+			_storageStack.pop();
+
+			//for(int x=0;x<=3;x++) {
+			//	cout<<(int(_pStr[_byteIndex+x])&0xf)<<"\n";
+			//}
+
 			break;
 		default:
+			cout<<"Unknown NBT Tag:"<<(int(iType)&0xFF);
+			for(int x=-10;x<=10;x++) {
+				cout<<"dump ["<<x<<"/"<<_byteIndex+x<<"] :"<<(int(_pStr[_byteIndex+x])&0xff)<<"\n";
+			}
 			throw FCRuntimeException("Unknown TAG");
 		}
 	}catch(FCRuntimeException& ex) {
@@ -124,472 +169,499 @@ void NBTBinaryParser::nextElement(string& rTarget,stack<NBTTagBase*>& StorageSta
 }
 
 
-void NBTBinaryParser::readName(string& rSource,int& iByteIndex,string& rTarget) {
-	if (iByteIndex + 2 > rSource.length()-1) {throw FCRuntimeException("End of file!");}
-	short iLen =  ((short(rSource[iByteIndex]) & 0x00FF)<<8) |
-		(short(rSource[iByteIndex+1]) & 0x00FF);
-
+string NBTBinaryParser::readName() {
+	if (_byteIndex + 2 > _iSize-1) {throw FCRuntimeException("End of file!");}
+	_byteIndex++;
+	short iLen =  ((short(_pStr[_byteIndex]) & 0x00FF)<<8) |
+		(short(_pStr[_byteIndex+1]) & 0x00FF);
+	
 	if (iLen < 0) {throw FCRuntimeException("Illegal lengh field");}
-
-	iByteIndex += 2;
-	if (iByteIndex + iLen - 1 > rSource.length()-1) {throw FCRuntimeException("End of file!");}
-	rTarget.assign(rSource,iByteIndex,iLen);
-	iByteIndex += iLen-1; //Move index to last name char
-}
-
-void NBTBinaryParser::handleByte(string& rSource,int& iByteIndex,NBTTagBase* pLastStorage,bool fParseHeader) {
-	string sName("");
-	NBTTagByte* pElement;
-
-	if (fParseHeader) {
-		if (iByteIndex + 2 > rSource.length()-1) {throw FCRuntimeException("End of file!");}
-		iByteIndex+=2; //Move to tag type byte & skip it
-		readName(rSource,iByteIndex,sName);
-
-		pElement = new NBTTagByte(sName);
-		//cout<<"byte "<<sName<<"\n";
-	}else{
-		pElement = new NBTTagByte("");
-		//cout<<"byte (nameless)\n";
-	}
-
-
-	if (iByteIndex + 1 > rSource.length()-1) {throw FCRuntimeException("End of file!");}
-	iByteIndex++; //Move to data start
-	pElement->getDataRef() = rSource[iByteIndex];
-
-
-	switch(pLastStorage->getTagType()) {
-	case FC_NBT_TYPE_LIST:
-		{
-			NBTTagList* p = (NBTTagList*)pLastStorage;
-			p->addSubElement(pElement);
-		}
-		break;
-	case FC_NBT_TYPE_COMPOUND:
-		{
-			NBTTagCompound* p = (NBTTagCompound*)pLastStorage;
-			p->addSubElement(pElement);
-		}
-		break;
-	default:
-		throw FCRuntimeException("Illegal storage");
-	}
-}
-
-void NBTBinaryParser::handleShort(string& rSource,int& iByteIndex,NBTTagBase* pLastStorage,bool fParseHeader) {
-	string sName("");
-	NBTTagShort* pElement;
-	NBTU_Short unionShort;
-
-	if (fParseHeader) {
-		if (iByteIndex + 2 > rSource.length()-1) {throw FCRuntimeException("End of file!");}
-		iByteIndex+=2; //Move to tag type byte & skip it
-		readName(rSource,iByteIndex,sName);
-
-		pElement = new NBTTagShort(sName);
-		//cout<<"short "<<sName<<"\n";
-	}else{
-		pElement = new NBTTagShort("");
-		//cout<<"short (nameless)\n";
-	}
-
-	
-	if (iByteIndex + 2 > rSource.length()-1) {throw FCRuntimeException("End of file!");}
-	iByteIndex++; //Move to data start
-	memcpy(unionShort.sData,&rSource[iByteIndex],2);
-	pElement->getDataRef() = Poco::ByteOrder::flipBytes(Poco::Int16(unionShort.iData));
-	iByteIndex++; //Move to data end
-
-
-	switch(pLastStorage->getTagType()) {
-	case FC_NBT_TYPE_LIST:
-		{
-			NBTTagList* p = (NBTTagList*)pLastStorage;
-			p->addSubElement(pElement);
-		}
-		break;
-	case FC_NBT_TYPE_COMPOUND:
-		{
-			NBTTagCompound* p = (NBTTagCompound*)pLastStorage;
-			p->addSubElement(pElement);
-		}
-		break;
-	default:
-		throw FCRuntimeException("Illegal storage");
-	}
-}
-
-void NBTBinaryParser::handleInt(string& rSource,int& iByteIndex,NBTTagBase* pLastStorage,bool fParseHeader) {
-	string sName("");
-	NBTTagInt* pElement;
-	NBTU_Int unionInt;
-
-	if (fParseHeader) {
-		if (iByteIndex + 2 > rSource.length()-1) {throw FCRuntimeException("End of file!");}
-		iByteIndex+=2; //Move to tag type byte & skip it
-		readName(rSource,iByteIndex,sName);
-
-		pElement = new NBTTagInt(sName);
-		//cout<<"int "<<sName<<"\n";
-	}else{
-		pElement = new NBTTagInt("");
-		//cout<<"int (nameless)\n";
-	}
-
-
-	if (iByteIndex + 4 > rSource.length()-1) {throw FCRuntimeException("End of file!");}
-	iByteIndex++;//Move to data start
-	memcpy(unionInt.sData,&rSource[iByteIndex],4);
-	pElement->getDataRef() = Poco::ByteOrder::flipBytes(Poco::Int32(unionInt.iData));
-	iByteIndex += 3;//Move to data end
-
-
-	switch(pLastStorage->getTagType()) {
-	case FC_NBT_TYPE_LIST:
-		{
-			NBTTagList* p = (NBTTagList*)pLastStorage;
-			p->addSubElement(pElement);
-		}
-		break;
-	case FC_NBT_TYPE_COMPOUND:
-		{
-			NBTTagCompound* p = (NBTTagCompound*)pLastStorage;
-			p->addSubElement(pElement);
-		}
-		break;
-	default:
-		throw FCRuntimeException("Illegal storage");
-	}
-}
-
-void NBTBinaryParser::handleInt64(string& rSource,int& iByteIndex,NBTTagBase* pLastStorage,bool fParseHeader) {
-	string sName("");
-	NBTTagInt64* pElement;
-	NBTU_Int64 unionInt64;
-
-	if (fParseHeader) {
-		if (iByteIndex + 2 > rSource.length()-1) {throw FCRuntimeException("End of file!");}
-		iByteIndex+=2; //Move to tag type byte & skip it
-		readName(rSource,iByteIndex,sName);
-
-		pElement = new NBTTagInt64(sName);
-		//cout<<"int64 "<<sName<<"\n";
-	}else{
-		pElement = new NBTTagInt64("");
-		//cout<<"int64 (nameless)\n";
-	}
-
-
-	if (iByteIndex + 8 > rSource.length()-1) {throw FCRuntimeException("End of file!");}
-	iByteIndex++; //Move to data start
-	memcpy(unionInt64.sData,&rSource[iByteIndex],8);
-	pElement->getDataRef() = Poco::ByteOrder::flipBytes(Poco::Int64(unionInt64.iData));
-	iByteIndex += 7;//Move to data end
-
-
-	switch(pLastStorage->getTagType()) {
-	case FC_NBT_TYPE_LIST:
-		{
-			NBTTagList* p = (NBTTagList*)pLastStorage;
-			p->addSubElement(pElement);
-		}
-		break;
-	case FC_NBT_TYPE_COMPOUND:
-		{
-			NBTTagCompound* p = (NBTTagCompound*)pLastStorage;
-			p->addSubElement(pElement);
-		}
-		break;
-	default:
-		throw FCRuntimeException("Illegal storage");
-	}
-}
-
-void NBTBinaryParser::handleFloat(string& rSource,int& iByteIndex,NBTTagBase* pLastStorage,bool fParseHeader) {
-	string sName("");
-	NBTTagFloat* pElement;
-	NBTU_Int unionInt;
-
-	if (fParseHeader) {
-		if (iByteIndex + 2 > rSource.length()-1) {throw FCRuntimeException("End of file!");}
-		iByteIndex+=2; //Move to tag type byte & skip it
-		readName(rSource,iByteIndex,sName);
-
-		pElement = new NBTTagFloat(sName);
-		//cout<<"float "<<sName<<"\n";
-	}else{
-		pElement = new NBTTagFloat("");
-		//cout<<"float (nameless)\n";
-	}
-
-
-	if (iByteIndex + 4 > rSource.length()-1) {throw FCRuntimeException("End of file!");}
-	iByteIndex++; //Move to data start
-	memcpy(unionInt.sData,&rSource[iByteIndex],4);
-	unionInt.iData = Poco::ByteOrder::flipBytes(Poco::Int32(unionInt.iData));
-	pElement->getDataRef() = unionInt.nData;
-	iByteIndex += 3;//Move to data end
-
-
-	switch(pLastStorage->getTagType()) {
-	case FC_NBT_TYPE_LIST:
-		{
-			NBTTagList* p = (NBTTagList*)pLastStorage;
-			p->addSubElement(pElement);
-		}
-		break;
-	case FC_NBT_TYPE_COMPOUND:
-		{
-			NBTTagCompound* p = (NBTTagCompound*)pLastStorage;
-			p->addSubElement(pElement);
-		}
-		break;
-	default:
-		throw FCRuntimeException("Illegal storage");
-	}
-}
-
-void NBTBinaryParser::handleDouble(string& rSource,int& iByteIndex,NBTTagBase* pLastStorage,bool fParseHeader) {
-	string sName("");
-	NBTTagDouble* pElement;
-	NBTU_Int64 unionInt64;
-
-	if (fParseHeader) {
-		if (iByteIndex + 2 > rSource.length()-1) {throw FCRuntimeException("End of file!");}
-		iByteIndex+=2; //Move to tag type byte & skip it
-		readName(rSource,iByteIndex,sName);
-
-		pElement = new NBTTagDouble(sName);
-		//cout<<"double "<<sName<<"\n";
-	}else{
-		pElement = new NBTTagDouble("");
-		//cout<<"double (nameless)\n";
-	}
-
-	if (iByteIndex + 8 > rSource.length()-1) {throw FCRuntimeException("End of file!");}
-	iByteIndex++;
-	memcpy(unionInt64.sData,&rSource[iByteIndex],8);
-	unionInt64.iData = Poco::ByteOrder::flipBytes(Poco::Int64(unionInt64.iData));
-	pElement->getDataRef() = unionInt64.nData;
-
-	iByteIndex += 7;//Move to data end
-
-	switch(pLastStorage->getTagType()) {
-	case FC_NBT_TYPE_LIST:
-		{
-			NBTTagList* p = (NBTTagList*)pLastStorage;
-			p->addSubElement(pElement);
-		}
-		break;
-	case FC_NBT_TYPE_COMPOUND:
-		{
-			NBTTagCompound* p = (NBTTagCompound*)pLastStorage;
-			p->addSubElement(pElement);
-		}
-		break;
-	default:
-		throw FCRuntimeException("Illegal storage");
-	}
-}
-
-void NBTBinaryParser::handleString(string& rSource,int& iByteIndex,NBTTagBase* pLastStorage,bool fParseHeader) {
-	string sName("");
-	NBTTagString* pElement;
-
-	if (fParseHeader) {
-		if (iByteIndex + 2 > rSource.length()-1) {throw FCRuntimeException("End of file!");}
-		iByteIndex+=2; //Move to tag type byte & skip it
-		readName(rSource,iByteIndex,sName);
-
-		pElement = new NBTTagString(sName);
-		//cout<<"string "<<sName<<"\n";
-	}else{
-		pElement = new NBTTagString("");
-		//cout<<"string (nameless)\n";
-	}
-	iByteIndex++; //Move to data start
-	readName(rSource,iByteIndex,pElement->getDataRef());
-
-	switch(pLastStorage->getTagType()) {
-	case FC_NBT_TYPE_LIST:
-		{
-			NBTTagList* p = (NBTTagList*)pLastStorage;
-			p->addSubElement(pElement);
-		}
-		break;
-	case FC_NBT_TYPE_COMPOUND:
-		{
-			NBTTagCompound* p = (NBTTagCompound*)pLastStorage;
-			p->addSubElement(pElement);
-		}
-		break;
-	default:
-		throw FCRuntimeException("Illegal storage");
-	}
-}
-
-void NBTBinaryParser::handleByteArray(string& rSource,int& iByteIndex,NBTTagBase* pLastStorage,bool fParseHeader) {
-	string sName("");
-	NBTTagByteArray* pElement;
-	NBTU_Int unionInt;
-	char* pData;
-
-	if (fParseHeader) {
-		if (iByteIndex + 2 > rSource.length()-1) {throw FCRuntimeException("End of file!");}
-		iByteIndex+=2; //Move to tag type byte & skip it
-		readName(rSource,iByteIndex,sName);
-
-		pElement = new NBTTagByteArray(sName);
-		//cout<<"byteArray "<<sName<<"\n";
-	}else{
-		pElement = new NBTTagByteArray("");
-		//cout<<"byteArray (nameless)\n";
-	}
-	if (iByteIndex + 4 > rSource.length()-1) {throw FCRuntimeException("End of file!");}
-	iByteIndex++; //Move to data start
-	memcpy(unionInt.sData,&rSource[iByteIndex],4);
-	unionInt.iData = Poco::ByteOrder::flipBytes(unionInt.iData);
-	iByteIndex += 3;//Move to data end
-
-	if (unionInt.iData < 0) {
-		throw FCRuntimeException("Illegal ByteArray length field");
-	}
-
-	if (unionInt.iData > 0) {
-		if (iByteIndex + unionInt.iData-1 > rSource.length()-1) {throw FCRuntimeException("End of file!");}
-		pData = new char[unionInt.iData];
-		iByteIndex++; //Move to data start
-		memcpy(pData,&rSource[iByteIndex],unionInt.iData);
-		pElement->getDataRef().assign(pData,unionInt.iData);
-		delete [] pData;
-		iByteIndex += unionInt.iData-1;
-	}
-
-
-	switch(pLastStorage->getTagType()) {
-	case FC_NBT_TYPE_LIST:
-		{
-			NBTTagList* p = (NBTTagList*)pLastStorage;
-			p->addSubElement(pElement);
-		}
-		break;
-	case FC_NBT_TYPE_COMPOUND:
-		{
-			NBTTagCompound* p = (NBTTagCompound*)pLastStorage;
-			p->addSubElement(pElement);
-		}
-		break;
-	default:
-		throw FCRuntimeException("Illegal storage");
-	}
-}
-
-NBTTagCompound* NBTBinaryParser::handleCompound(string& rSource,int& iByteIndex,NBTTagBase* pLastStorage,bool fParseHeader) {
-	string sName("");
-	NBTTagCompound* pElement;
-
-	if (fParseHeader) {
-		if (iByteIndex + 2 > rSource.length()-1) {throw FCRuntimeException("End of file!");}
-		iByteIndex+=2; //Move to tag type byte & skip it
-		readName(rSource,iByteIndex,sName);
-		pElement = new NBTTagCompound(sName);
-		//cout<<"compound "<<sName<<"\n";
-	}else{
-		pElement = new NBTTagCompound("");
-		//cout<<"compound (nameless)\n";
-	}
+	_byteIndex++;
+	if (iLen == 0) {return string("");}
 	
 
-	switch(pLastStorage->getTagType()) {
-	case FC_NBT_TYPE_LIST:
-		{
-			NBTTagList* p = (NBTTagList*)pLastStorage;
-			p->addSubElement(pElement);
-		}
-		break;
-	case FC_NBT_TYPE_COMPOUND:
-		{
-			NBTTagCompound* p = (NBTTagCompound*)pLastStorage;
-			p->addSubElement(pElement);
-		}
-		break;
-	default:
-		throw FCRuntimeException("Illegal storage");
-	}
-	return pElement;
+	if (_byteIndex + iLen > _iSize-1) {throw FCRuntimeException("End of file!");}
+	_byteIndex++;
+
+	string sData;
+	sData.assign(&_pStr[_byteIndex],iLen); 
+
+	_byteIndex += iLen -1; //Move index to last name char
+	return sData;
 }
 
-void NBTBinaryParser::handleList(string& rSource,int& iByteIndex,NBTTagBase* pLastStorage,stack<NBTTagBase*>& storageStack,bool fParseHeader) {
-	string sName("");
-	char iType;
-	NBTU_Int unionInt;
-	NBTTagList* pElement;
-
-	if (fParseHeader) {
-		if (iByteIndex + 2 > rSource.length()-1) {throw FCRuntimeException("End of file!");}
-		iByteIndex+=2; //Move to tag type byte & skip it
-		readName(rSource,iByteIndex,sName);
-	}
-
-	if (iByteIndex + 1 > rSource.length()-1) {throw FCRuntimeException("End of file!");}
-	iByteIndex++; 
-	iType = rSource[iByteIndex];
+int NBTBinaryParser::readInt() {
+	if (_byteIndex + 4 > _iSize-1) {throw FCRuntimeException("End of file!");}
 	
-	if (iByteIndex + 4 > rSource.length()-1) {throw FCRuntimeException("End of file!");}
-	iByteIndex++;
-	 memcpy(unionInt.sData,&rSource[iByteIndex],4);
-	unionInt.iData = Poco::ByteOrder::flipBytes(unionInt.iData);
-	iByteIndex += 3;
+	_byteIndex++;
+	memcpy(_unionInt.sData,&_pStr[_byteIndex],4);
+	_byteIndex += 3;//Move to data end
 
-	if (iType < 1 || iType > 10) {throw FCRuntimeException("Unknown tag type");}
-	if (unionInt.iData < 0) {throw FCRuntimeException("Invalid count field");}
+	return Poco::ByteOrder::flipBytes(Poco::Int32(_unionInt.iData));
+}
 
-	if (fParseHeader) {
-		pElement = new NBTTagList(sName,iType);
-		//cout<<"list "<<sName<<"\n";
-	}else{
-		pElement = new NBTTagList("",iType);
-		//cout<<"list (nameless)\n";
+void NBTBinaryParser::handleByte(bool fParseHeader) {
+	NBTTagByte* pElement = NULL;
+	try {
+		if (fParseHeader) {
+			pElement = new NBTTagByte(readName());
+		}else{
+			pElement = new NBTTagByte("");
+		}
+
+		if (_byteIndex + 1 > _iSize-1) {throw FCRuntimeException("End of file!");}
+		_byteIndex++; //Move to data start
+		pElement->getDataRef() = _pStr[_byteIndex];
+
+
+		NBTTagBase* pLastStorage = _storageStack.top();
+		switch(pLastStorage->getTagType()) {
+		case FC_NBT_TYPE_LIST:
+			{
+				NBTTagList* p = (NBTTagList*)pLastStorage;
+				p->addSubElement(pElement);
+			}
+			break;
+		case FC_NBT_TYPE_COMPOUND:
+			{
+				NBTTagCompound* p = (NBTTagCompound*)pLastStorage;
+				p->addSubElement(pElement);
+			}
+			break;
+		default:
+			throw FCRuntimeException("Illegal storage");
+		}
+	}catch(FCRuntimeException& ex) {
+		if (pElement) {delete pElement;}
+		ex.rethrow();
 	}
+}
 
-	if (unionInt.iData > 0) {
-		storageStack.push(pElement);
-		while(unionInt.iData != 0){
-			if (iType == FC_NBT_TYPE_COMPOUND) {
-				NBTTagCompound* pComp = new NBTTagCompound("");
-				storageStack.push(pComp);
-				pElement->addSubElement(pComp);
-			}else {
-				nextElement(rSource,storageStack,iByteIndex,iType,false);
+void NBTBinaryParser::handleShort(bool fParseHeader) {
+	NBTTagShort* pElement = NULL;
+	try {
+		if (fParseHeader) {
+			pElement = new NBTTagShort(readName());
+		}else{
+			pElement = new NBTTagShort("");
+		}
+
+
+		if (_byteIndex + 2 > _iSize-1) {throw FCRuntimeException("End of file!");}
+		_byteIndex++; //Move to data start
+		memcpy(_unionShort.sData,&_pStr[_byteIndex],2);
+		pElement->getDataRef() = Poco::ByteOrder::flipBytes(Poco::Int16(_unionShort.iData));
+		_byteIndex++; //Move to data end
+
+
+		NBTTagBase* pLastStorage = _storageStack.top();
+		switch(pLastStorage->getTagType()) {
+		case FC_NBT_TYPE_LIST:
+			{
+				NBTTagList* p = (NBTTagList*)pLastStorage;
+				p->addSubElement(pElement);
+			}
+			break;
+		case FC_NBT_TYPE_COMPOUND:
+			{
+				NBTTagCompound* p = (NBTTagCompound*)pLastStorage;
+				p->addSubElement(pElement);
+			}
+			break;
+		default:
+			throw FCRuntimeException("Illegal storage");
+		}
+	}catch(FCRuntimeException& ex) {
+		if (pElement) {delete pElement;}
+		ex.rethrow();
+	}
+}
+
+void NBTBinaryParser::handleInt(bool fParseHeader) {
+	NBTTagInt* pElement = NULL;
+	try {
+		if (fParseHeader) {
+			pElement = new NBTTagInt(readName());
+		}else{
+			pElement = new NBTTagInt("");
+		}
+		
+		pElement->getDataRef() = readInt();
+		
+		NBTTagBase* pLastStorage = _storageStack.top();
+		switch(pLastStorage->getTagType()) {
+		case FC_NBT_TYPE_LIST:
+			{
+				NBTTagList* p = (NBTTagList*)pLastStorage;
+				p->addSubElement(pElement);
+			}
+			break;
+		case FC_NBT_TYPE_COMPOUND:
+			{
+				NBTTagCompound* p = (NBTTagCompound*)pLastStorage;
+				p->addSubElement(pElement);
+			}
+			break;
+		default:
+			throw FCRuntimeException("Illegal storage");
+		}
+	}catch(FCRuntimeException& ex) {
+		if (pElement) {delete pElement;}
+		ex.rethrow();
+	}
+}
+
+void NBTBinaryParser::handleInt64(bool fParseHeader) {
+	NBTTagInt64* pElement = NULL;
+	try {
+		if (fParseHeader) {
+			pElement = new NBTTagInt64(readName());
+		}else{
+			pElement = new NBTTagInt64("");
+		}
+
+
+		if (_byteIndex + 8 > _iSize-1) {throw FCRuntimeException("End of file!");}
+		_byteIndex++; //Move to data start
+		memcpy(_unionInt64.sData,&_pStr[_byteIndex],8);
+		pElement->getDataRef() = Poco::ByteOrder::flipBytes(Poco::Int64(_unionInt64.iData));
+		_byteIndex += 7;//Move to data end
+
+
+		NBTTagBase* pLastStorage = _storageStack.top();
+		switch(pLastStorage->getTagType()) {
+		case FC_NBT_TYPE_LIST:
+			{
+				NBTTagList* p = (NBTTagList*)pLastStorage;
+				p->addSubElement(pElement);
+			}
+			break;
+		case FC_NBT_TYPE_COMPOUND:
+			{
+				NBTTagCompound* p = (NBTTagCompound*)pLastStorage;
+				p->addSubElement(pElement);
+			}
+			break;
+		default:
+			throw FCRuntimeException("Illegal storage");
+		}
+	}catch(FCRuntimeException& ex) {
+		if (pElement) {delete pElement;}
+		ex.rethrow();
+	}
+}
+
+void NBTBinaryParser::handleFloat(bool fParseHeader) {
+	NBTTagFloat* pElement = NULL;
+	try {
+		if (fParseHeader) {
+			pElement = new NBTTagFloat(readName());
+		}else{
+			pElement = new NBTTagFloat("");
+		}
+
+
+		if (_byteIndex + 4 > _iSize-1) {throw FCRuntimeException("End of file!");}
+		_byteIndex++; //Move to data start
+
+		memcpy(_unionInt.sData,&_pStr[_byteIndex],4);
+		_unionInt.iData = Poco::ByteOrder::flipBytes(Poco::Int32(_unionInt.iData));
+		pElement->getDataRef() = _unionInt.nData;
+
+		_byteIndex += 3;//Move to data end
+
+
+		NBTTagBase* pLastStorage = _storageStack.top();
+		switch(pLastStorage->getTagType()) {
+		case FC_NBT_TYPE_LIST:
+			{
+				NBTTagList* p = (NBTTagList*)pLastStorage;
+				p->addSubElement(pElement);
+			}
+			break;
+		case FC_NBT_TYPE_COMPOUND:
+			{
+				NBTTagCompound* p = (NBTTagCompound*)pLastStorage;
+				p->addSubElement(pElement);
+			}
+			break;
+		default:
+			throw FCRuntimeException("Illegal storage");
+		}
+	}catch(FCRuntimeException& ex) {
+		if (pElement) {delete pElement;}
+		ex.rethrow();
+	}
+}
+
+void NBTBinaryParser::handleDouble(bool fParseHeader) {
+	NBTTagDouble* pElement = NULL;
+	try {
+		if (fParseHeader) {
+			pElement = new NBTTagDouble(readName());
+		}else{
+			pElement = new NBTTagDouble("");
+		}
+
+		if (_byteIndex + 8 > _iSize-1) {throw FCRuntimeException("End of file!");}
+		_byteIndex++;
+		memcpy(_unionInt64.sData,&_pStr[_byteIndex],8);
+		_unionInt64.iData = Poco::ByteOrder::flipBytes(Poco::Int64(_unionInt64.iData));
+		pElement->getDataRef() = _unionInt64.nData;
+
+		_byteIndex += 7;//Move to data end
+
+
+		NBTTagBase* pLastStorage = _storageStack.top();
+		switch(pLastStorage->getTagType()) {
+		case FC_NBT_TYPE_LIST:
+			{
+				NBTTagList* p = (NBTTagList*)pLastStorage;
+				p->addSubElement(pElement);
+			}
+			break;
+		case FC_NBT_TYPE_COMPOUND:
+			{
+				NBTTagCompound* p = (NBTTagCompound*)pLastStorage;
+				p->addSubElement(pElement);
+			}
+			break;
+		default:
+			throw FCRuntimeException("Illegal storage");
+		}
+	}catch(FCRuntimeException& ex) {
+		if (pElement) {delete pElement;}
+		ex.rethrow();
+	}
+}
+
+void NBTBinaryParser::handleString(bool fParseHeader) {
+	NBTTagString* pElement = NULL;
+	try {
+		if (fParseHeader) {
+			pElement = new NBTTagString(readName());
+		}else{
+			pElement = new NBTTagString("");
+		}
+
+		pElement->getDataRef() = readName();
+
+		NBTTagBase* pLastStorage = _storageStack.top();
+		switch(pLastStorage->getTagType()) {
+		case FC_NBT_TYPE_LIST:
+			{
+				NBTTagList* p = (NBTTagList*)pLastStorage;
+				p->addSubElement(pElement);
+			}
+			break;
+		case FC_NBT_TYPE_COMPOUND:
+			{
+				NBTTagCompound* p = (NBTTagCompound*)pLastStorage;
+				p->addSubElement(pElement);
+			}
+			break;
+		default:
+			throw FCRuntimeException("Illegal storage");
+		}
+	}catch(FCRuntimeException& ex) {
+		if (pElement) {delete pElement;}
+		ex.rethrow();
+	}
+}
+
+void NBTBinaryParser::handleByteArray(bool fParseHeader) {
+	NBTTagByteArray* pElement = NULL;
+	try {
+		char* pData;
+		string sName("");
+
+		if (fParseHeader) {
+			sName = readName();
+		}else{
+			_byteIndex++;
+		}
+
+		int iLen = readInt();
+		if (iLen <= 0) {throw FCRuntimeException("Illegal ByteArray length field");}
+		if (_byteIndex + iLen > _iSize-1) {throw FCRuntimeException("End of file!");}
+
+
+		pData = new char[iLen];
+		_byteIndex++; //Move to data start
+
+		memcpy(pData,&_pStr[_byteIndex],iLen);
+		pElement = new NBTTagByteArray(sName,pData,iLen);
+
+		_byteIndex += iLen-1;
+
+
+		NBTTagBase* pLastStorage = _storageStack.top();
+		switch(pLastStorage->getTagType()) {
+		case FC_NBT_TYPE_LIST:
+			{
+				NBTTagList* p = (NBTTagList*)pLastStorage;
+				p->addSubElement(pElement);
+			}
+			break;
+		case FC_NBT_TYPE_COMPOUND:
+			{
+				NBTTagCompound* p = (NBTTagCompound*)pLastStorage;
+				p->addSubElement(pElement);
+			}
+			break;
+		default:
+			throw FCRuntimeException("Illegal storage");
+		}
+	}catch(FCRuntimeException& ex) {
+		if (pElement) {delete pElement;}
+		ex.rethrow();
+	}
+}
+
+NBTTagCompound* NBTBinaryParser::handleCompound(bool fParseHeader) {
+	NBTTagCompound* pElement = NULL;
+	try {
+		string sName("");
+
+
+		if (fParseHeader) {
+			pElement = new NBTTagCompound(readName());
+		}else{
+			pElement = new NBTTagCompound("");
+		}
+		
+
+		NBTTagBase* pLastStorage = _storageStack.top();
+		switch(pLastStorage->getTagType()) {
+		case FC_NBT_TYPE_LIST:
+			{
+				NBTTagList* p = (NBTTagList*)pLastStorage;
+				p->addSubElement(pElement);
+			}
+			break;
+		case FC_NBT_TYPE_COMPOUND:
+			{
+				NBTTagCompound* p = (NBTTagCompound*)pLastStorage;
+				p->addSubElement(pElement);
+			}
+			break;
+		default:
+			throw FCRuntimeException("Illegal storage");
+		}
+
+		_storageStack.push(pElement);
+
+		return pElement;
+	}catch(FCRuntimeException& ex) {
+		if (pElement) {delete pElement;}
+		ex.rethrow();
+	}
+	return NULL; /* Compiler warning fix */
+}
+
+void NBTBinaryParser::handleList(bool fParseHeader) {
+	NBTTagList* pElement = NULL;
+	try {
+		string sName("");
+
+		if (fParseHeader) {sName = readName();}
+
+		if (_byteIndex + 5 > _iSize-1) {throw FCRuntimeException("End of file!");}
+
+		_byteIndex++; 
+		char iType = _pStr[_byteIndex];
+		if (iType < 1 || iType > 11) {throw FCRuntimeException("Unknown tag type");}
+
+		int iSize = readInt();
+		if (iSize < 0) {throw FCRuntimeException("Invalid count field");}
+
+		if (fParseHeader) {
+			pElement = new NBTTagList(sName,iType);
+		}else{
+			pElement = new NBTTagList("",iType);
+		}
+		_storageStack.push(pElement);
+
+		/*cout<<"Listy list: "<<int(iType)<<"  "<<sName<<"    "<<iSize<<"\n";*/
+
+		while(iSize > 0){
+			nextElement(iType,false);	
+
+			while (_storageStack.top() != pElement){
+				if (_byteIndex + 1 > _iSize-1) {throw FCRuntimeException("End of file!");}
+				_byteIndex++;
+
+				/*cout<<"other topstack element: "<<int(_pStr[_byteIndex+1])<<"\n";*/
+
+				nextElement(_pStr[_byteIndex]);
 			}
 
-			while (storageStack.top() != pElement){
-				if (iByteIndex+1 > rSource.length()-1) {throw FCRuntimeException("End of file!");}
-				nextElement(rSource,storageStack,iByteIndex,rSource[iByteIndex+1]);
+			if (_storageStack.empty()) {throw FCRuntimeException("Unexpected end");}
+			iSize--;
+		}
+		_storageStack.pop();
+
+
+		NBTTagBase* pLastStorage = _storageStack.top();
+		switch(pLastStorage->getTagType()) {
+		case FC_NBT_TYPE_LIST:
+			{
+				NBTTagList* p = (NBTTagList*)pLastStorage;
+				p->addSubElement(pElement);
 			}
-			
-			if (storageStack.empty()) {throw FCRuntimeException("Unexpected end");}
-			unionInt.iData--;
+			break;
+		case FC_NBT_TYPE_COMPOUND:
+			{
+				NBTTagCompound* p = (NBTTagCompound*)pLastStorage;
+				p->addSubElement(pElement);
+			}
+			break;
+		default:
+			throw FCRuntimeException("Illegal storage");
 		}
-		storageStack.pop();
+	}catch(FCRuntimeException& ex) {
+		if (pElement) {delete pElement;}
+		ex.rethrow();
 	}
+}
 
 
-	switch(pLastStorage->getTagType()) {
-	case FC_NBT_TYPE_LIST:
-		{
-			NBTTagList* p = (NBTTagList*)pLastStorage;
-			p->addSubElement(pElement);
+void NBTBinaryParser::handleIntArray(bool fParseHeader) {
+	NBTTagIntArray* pElement = NULL; 
+	try {
+		if (fParseHeader) {
+			pElement = new NBTTagIntArray(readName());
+		}else{
+			pElement = new NBTTagIntArray("");
 		}
-		break;
-	case FC_NBT_TYPE_COMPOUND:
-		{
-			NBTTagCompound* p = (NBTTagCompound*)pLastStorage;
-			p->addSubElement(pElement);
+
+		int iArraySize = readInt();
+
+		while (iArraySize > 0) {
+			pElement->addSubElement(readInt());
+			iArraySize--;
 		}
-		break;
-	default:
-		throw FCRuntimeException("Illegal storage");
+
+
+		NBTTagBase* pLastStorage = _storageStack.top();
+		switch(pLastStorage->getTagType()) {
+		case FC_NBT_TYPE_LIST:
+			{
+				NBTTagList* p = (NBTTagList*)pLastStorage;
+				p->addSubElement(pElement);
+			}
+			break;
+		case FC_NBT_TYPE_COMPOUND:
+			{
+				NBTTagCompound* p = (NBTTagCompound*)pLastStorage;
+				p->addSubElement(pElement);
+			}
+			break;
+		default:
+			throw FCRuntimeException("Illegal storage");
+		}
+	}catch(FCRuntimeException& ex) {
+		if (pElement) {delete pElement;}
+		ex.rethrow();
 	}
 }

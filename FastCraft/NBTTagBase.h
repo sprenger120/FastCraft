@@ -20,7 +20,7 @@ using std::string;
 //Base class for all NBT Elements
 class NBTTagBase {
 protected:
-	string _sName; //Contains name of the element
+	string _sName;
 	char _iElementType;
 public:
 	/*
@@ -43,10 +43,10 @@ public:
 
 	Parameter:
 	@1 : Target string
-	@2 : Output Type: FC_NBT_OUTPUT_RAW or FC_NBT_OUTPUT_GZIP
+	@2 : Output Type: (FC_NBT_IO_RAW, FC_NBT_IO_GZIP,FC_NBT_IO_ZLIB)
 	@3 : Nameless flag (won't write name field if is set to true)
 	*/
-	virtual void write(string&,bool,bool = false) = 0;
+	virtual void write(string&,char,bool = false) = 0;
 
 
 	/*
@@ -63,12 +63,13 @@ public:
 
 
 	/*
-	* Compresses given string, using GZIP
+	* Compresses given string
 
 	Parameter:
 	@1 : Reference to target string
+	@2 : Compress methode (FC_NBT_IO_GZIP,FC_NBT_IO_ZLIB)
 	*/
-	static void compress(string&);
+	static void compress(string&,char);
 
 
 	/*
