@@ -28,14 +28,6 @@ struct ChunkCoordinates {
 	int Z;
 };
 
-struct MapChunk {
-	char Blocks[FC_CHUNK_BLOCKCOUNT];
-	char Metadata[FC_CHUNK_NIBBLECOUNT];
-	char BlockLight[FC_CHUNK_NIBBLECOUNT];
-	char SkyLight[FC_CHUNK_NIBBLECOUNT];
-};
-
-
 struct Enchantment {
 	short EnchID;
 	short Level;

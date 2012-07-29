@@ -30,7 +30,7 @@ GNU General Public License for more details.
 #if defined(_WIN32)
     #include <Windows.h>
     #include <DbgHelp.h>
-#include <sstream>
+	#include <sstream>
 #endif
 
 
@@ -58,6 +58,7 @@ int main(int argc, char *argv[]) {
 	cout<<" Done\n";
 
 	Constants::init();
+
 	
 	#if defined(_WIN32)
 		cout<<"SYM...";
