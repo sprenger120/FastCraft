@@ -29,10 +29,13 @@ GNU General Public License for more details.
 #include "AcceptThread.h"
 #include <ctime>
 #include <Poco/ScopedLock.h>
+#include <cstring>
+
+
 using std::cout;
 
-MinecraftServer::MinecraftServer(string sName,Poco::Path sRootPath,vector<unsigned short>& rvUsedPorts) :
-_sServerName(""),
+MinecraftServer::MinecraftServer(string sName,Poco::Path sRootPath,vector<unsigned short>& rvUsedPorts) try :
+	_sServerName(""),
 	_sServerDescription		("FastCraft Minecraft server"),
 	_sMOTD					("§dWelcome to FastCraft 0.0.2 Alpha server."),
 	_sMainMapName			("main"),
@@ -40,7 +43,8 @@ _sServerName(""),
 	_vsAdditionalWorlds		(0),
 	_vpWorlds				(0),
 	ServerThreadBase		("Minecraft Server"),
-	_iInGameTime			(0)
+	_iInGameTime			(0),
+	_pathServerDir			(sRootPath)
 {
 	_iPort						= 25565;
 	_iPlayerSlotCount			= 16;
@@ -68,14 +72,14 @@ _sServerName(""),
 	//Check name
 	if (sName.compare("") == 0) {throw FCRuntimeException("Illegal name");}
 
-	
+
 	{
 		//Read config
 		cout<<"Reading configuration...\n";
-		
+
 		sRootPath.setFileName("settings.xml");
 		Poco::File ckeckExistanceFile(sRootPath);
-		
+
 		if (!ckeckExistanceFile.exists()) {
 			cout<<"Settings file doesn't exist. Starting with standart configuration.";
 		}else if(!(ckeckExistanceFile.canRead() && ckeckExistanceFile.canWrite())){
@@ -96,7 +100,7 @@ _sServerName(""),
 			if (rvUsedPorts[x] == _iPort) {throw FCRuntimeException("Port already in use!");}
 		}
 	}
-		
+
 
 	{
 		//Reading items.db
@@ -115,7 +119,7 @@ _sServerName(""),
 		}
 		_pItemInformationProvider = new ItemInformationProvider(sRootPath);
 	}
-	
+
 
 	//load words
 	cout<<"Loading worlds...\n";
@@ -125,6 +129,29 @@ _sServerName(""),
 			_vpWorlds.push_back(new World(_vsAdditionalWorlds[x],0,this));
 		}
 	}
+
+
+	//Generate RSA keys
+	cout<<"Generate RSA keys...\n";
+	try {
+		std::stringstream ss;
+
+		_RSA_PrivKey.Initialize(_AutoSeedGen,1024,65537);		
+		_RSA_PublicKey = new CryptoPP::RSA::PublicKey(_RSA_PrivKey);
+		_RSA_PublicKey->Save(CryptoPP::FileSink(ss));
+
+
+		string& rStr = ss.str();
+		if (rStr.length() == 0) {throw;}		
+
+		char *pBuffer = new char[rStr.length()];
+		memcpy(pBuffer,rStr.c_str(),rStr.length());
+
+		_Certificate = std::make_pair(pBuffer,(short)rStr.length());
+	} catch(...) { 
+		throw FCRuntimeException("Unable to generate RSA key");
+	} 
+
 
 
 	//start playerpool
@@ -148,6 +175,9 @@ _sServerName(""),
 		<<(_clockCreation.elapsed()/1000)%1000<<"ms"
 		<<" ;  Port:"<<_iPort<<")\n"
 		<<std::endl;
+
+}catch(CryptoPP::Exception){
+	throw FCRuntimeException("Unable to generate RSA key");
 }
 
 MinecraftServer::~MinecraftServer() {
@@ -160,6 +190,9 @@ MinecraftServer::~MinecraftServer() {
 			delete _vpWorlds[x];
 		}
 	}
+
+	delete [] _Certificate.first;
+	delete _RSA_PublicKey;
 
 	killThread();
 }
@@ -453,4 +486,12 @@ unsigned long long MinecraftServer::getReadTraffic() {
 
 unsigned long long MinecraftServer::getWriteTraffic() {
 	return _iWriteTraffic;
+}
+
+std::pair<char*,short>& MinecraftServer::getCertificate() {
+	return _Certificate;
+}
+
+Poco::Path MinecraftServer::getServerDirectory() {
+	return _pathServerDir;
 }

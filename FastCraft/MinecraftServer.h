@@ -27,6 +27,10 @@ GNU General Public License for more details.
 #include <Poco/Mutex.h>
 #include "NetworkIn.h"
 #include "NetworkOutRoot.h"
+#include <utility>
+#include <osrng.h>
+#include <rsa.h>
+#include <files.h>
 
 //Forward definitions
 class AcceptThread;
@@ -86,6 +90,15 @@ private:
 	bool _fMarkedForShutdown;
 	unsigned long long _iWriteTraffic;
 	unsigned long long _iReadTraffic;
+	Poco::Path _pathServerDir;
+
+
+	/* RSA */ 
+	CryptoPP::AutoSeededRandomPool _AutoSeedGen;
+	CryptoPP::RSA::PrivateKey _RSA_PrivKey;
+	CryptoPP::RSA::PublicKey* _RSA_PublicKey;
+		
+	std::pair<char*,short> _Certificate;
 public:
 	/*
 	* Constructor
@@ -257,11 +270,24 @@ public:
 	*/
 	int generateID();
 
+
 	/*
 	* This functions are returning the Network I/O traffic
 	*/
 	unsigned long long getReadTraffic();
 	unsigned long long getWriteTraffic();
+
+
+	/*
+	* Returns path to server configuration
+	*/ 
+	Poco::Path getServerDirectory();
+
+
+	/* 
+	* Returns the ASN.1 certificate of this server
+	*/
+	std::pair<char*,short>& getCertificate();
 private:
 	bool Int2Bool(int&);
 	bool parseNodeInt(Poco::AutoPtr<Poco::XML::Document>,string,int&,int,int);
