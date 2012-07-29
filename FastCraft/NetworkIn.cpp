@@ -27,7 +27,7 @@ _rSocket(r)
 
 char NetworkIn::readByte() {
 	try {
-		read(1);
+		read(1,_sReadBuffer);
 	} catch(FCRuntimeException& ex) {
 		ex.rethrow();
 	}
@@ -54,7 +54,7 @@ bool NetworkIn::readBool() {
 
 short NetworkIn::readShort() {
 	try {
-		read(2);
+		read(2,_sReadBuffer);
 	} catch(FCRuntimeException& ex) {
 		ex.rethrow();
 	}
@@ -65,7 +65,7 @@ short NetworkIn::readShort() {
 
 int NetworkIn::readInt() {
 	try {
-		read(4);
+		read(4,_sReadBuffer);
 	} catch(FCRuntimeException& ex) {
 		ex.rethrow();
 	}
@@ -79,7 +79,7 @@ int NetworkIn::readInt() {
 
 long long NetworkIn::readInt64() {
 	try {
-		read(8);
+		read(8,_sReadBuffer);
 	} catch(FCRuntimeException& ex) {
 		ex.rethrow();
 	}
@@ -123,8 +123,9 @@ string NetworkIn::readString() {
 
 	try {
 		iDataLenght = readShort();
+		if (iDataLenght < 0) {throw FCRuntimeException("Illegal length field");}
 
-		for(int x = 0;x<=iDataLenght-1;x++) {
+		for(short x = 0;x<=iDataLenght-1;x++) {
 			readByte();
 			sOutput.append(1,readByte());
 		}
@@ -135,24 +136,30 @@ string NetworkIn::readString() {
 	return sOutput;
 }
 
+std::pair<char*,short> NetworkIn::readByteArray() {
+	short iLen = readShort();
+	if (iLen <= 0) {throw FCRuntimeException("Illegal length field");}
 
-void NetworkIn::read(int iLenght) {
+	char* pStr = new char[iLen];
+	read(iLen,pStr);
+
+	return std::make_pair(pStr,iLen);
+}
+
+
+void NetworkIn::read(int iLenght,char* pBuffer) {
 	int iReadedLenght = 0;
 	int iUnderflowCount=0;
 	bool fUnderflow = false;
-
-	if (iLenght <= 0 || iLenght > 8) { 
-		throw FCRuntimeException("Invalid lenght");
-	}
 
 	while ( iReadedLenght < iLenght) {
 		try {
 			switch(fUnderflow) {
 			case false:
-				iReadedLenght = _rSocket.receiveBytes(_sReadBuffer,iLenght);
+				iReadedLenght = _rSocket.receiveBytes(pBuffer,iLenght);
 				break;
 			case true:
-				iReadedLenght += _rSocket.receiveBytes(&_sReadBuffer[iReadedLenght], iLenght - iReadedLenght);
+				iReadedLenght += _rSocket.receiveBytes(&pBuffer[iReadedLenght], iLenght - iReadedLenght);
 				break;
 			}
 		}catch(Poco::Net::ConnectionAbortedException) {

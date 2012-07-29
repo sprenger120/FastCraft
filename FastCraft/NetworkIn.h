@@ -18,6 +18,7 @@ GNU General Public License for more details.
 #include <Poco/Net/StreamSocket.h>
 #include <string>
 #include "Structs.h"
+#include <utility>
 
 using Poco::Net::StreamSocket;
 using std::string;
@@ -54,7 +55,8 @@ public:
 	float readFloat();
 	double readDouble();
 	string readString();
+	std::pair<char*,short> readByteArray();
 private:
-	void read(int);
+	void read(int,char* pBuffer);
 };
 #endif
