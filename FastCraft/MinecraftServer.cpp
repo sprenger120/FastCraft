@@ -495,3 +495,15 @@ std::pair<char*,short>& MinecraftServer::getCertificate() {
 Poco::Path MinecraftServer::getServerDirectory() {
 	return _pathServerDir;
 }
+
+RSA::PrivateKey& MinecraftServer::getPrivateRSAKey() {
+	return _RSA_PrivKey;
+}
+
+RSA::PublicKey& MinecraftServer::getPublicRSAKey() {
+	return *_RSA_PublicKey;
+}
+
+CryptoPP::AutoSeededRandomPool& MinecraftServer::getAutoSeedRndPool() {
+	return _AutoSeedGen;
+}

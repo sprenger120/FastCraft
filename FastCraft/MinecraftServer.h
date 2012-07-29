@@ -43,6 +43,8 @@ class World;
 
 using std::string;
 using std::vector;
+using CryptoPP::RSA;
+using CryptoPP::RSA;
 
 typedef unsigned long long Tick;
 
@@ -95,8 +97,8 @@ private:
 
 	/* RSA */ 
 	CryptoPP::AutoSeededRandomPool _AutoSeedGen;
-	CryptoPP::RSA::PrivateKey _RSA_PrivKey;
-	CryptoPP::RSA::PublicKey* _RSA_PublicKey;
+	RSA::PrivateKey _RSA_PrivKey;
+	RSA::PublicKey* _RSA_PublicKey;
 		
 	std::pair<char*,short> _Certificate;
 public:
@@ -288,6 +290,19 @@ public:
 	* Returns the ASN.1 certificate of this server
 	*/
 	std::pair<char*,short>& getCertificate();
+
+
+	/*
+	* Private/Public key accessators
+	*/
+	RSA::PrivateKey& getPrivateRSAKey();
+	RSA::PublicKey&  getPublicRSAKey();
+
+
+	/*
+	* AutoSeedRandomPool accessators
+	*/
+	CryptoPP::AutoSeededRandomPool& getAutoSeedRndPool();
 private:
 	bool Int2Bool(int&);
 	bool parseNodeInt(Poco::AutoPtr<Poco::XML::Document>,string,int&,int,int);
