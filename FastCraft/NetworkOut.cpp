@@ -83,7 +83,7 @@ void NetworkOut::addDouble(string& rBuff,double dVal) {
 	rBuff.append(EndianBuffer,8);//append
 }
 
-void NetworkOut::addString(string& rBuff,string sString) {
+void NetworkOut::addString(string& rBuff,string& sString) {
 	short iDataLength;
 
 	iDataLength = sString.length();
@@ -142,7 +142,7 @@ void NetworkOut::addDouble(double dVal) {
 	_sNetworkBuffer.append(_sEndianBuffer,8);//append
 }
 
-void NetworkOut::addString(string sString) {
+void NetworkOut::addString(string& sString) {
 	short iDataLength;
 	iDataLength = sString.length();
 	addShort(iDataLength);
@@ -161,7 +161,23 @@ string& NetworkOut::getStr() {
 
 void NetworkOut::Finalize(char iType) {
 	if (iType != FC_QUEUE_LOW && iType != FC_QUEUE_HIGH) {throw FCRuntimeException("Unknown queue type");}
+	if (_sNetworkBuffer.empty()) {return;}
 	string & rStr = _sNetworkBuffer;
 	_pMaster->Add(iType,rStr);
 	_sNetworkBuffer.clear();
+}
+
+void NetworkOut::addByteArray(string& rTarget,std::pair<char*,short>& rData) {
+	if (rData.first == NULL) {throw FCRuntimeException("Nullpointer");}
+	addShort(rTarget,rData.second);
+	rTarget.append(rData.first,rData.second);	
+}
+
+
+void NetworkOut::addByteArray(std::pair<char*,short>& rData) {
+	try {
+		addByteArray(_sNetworkBuffer,rData);
+	}catch(FCRuntimeException& ex) { 
+		ex.rethrow();
+	}
 }

@@ -59,7 +59,8 @@ public:
 	static void addInt64(string&,long long);
 	static void addFloat(string&,float);
 	static void addDouble(string&,double);
-	static void addString(string&,string);
+	static void addString(string&,string&);
+	static void addByteArray(string&,std::pair<char*,short>&);
 
 
 	/*
@@ -72,7 +73,8 @@ public:
 	void addInt64(long long);
 	void addFloat(float);
 	void addDouble(double);
-	void addString(string);
+	void addString(string&);
+	void addByteArray(std::pair<char*,short>&);
 
 
 	/*
