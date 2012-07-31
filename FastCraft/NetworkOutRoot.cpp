@@ -17,34 +17,53 @@ GNU General Public License for more details.
 #include <iostream>
 #include "FCRuntimeException.h"
 #include "MinecraftServer.h"
+#include "PlayerThread.h"
+#include <cstring>
+#include <utility>
 
-NetworkOutRoot::NetworkOutRoot(MinecraftServer* pMCServer) :
-_lowQueue(),
-_highQueue()
-{
+using std::pair;
+
+NetworkOutRoot::NetworkOutRoot(MinecraftServer* pMCServer,PlayerThread* pPlayer) {
 	_pMCServer = pMCServer;
+	_fCryptMode = false;
+	_pPlayer = pPlayer;
+	_aesEncryptor = NULL;
 }
 
+NetworkOutRoot::~NetworkOutRoot() {
+	if (_aesEncryptor != NULL) {delete _aesEncryptor;}
+}
 
-ThreadSafeQueue<string> & NetworkOutRoot::getLowQueue() {
+ThreadSafeQueue<string*> & NetworkOutRoot::getLowQueue() {
 	return _lowQueue;
 }
 
-ThreadSafeQueue<string> & NetworkOutRoot::getHighQueue() {
+ThreadSafeQueue<string*> & NetworkOutRoot::getHighQueue() {
 	return _highQueue;
 }
 
-void NetworkOutRoot::Add(char iType,string& rData) {
+void NetworkOutRoot::Add(char iType,string* pData) {
+	_pMCServer->_iWriteTraffic+=pData->length();
 	switch(iType) {
 	case FC_QUEUE_LOW:
-		_pMCServer->_iWriteTraffic+=rData.length();
-		_lowQueue.push(rData);
+		_lowQueue.push(pData);
 		break;
 	case FC_QUEUE_HIGH:
-		_pMCServer->_iWriteTraffic+=rData.length();
-		_highQueue.push(rData);
+		_highQueue.push(pData);
 		break;
 	default:
 		throw FCRuntimeException("Unknown queue type");
+	}
+}
+
+void NetworkOutRoot::setCryptMode(bool fMode) {
+	_fCryptMode = fMode;
+	if(fMode) {
+		if (_aesEncryptor != NULL) {delete _aesEncryptor;}
+		pair<char*,short>& rKey = _pPlayer->getSecretKey();
+
+		memcpy(_IV,rKey.first,rKey.second);
+
+		_aesEncryptor = new CryptoPP::CFB_Mode<AES>::Encryption((byte*)rKey.first,(unsigned int)rKey.second,_IV,1);
 	}
 }

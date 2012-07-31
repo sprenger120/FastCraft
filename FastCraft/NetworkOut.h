@@ -17,9 +17,12 @@ GNU General Public License for more details.
 #define _FASTCRAFTHEADER_NETWORKOUT
 #include <string>
 #include "Structs.h"
+#include <modes.h>
+#include <aes.h>
+#include <filters.h>
 using std::string;
 
-//Forward definitions
+
 class NetworkOutRoot;
 
 class NetworkOut {
@@ -28,13 +31,13 @@ private:
 	Int64ToDouble _ItD;
 
 	char _sEndianBuffer[8];
-	string _sNetworkBuffer;
+	string* _pNetworkBuffer;
 
 	NetworkOutRoot* _pMaster;
+	CryptoPP::StreamTransformationFilter* _cfbEncryptor;
 public:
 	/* 
 	* Constructor
-	* Don't construct by yourself !  Let that NetworkOutRoot do!
 
 	Parameter:
 	@1 : pointer from NetworkOutRoot

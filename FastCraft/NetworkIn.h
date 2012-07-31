@@ -19,10 +19,18 @@ GNU General Public License for more details.
 #include <string>
 #include "Structs.h"
 #include <utility>
+#include <rsa.h>
+#include <modes.h>
+#include <aes.h>
 
 using Poco::Net::StreamSocket;
 using std::string;
+using CryptoPP::RSAES;
+using CryptoPP::PKCS1v15;
+using CryptoPP::AES;
+
 class MinecraftServer;
+class PlayerThread;
 
 class NetworkIn {
 private:
@@ -32,6 +40,15 @@ private:
 
 	StreamSocket & _rSocket;
 	MinecraftServer* _pMCServer;
+	PlayerThread* _pPlayer;
+
+	RSAES<PKCS1v15>::Decryptor _rsaDecryptor;
+	CryptoPP::CFB_Mode<AES>::Decryption* _aesDecryptor;
+	byte _IV[AES::BLOCKSIZE];
+	CryptoPP::StreamTransformationFilter* _cfbEncryptor;
+
+	bool _fCryptMode;
+	string _sDecryptOutput;
 public:
 	/*
 	* Constructor
@@ -40,8 +57,13 @@ public:
 	@1 : Reference to a StreamSocket
 	@2 : a MinecraftServer instance
 	*/
-	NetworkIn(StreamSocket&,MinecraftServer*);
+	NetworkIn(StreamSocket&,MinecraftServer*,PlayerThread*);
 	
+
+	/*
+	* Destructor
+	*/
+	~NetworkIn();
 
 	/*
 	* Read functions
@@ -55,8 +77,16 @@ public:
 	float readFloat();
 	double readDouble();
 	string readString();
-	std::pair<char*,short> readByteArray();
+	/* Ignores the decrypt parameter if CryptMode is activated */
+	std::pair<char*,short> readByteArray(bool = false); //Set to true to decrypt via AES
+
+
+	/*
+	* De-/activates encryption
+	*/ 
+	void setCryptMode(bool);
 private:
 	void read(int,char* pBuffer);
+	void AESdecrypt(char*,int);
 };
 #endif

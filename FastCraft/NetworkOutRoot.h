@@ -18,19 +18,29 @@ GNU General Public License for more details.
 #include "ThreadSafeQueue.h"
 #include "NetworkOut.h"
 #include <string>
+#include <rsa.h>
+#include <modes.h>
+#include <aes.h>
 
 using std::string;
+using CryptoPP::RSAES;
+using CryptoPP::PKCS1v15;
+using CryptoPP::AES;
 class MinecraftServer;
+class PlayerThread;
 
-/*
-* This class represents a root for the NetworkOut classes
-* It holds the out queue
-*/
+
 class NetworkOutRoot {
+friend class NetworkOut;
 private:
-	ThreadSafeQueue<string> _lowQueue;
-	ThreadSafeQueue<string> _highQueue;
+	ThreadSafeQueue<string*> _lowQueue;
+	ThreadSafeQueue<string*> _highQueue;
 	MinecraftServer* _pMCServer;
+	PlayerThread* _pPlayer;
+
+	bool _fCryptMode;
+	CryptoPP::CFB_Mode<AES>::Encryption* _aesEncryptor;
+	byte _IV[AES::BLOCKSIZE];
 public:
 	/*
 	* Constructor
@@ -38,19 +48,25 @@ public:
 	Parameter:
 	@1 : a MinecraftServer instance
 	*/
-	NetworkOutRoot(MinecraftServer*);
+	NetworkOutRoot(MinecraftServer*,PlayerThread*);
+
+
+	/*
+	* Destuctor
+	*/
+	~NetworkOutRoot();
 
 
 	/*
 	* Returns a reference to the low queue
 	*/
-	ThreadSafeQueue<string> & getLowQueue();
+	ThreadSafeQueue<string*> & getLowQueue();
 
 
 	/*
 	* Returns a reference to the high queue
 	*/
-	ThreadSafeQueue<string> & getHighQueue();
+	ThreadSafeQueue<string*> & getHighQueue();
 
 
 	/*
@@ -59,8 +75,14 @@ public:
 
 	Parameter:
 	@1 : Queue type (FC_QUEUE_LOW / FC_QUEUE_HIGH)
-	@2 : Reference to string that have to pushed to queue
+	@2 : Pointer tot data
 	*/
-	void Add(char,string&);
+	void Add(char,string*);
+
+
+	/*
+	* De-/enables traffic encryption
+	*/
+	void setCryptMode(bool);
 };
 #endif

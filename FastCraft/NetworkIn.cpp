@@ -15,19 +15,33 @@ GNU General Public License for more details.
 #include "NetworkIn.h"
 #include "FCRuntimeException.h"
 #include <Poco/Net/NetException.h>
-#include <Poco/ByteOrder.h>
 #include "MinecraftServer.h"
+#include "PlayerThread.h"
+using CryptoPP::StringSource;
+using CryptoPP::PK_DecryptorFilter;
+using CryptoPP::StringSink;
 
 
-NetworkIn::NetworkIn(StreamSocket& r,MinecraftServer* pMCServer) :
-_rSocket(r)
+NetworkIn::NetworkIn(StreamSocket& r,MinecraftServer* pMCServer,PlayerThread* pPlayer) :
+	_rSocket(r),
+	_rsaDecryptor(pMCServer->getPrivateRSAKey())
 {
 	_pMCServer = pMCServer;
+	_pPlayer = pPlayer;
+	_fCryptMode = false;
+	_aesDecryptor = NULL;
+	_cfbEncryptor = NULL;
 }
+
+NetworkIn::~NetworkIn() {
+	if (_aesDecryptor != NULL) {delete _aesDecryptor;}
+}
+
 
 char NetworkIn::readByte() {
 	try {
 		read(1,_sReadBuffer);
+		if (_fCryptMode) {AESdecrypt(_sReadBuffer,1);}
 	} catch(FCRuntimeException& ex) {
 		ex.rethrow();
 	}
@@ -55,17 +69,19 @@ bool NetworkIn::readBool() {
 short NetworkIn::readShort() {
 	try {
 		read(2,_sReadBuffer);
+		if (_fCryptMode) {AESdecrypt(_sReadBuffer,2);}
 	} catch(FCRuntimeException& ex) {
 		ex.rethrow();
 	}
 
 	return (short(_sReadBuffer[0])<<8 & 0xFF00) | 
-			(short(_sReadBuffer[1]) & 0x00FF);
+		(short(_sReadBuffer[1]) & 0x00FF);
 }
 
 int NetworkIn::readInt() {
 	try {
 		read(4,_sReadBuffer);
+		if (_fCryptMode) {AESdecrypt(_sReadBuffer,4);}
 	} catch(FCRuntimeException& ex) {
 		ex.rethrow();
 	}
@@ -80,21 +96,21 @@ int NetworkIn::readInt() {
 long long NetworkIn::readInt64() {
 	try {
 		read(8,_sReadBuffer);
+		if (_fCryptMode) {AESdecrypt(_sReadBuffer,8);}
 	} catch(FCRuntimeException& ex) {
 		ex.rethrow();
 	}
 
-
 	return (
-		    ((((long long)_sReadBuffer[0])<<56) & 0xFF00000000000000) |
-            ((((long long)_sReadBuffer[1])<<48) & 0xFF000000000000) |
-			((((long long)_sReadBuffer[2])<<40) & 0xFF0000000000) |
-			((((long long)_sReadBuffer[3])<<32) & 0xFF00000000) |
-			((((long long)_sReadBuffer[4])<<24) & 0xFF000000) |
-			((((long long)_sReadBuffer[5])<<16) & 0xFF0000) |
-			((((long long)_sReadBuffer[6])<<8)  & 0xFF00) |
-			(((long long)_sReadBuffer[7])       & 0xFF)
-		  );
+		((((long long)_sReadBuffer[0])<<56) & 0xFF00000000000000) |
+		((((long long)_sReadBuffer[1])<<48) & 0xFF000000000000) |
+		((((long long)_sReadBuffer[2])<<40) & 0xFF0000000000) |
+		((((long long)_sReadBuffer[3])<<32) & 0xFF00000000) |
+		((((long long)_sReadBuffer[4])<<24) & 0xFF000000) |
+		((((long long)_sReadBuffer[5])<<16) & 0xFF0000) |
+		((((long long)_sReadBuffer[6])<<8)  & 0xFF00) |
+		(((long long)_sReadBuffer[7])       & 0xFF)
+		);
 }
 
 float NetworkIn::readFloat() {
@@ -136,14 +152,43 @@ string NetworkIn::readString() {
 	return sOutput;
 }
 
-std::pair<char*,short> NetworkIn::readByteArray() {
-	short iLen = readShort();
-	if (iLen <= 0) {throw FCRuntimeException("Illegal length field");}
+std::pair<char*,short> NetworkIn::readByteArray(bool fDecrypt) {
+	try {
+		short iLen = readShort();
+		if (iLen <= 0) {throw FCRuntimeException("Illegal length field");}
 
-	char* pStr = new char[iLen];
-	read(iLen,pStr);
+		char* pStr = new char[iLen];
+		read(iLen,pStr);
 
-	return std::make_pair(pStr,iLen);
+		if (_fCryptMode) {
+			AESdecrypt(pStr,iLen);
+		}else{
+			if (fDecrypt) {
+				string sEncryptedData(pStr,iLen);
+				string sDecryptedData("");
+
+				delete [] pStr;
+
+				StringSource StrSrc(sEncryptedData,
+					true,
+					new CryptoPP::PK_DecryptorFilter(_pMCServer->getAutoSeedRndPool(),
+					_rsaDecryptor,
+					new StringSink(sDecryptedData)
+					)
+					);
+
+				if (sDecryptedData.empty()) {throw;}
+				iLen = sDecryptedData.size();
+				pStr = new char[iLen];
+
+				memcpy(pStr,sDecryptedData.c_str(),iLen);
+			}
+		}
+		return std::make_pair(pStr,iLen);
+	}catch(...) {
+		throw FCRuntimeException("Unable to read packet");
+	}
+	return std::make_pair<char*,short>(NULL,0);
 }
 
 
@@ -182,4 +227,31 @@ void NetworkIn::read(int iLenght,char* pBuffer) {
 		}
 	}
 	_pMCServer->_iReadTraffic += iLenght;
+}
+
+void NetworkIn::setCryptMode(bool fVal) {
+	_fCryptMode = fVal;
+	if (fVal) {
+		memcpy(_IV,_pPlayer->getSecretKey().first,_pPlayer->getSecretKey().second);
+		if (_aesDecryptor != NULL) {delete _aesDecryptor;}
+		if (_cfbEncryptor != NULL) {delete _cfbEncryptor;}
+		_aesDecryptor = new CryptoPP::CFB_Mode<AES>::Decryption((byte*)_pPlayer->getSecretKey().first,(unsigned int)_pPlayer->getSecretKey().second,_IV,1);
+		_cfbEncryptor = new CryptoPP::StreamTransformationFilter(*_aesDecryptor, new StringSink(_sDecryptOutput));
+	}
+}
+
+
+void NetworkIn::AESdecrypt(char* pSrc,int iLen) {
+	try {
+		_sDecryptOutput.clear();
+
+		_cfbEncryptor->Put((byte*)pSrc, iLen);
+		_cfbEncryptor->MessageEnd();
+
+		if (_sDecryptOutput.length() != iLen) {throw;}
+
+		memcpy(pSrc,_sDecryptOutput.c_str(),iLen);
+	}catch(...) {
+		throw FCRuntimeException("Unable to decrypt");
+	}
 }

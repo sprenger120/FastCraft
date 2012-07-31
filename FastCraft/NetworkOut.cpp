@@ -18,13 +18,20 @@ GNU General Public License for more details.
 #include <Poco/ByteOrder.h>
 #include <cstring>
 #include "FCRuntimeException.h"
+#include "PlayerThread.h"
+using namespace CryptoPP;
+//using CryptoPP::StringSink;
 
 NetworkOut::NetworkOut(NetworkOutRoot* p) 
 {
 	_pMaster = p;
+	_cfbEncryptor = NULL;
+	_pNetworkBuffer = new string("");
 }
 
 NetworkOut::~NetworkOut() {
+	if (_cfbEncryptor != NULL) {delete _cfbEncryptor;}
+	delete _pNetworkBuffer;
 }
 
 void NetworkOut::addByte(string& rBuff,char Byte) {
@@ -98,40 +105,40 @@ void NetworkOut::addString(string& rBuff,string& sString) {
 }
 
 void NetworkOut::addByte(unsigned char Byte) {
-	_sNetworkBuffer.append(1,Byte);
+	_pNetworkBuffer->append(1,Byte);
 }
 
 void NetworkOut::addBool(bool Bool) {
 	if (Bool) {
-		_sNetworkBuffer.append(1,1);
+		_pNetworkBuffer->append(1,1);
 	}else{
-		_sNetworkBuffer.append(1,0);
+		_pNetworkBuffer->append(1,0);
 	}
 }
 
 void NetworkOut::addShort(short Short) {
-	_sNetworkBuffer.append(1, char(Short>>8)); 
-	_sNetworkBuffer.append(1, char(Short));
+	_pNetworkBuffer->append(1, char(Short>>8)); 
+	_pNetworkBuffer->append(1, char(Short));
 }
 
 
 void NetworkOut::addInt(int iInt) {
 	iInt = Poco::ByteOrder::toBigEndian(iInt);
 	memcpy(_sEndianBuffer,&iInt,4);
-	_sNetworkBuffer.append(_sEndianBuffer,4);
+	_pNetworkBuffer->append(_sEndianBuffer,4);
 }
 
 void NetworkOut::addInt64(long long iInt) {
 	iInt = Poco::ByteOrder::toBigEndian(Poco::Int64(iInt));
 	memcpy(_sEndianBuffer,&iInt,8);
-	_sNetworkBuffer.append(_sEndianBuffer,8);
+	_pNetworkBuffer->append(_sEndianBuffer,8);
 }
 
 void NetworkOut::addFloat(float dVal) {
 	_ItF.d = dVal;
 	_ItF.i = Poco::ByteOrder::toBigEndian(_ItF.i);
 	memcpy(_sEndianBuffer,&_ItF.i,4);
-	_sNetworkBuffer.append(_sEndianBuffer,4);
+	_pNetworkBuffer->append(_sEndianBuffer,4);
 }
 
 
@@ -139,7 +146,7 @@ void NetworkOut::addDouble(double dVal) {
 	_ItD.d = dVal;
 	_ItD.i = Poco::ByteOrder::toBigEndian((Poco::Int64)_ItD.i); //switch endian
 	memcpy(_sEndianBuffer,&_ItD.i,8);//copy to endian buffer
-	_sNetworkBuffer.append(_sEndianBuffer,8);//append
+	_pNetworkBuffer->append(_sEndianBuffer,8);//append
 }
 
 void NetworkOut::addString(string& sString) {
@@ -150,21 +157,44 @@ void NetworkOut::addString(string& sString) {
 	if (sString.empty()) {return;}
 
 	for (int x=0;x<=sString.length()-1;x++) {
-		_sNetworkBuffer.append(1,0);
-		_sNetworkBuffer.append(1,sString[x]);
+		_pNetworkBuffer->append(1,0);
+		_pNetworkBuffer->append(1,sString[x]);
 	}
 }
 
 string& NetworkOut::getStr() {
-	return _sNetworkBuffer;
+	return *_pNetworkBuffer;
 }
 
 void NetworkOut::Finalize(char iType) {
 	if (iType != FC_QUEUE_LOW && iType != FC_QUEUE_HIGH) {throw FCRuntimeException("Unknown queue type");}
-	if (_sNetworkBuffer.empty()) {return;}
-	string & rStr = _sNetworkBuffer;
-	_pMaster->Add(iType,rStr);
-	_sNetworkBuffer.clear();
+	if (_pNetworkBuffer->empty()) {return;}
+	if (!_pMaster->_pPlayer->isAssigned()) {return;}
+
+	string* pCiphed = NULL;
+
+	if (_pMaster->_fCryptMode) {
+		pCiphed = new string("");
+
+		try {
+			StringSource(*_pNetworkBuffer, true, 
+				new StreamTransformationFilter( *_pMaster->_aesEncryptor,
+				new StringSink(*pCiphed)
+				)     
+			); 
+		}catch(CryptoPP::Exception) {
+			delete pCiphed;
+			std::cout<<"Unable to encrypt data\n";
+			return;
+		}
+
+		_pMaster->Add(iType,pCiphed);
+		_pNetworkBuffer->clear();
+		return;
+	}
+
+	_pMaster->Add(iType,_pNetworkBuffer);
+	_pNetworkBuffer = new string("");
 }
 
 void NetworkOut::addByteArray(string& rTarget,std::pair<char*,short>& rData) {
@@ -176,7 +206,7 @@ void NetworkOut::addByteArray(string& rTarget,std::pair<char*,short>& rData) {
 
 void NetworkOut::addByteArray(std::pair<char*,short>& rData) {
 	try {
-		addByteArray(_sNetworkBuffer,rData);
+		addByteArray(*_pNetworkBuffer,rData);
 	}catch(FCRuntimeException& ex) { 
 		ex.rethrow();
 	}
