@@ -25,8 +25,8 @@ using std::string;
 
 class NetworkWriter : public ServerThreadBase { 
 private:
-	ThreadSafeQueue<string>& _rLowQueue;
-	ThreadSafeQueue<string>& _rHighQueue;
+	ThreadSafeQueue<string*>& _rLowQueue;
+	ThreadSafeQueue<string*>& _rHighQueue;
 	Poco::Net::StreamSocket& _rStrm;
 	PlayerThread* _pPlayer;
 
@@ -41,8 +41,8 @@ public:
 	@3 : Reference to the StreamSocket instance of the player
 	@4 : this pointer of PlayerThread class this class
 	*/
-	NetworkWriter(	ThreadSafeQueue<string>&,
-					ThreadSafeQueue<string>&,
+	NetworkWriter(	ThreadSafeQueue<string*>&,
+					ThreadSafeQueue<string*>&,
 					Poco::Net::StreamSocket&,
 					PlayerThread*
 				 );

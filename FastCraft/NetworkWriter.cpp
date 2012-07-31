@@ -21,7 +21,7 @@ GNU General Public License for more details.
 
 using Poco::Thread;
 
-NetworkWriter::NetworkWriter(ThreadSafeQueue<string>& lowQ,ThreadSafeQueue<string>& highQ,Poco::Net::StreamSocket& s,PlayerThread* p) :
+NetworkWriter::NetworkWriter(ThreadSafeQueue<string*>& lowQ,ThreadSafeQueue<string*>& highQ,Poco::Net::StreamSocket& s,PlayerThread* p) :
 _rLowQueue(lowQ),
 	_rHighQueue(highQ),
 	_rStrm(s),
@@ -43,8 +43,20 @@ void NetworkWriter::run() {
 	while (_iThreadStatus == FC_THREADSTATUS_RUNNING) {
 		if (_fClear) {
 			_fClear = false;
-			if (!_rLowQueue.empty()) {_rLowQueue.clear();}
-			if (!_rHighQueue.empty()) {_rHighQueue.clear();}
+
+			string* pStr = NULL;
+
+			while(!_rLowQueue.empty()) {
+				pStr = _rLowQueue.front();
+				delete pStr;
+				_rLowQueue.pop();
+			}
+
+			while(!_rHighQueue.empty()) {
+				pStr = _rHighQueue.front();
+				delete pStr;
+				_rHighQueue.pop();
+			}
 		}
 
 		if (!_pPlayer->isSpawned()) {
@@ -53,11 +65,16 @@ void NetworkWriter::run() {
 		}
 
 		try {
+			string* pStr = NULL;
+
 			/* High priority packets */
 			while (!_rHighQueue.empty()) {
-				string & rStr = _rHighQueue.front();
-				_rStrm.sendBytes(rStr.c_str(),rStr.length()); 
+				pStr = _rHighQueue.front();
+				
+				_rStrm.sendBytes(pStr->c_str(),pStr->length()); 
+				
 				_rHighQueue.pop();
+				delete pStr;
 			}
 
 
@@ -66,9 +83,11 @@ void NetworkWriter::run() {
 				Thread::sleep(10);
 				continue;
 			}
-			string & rStr = _rLowQueue.front();
-			_rStrm.sendBytes(rStr.c_str(),rStr.length()); 
+			pStr = _rLowQueue.front();
+			_rStrm.sendBytes(pStr->c_str(),pStr->length()); 
+			
 			_rLowQueue.pop();
+			delete pStr;
 		}catch(...) {
 			waitTillDisconnected();
 			continue;
