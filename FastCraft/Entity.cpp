@@ -66,9 +66,13 @@ string Entity::getName() {
 }
 
 void Entity::spawn(NetworkOut& rOut) {
-	rOut.addByte(0x1E);
-	rOut.addInt(_iEntityID);
-	rOut.Finalize(FC_QUEUE_HIGH);
+	try {
+		rOut.addByte(0x1E);
+		rOut.addInt(_iEntityID);
+		rOut.Finalize(FC_QUEUE_HIGH);
+	}catch (FCRuntimeException& ex) {
+		ex.rethrow();
+	}
 }
 
 
@@ -83,54 +87,57 @@ void Entity::syncCoordinates(NetworkOut& rOut,EntityCoordinates& lastCoordinates
 		rOut.addInt((char) ((Coordinates.Pitch * 256.0F) / 360.0F));
 		rOut.Finalize(FC_QUEUE_HIGH);
 	}*/
+	try {
+		if(lastCoordinates.LookEqual(Coordinates)) {	//Player just moved around and doesn't change camera 
+			if (fabs(dX) <= 4.0 && fabs(dY) <= 4.0 && fabs(dZ) <= 4.0 ) {//Movement under 4 blocks
+				rOut.addByte(0x1F);//relative move
+				rOut.addInt(_iEntityID);
+				rOut.addByte(   (char) (dX*32.0) );
+				rOut.addByte(   (char) (dY*32.0) );
+				rOut.addByte(   (char) (dZ*32.0) );
+				rOut.Finalize(FC_QUEUE_HIGH);
+				return;
+			}
+			/* else: full update */
+		}else{ //player moved camera
+			if (lastCoordinates.CoordinatesEqual(Coordinates)) { //Just moved camera
+				rOut.addByte(0x20); //Entity Look
+				rOut.addInt(_iEntityID);
+				rOut.addByte( (char) ((Coordinates.Yaw * 256.0F) / 360.0F) );
+				rOut.addByte( (char) ((Coordinates.Pitch * 256.0F) / 360.0F) );
+				rOut.Finalize(FC_QUEUE_HIGH);
+				return;
+			}
+			if (fabs(dX) <= 4.0 && fabs(dY) <= 4.0 && fabs(dZ) <= 4.0 ) {//Movement under 4 blocks
+				rOut.addByte(0x21);//relative move + camera
+				rOut.addInt(_iEntityID);
+				rOut.addByte((char) (dX*32.0) );
+				rOut.addByte((char) (dY*32.0) );
+				rOut.addByte((char) (dZ*32.0) );
+				rOut.addByte((char) ((Coordinates.Yaw * 256.0F) / 360.0F) );
+				rOut.addByte((char) ((Coordinates.Pitch * 256.0F) / 360.0F) );
+				rOut.Finalize(FC_QUEUE_HIGH);
+				return;
+			}
+			/* else: full update */
+		}
 
-	if(lastCoordinates.LookEqual(Coordinates)) {	//Player just moved around and doesn't change camera 
-		if (fabs(dX) <= 4.0 && fabs(dY) <= 4.0 && fabs(dZ) <= 4.0 ) {//Movement under 4 blocks
-			rOut.addByte(0x1F);//relative move
-			rOut.addInt(_iEntityID);
-			rOut.addByte(   (char) (dX*32.0) );
-			rOut.addByte(   (char) (dY*32.0) );
-			rOut.addByte(   (char) (dZ*32.0) );
-			rOut.Finalize(FC_QUEUE_HIGH);
-			return;
-		}
-		/* else: full update */
-	}else{ //player moved camera
-		if (lastCoordinates.CoordinatesEqual(Coordinates)) { //Just moved camera
-			rOut.addByte(0x20); //Entity Look
-			rOut.addInt(_iEntityID);
-			rOut.addByte( (char) ((Coordinates.Yaw * 256.0F) / 360.0F) );
-			rOut.addByte( (char) ((Coordinates.Pitch * 256.0F) / 360.0F) );
-			rOut.Finalize(FC_QUEUE_HIGH);
-			return;
-		}
-		if (fabs(dX) <= 4.0 && fabs(dY) <= 4.0 && fabs(dZ) <= 4.0 ) {//Movement under 4 blocks
-			rOut.addByte(0x21);//relative move + camera
-			rOut.addInt(_iEntityID);
-			rOut.addByte((char) (dX*32.0) );
-			rOut.addByte((char) (dY*32.0) );
-			rOut.addByte((char) (dZ*32.0) );
-			rOut.addByte((char) ((Coordinates.Yaw * 256.0F) / 360.0F) );
-			rOut.addByte((char) ((Coordinates.Pitch * 256.0F) / 360.0F) );
-			rOut.Finalize(FC_QUEUE_HIGH);
-			return;
-		}
-		/* else: full update */
+		//Full update
+		rOut.addByte(0x22);
+		rOut.addInt(_iEntityID);
+
+		rOut.addInt( (int) (Coordinates.X * 32.0));
+		rOut.addInt( (int) (Coordinates.Y * 32.0));
+		rOut.addInt( (int) (Coordinates.Z * 32.0));
+
+		rOut.addByte( (char) ((Coordinates.Yaw * 256.0F) / 360.0F) );
+		rOut.addByte( (char) ((Coordinates.Pitch * 256.0F) / 360.0F) );
+		//rOut.addByte( (char) ((Coordinates.HeadYaw * 256.0F) / 360.0F) );
+
+		rOut.Finalize(FC_QUEUE_HIGH);
+	}catch (FCRuntimeException& ex) {
+		ex.rethrow();
 	}
-
-	//Full update
-	rOut.addByte(0x22);
-	rOut.addInt(_iEntityID);
-
-	rOut.addInt( (int) (Coordinates.X * 32.0));
-	rOut.addInt( (int) (Coordinates.Y * 32.0));
-	rOut.addInt( (int) (Coordinates.Z * 32.0));
-
-	rOut.addByte( (char) ((Coordinates.Yaw * 256.0F) / 360.0F) );
-	rOut.addByte( (char) ((Coordinates.Pitch * 256.0F) / 360.0F) );
-	//rOut.addByte( (char) ((Coordinates.HeadYaw * 256.0F) / 360.0F) );
-
-	rOut.Finalize(FC_QUEUE_HIGH);
 }
 
 char Entity::getBaseType() {

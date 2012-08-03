@@ -110,6 +110,7 @@ public:
 
 	/*
 	* Sends spawn packet to given client
+	* Throws FCRuntimeException if client isn't connected
 	*/
 	virtual void spawn(NetworkOut&);
 
