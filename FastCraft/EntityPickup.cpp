@@ -46,23 +46,27 @@ string EntityPickup::getName() {
 }
 
 void EntityPickup::spawn(NetworkOut& rOut){
-	rOut.addByte(0x15);
-	rOut.addInt(_iEntityID);
-	rOut.addShort(_itemID.first);
-	rOut.addByte(1);
+	try{
+		rOut.addByte(0x15);
+		rOut.addInt(_iEntityID);
+		rOut.addShort(_itemID.first);
+		rOut.addByte(1);
 
-	if(_pMCServer->getItemInfoProvider()->isBlock(_itemID) || !_pMCServer->getItemInfoProvider()->getItem(_itemID)->Damageable) {
-		rOut.addShort(_itemID.second);
-	}else{
-		rOut.addShort(0);
+		if(_pMCServer->getItemInfoProvider()->isBlock(_itemID) || !_pMCServer->getItemInfoProvider()->getItem(_itemID)->Damageable) {
+			rOut.addShort(_itemID.second);
+		}else{
+			rOut.addShort(0);
+		}
+	
+		rOut.addInt( (int) (Coordinates.X * 32.0));
+		rOut.addInt( (int) (Coordinates.Y * 32.0));
+		rOut.addInt( (int) (Coordinates.Z * 32.0));
+		rOut.addByte(0);
+		rOut.addByte(0);
+		rOut.addByte(0);
+	
+		rOut.Finalize(FC_QUEUE_HIGH);
+	}catch(FCRuntimeException& ex) {
+		ex.rethrow();
 	}
-	
-	rOut.addInt( (int) (Coordinates.X * 32.0));
-	rOut.addInt( (int) (Coordinates.Y * 32.0));
-	rOut.addInt( (int) (Coordinates.Z * 32.0));
-	rOut.addByte(0);
-	rOut.addByte(0);
-	rOut.addByte(0);
-	
-	rOut.Finalize(FC_QUEUE_HIGH);
 }

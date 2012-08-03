@@ -23,8 +23,8 @@ GNU General Public License for more details.
 #include "PlayerThread.h"
 
 EntityPlayer::EntityPlayer(MinecraftServer* pServer,World* pWorld,string sName) try :
-EntityLiving		(Constants::get("/Entity/Alive/TypeID/Player"),pServer,pWorld),
-_sName				("")
+	EntityLiving		(Constants::get("/Entity/Alive/TypeID/Player"),pServer,pWorld),
+	_sName				("")
 {
 	if (sName.compare("") == 0) {throw FCRuntimeException("Illegal name");}
 	_sName.assign(sName);
@@ -34,7 +34,7 @@ _sName				("")
 }
 
 EntityPlayer::EntityPlayer(PlayerThread* pPlayer) try :
-EntityLiving		(Constants::get("/Entity/Alive/TypeID/Player"),pPlayer->getMinecraftServer(),pPlayer->getWorld(),false),
+	EntityLiving		(Constants::get("/Entity/Alive/TypeID/Player"),pPlayer->getMinecraftServer(),pPlayer->getWorld(),false),
 	_sName				(pPlayer->getUsername())
 {
 
@@ -66,37 +66,45 @@ string EntityPlayer::getName() {
 
 void EntityPlayer::spawn(NetworkOut& rOut) {
 	/* Spawn packet */
-	rOut.addByte(0x14);
-	rOut.addInt(_iEntityID);
-	rOut.addString(_sName);
-	rOut.addInt(int(floor(Coordinates.X * 32.0)));
-	rOut.addInt(int(floor(Coordinates.Y * 32.0)));
-	rOut.addInt(int(floor(Coordinates.Z * 32.0)));
-	rOut.addByte(char((Coordinates.Yaw * 256.0F) / 360.0F));
-	rOut.addByte(char((Coordinates.Pitch * 256.0F) / 360.0F));
-	
-	rOut.addShort(_vpHeld[0] == NULL || _vpHeld[0]->isEmpty() ? 0 : _vpHeld[0]->getItem().first);
-	rOut.Finalize(FC_QUEUE_HIGH);
+	try{
+		rOut.addByte(0x14);
+		rOut.addInt(_iEntityID);
+		rOut.addString(_sName);
+		rOut.addInt(int(floor(Coordinates.X * 32.0)));
+		rOut.addInt(int(floor(Coordinates.Y * 32.0)));
+		rOut.addInt(int(floor(Coordinates.Z * 32.0)));
+		rOut.addByte(char((Coordinates.Yaw * 256.0F) / 360.0F));
+		rOut.addByte(char((Coordinates.Pitch * 256.0F) / 360.0F));
 
-	sendEquipment(rOut);
-	sendMetadata(rOut);
+		rOut.addShort(_vpHeld[0] == NULL || _vpHeld[0]->isEmpty() ? 0 : _vpHeld[0]->getItem().first);
+		rOut.Finalize(FC_QUEUE_HIGH);
+
+		sendEquipment(rOut);
+		sendMetadata(rOut);
+	}catch(FCRuntimeException& ex) {
+		ex.rethrow();
+	}
 }
 
 
 void EntityPlayer::appendMetadata(NetworkOut& rOut) {
 	//Flags
 	//            DataID      Data Type);
-	rOut.addByte((0&0x1f) | ((0<<5)&0xe0)); 
-	
-	std::bitset<5> bitFlags;
-	bitFlags[0] = Flags.isOnFire();
-	bitFlags[1] = Flags.isCrouched();
-	bitFlags[2] = Flags.isRiding();
-	bitFlags[3] = Flags.isSprinting();
-	bitFlags[4] = Flags.isRightClicking();
+	try{
+		rOut.addByte((0&0x1f) | ((0<<5)&0xe0)); 
 
-	rOut.addByte((unsigned char)bitFlags.to_ulong());
-	rOut.addByte(127);
+		std::bitset<5> bitFlags;
+		bitFlags[0] = Flags.isOnFire();
+		bitFlags[1] = Flags.isCrouched();
+		bitFlags[2] = Flags.isRiding();
+		bitFlags[3] = Flags.isSprinting();
+		bitFlags[4] = Flags.isRightClicking();
+
+		rOut.addByte((unsigned char)bitFlags.to_ulong());
+		rOut.addByte(127);
+	}catch(FCRuntimeException& ex) {
+		ex.rethrow();
+	}
 }
 
 short EntityPlayer::getMaxHealth() {

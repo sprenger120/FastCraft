@@ -22,7 +22,7 @@ GNU General Public License for more details.
 using std::vector;
 
 EntityLiving::EntityLiving(char iType,MinecraftServer* pServer,World* pWorld,bool fGrabNew) try :
-Entity			(pServer,pWorld,fGrabNew),
+	Entity			(pServer,pWorld,fGrabNew),
 	_vpHeld			(5)
 {
 	if (!Constants::isDefined(iType,"/Entity/Alive/TypeID")) {throw FCRuntimeException("Entity type not defined!");}
@@ -56,31 +56,43 @@ string EntityLiving::getName() {
 }
 
 void EntityLiving::spawn(NetworkOut& rOut) {
-	rOut.addByte(0x18);
-	rOut.addInt(_iEntityID);
-	rOut.addByte(_iType);
-	rOut.addInt(int(floor(Coordinates.X * 32.0)));
-	rOut.addInt(int(floor(Coordinates.Y * 32.0)));
-	rOut.addInt(int(floor(Coordinates.Z * 32.0)));
-	rOut.addByte(char((Coordinates.Yaw * 256.0F) / 360.0F));
-	rOut.addByte(char((Coordinates.Pitch * 256.0F) / 360.0F));
-	//rOut.addByte(char((Coordinates.HeadYaw * 256.0F) / 360.0F));
-	appendMetadata(rOut);
-	rOut.Finalize(FC_QUEUE_HIGH);
+	try {
+		rOut.addByte(0x18);
+		rOut.addInt(_iEntityID);
+		rOut.addByte(_iType);
+		rOut.addInt(int(floor(Coordinates.X * 32.0)));
+		rOut.addInt(int(floor(Coordinates.Y * 32.0)));
+		rOut.addInt(int(floor(Coordinates.Z * 32.0)));
+		rOut.addByte(char((Coordinates.Yaw * 256.0F) / 360.0F));
+		rOut.addByte(char((Coordinates.Pitch * 256.0F) / 360.0F));
+		//rOut.addByte(char((Coordinates.HeadYaw * 256.0F) / 360.0F));
+		appendMetadata(rOut);
+		rOut.Finalize(FC_QUEUE_HIGH);
 
-	sendEquipment(rOut);
+		sendEquipment(rOut);
+	}catch(FCRuntimeException& ex) {
+		ex.rethrow();
+	}
 }
 
 
 void EntityLiving::appendMetadata(NetworkOut& rOut) { 
-	rOut.addByte(127);
+	try {
+		rOut.addByte(127);
+	}catch(FCRuntimeException& ex) {
+		ex.rethrow();
+	}
 }
 
 void EntityLiving::sendMetadata(NetworkOut& rOut) { 
-	rOut.addByte(0x28);
-	rOut.addInt(_iEntityID);
-	appendMetadata(rOut);
-	rOut.Finalize(FC_QUEUE_HIGH);
+	try{
+		rOut.addByte(0x28);
+		rOut.addInt(_iEntityID);
+		appendMetadata(rOut);
+		rOut.Finalize(FC_QUEUE_HIGH);
+	}catch(FCRuntimeException& ex) {
+		ex.rethrow();
+	}
 }
 
 short EntityLiving::getHealth() {
@@ -92,47 +104,54 @@ short EntityLiving::getMaxHealth() {
 }
 
 void EntityLiving::sendEquipment(NetworkOut& rOut) {
-	for (char x=0;x<=4;x++) {
-		if (_vpHeld[x]->isEmpty()) {continue;}
-		rOut.addByte(0x5);
-		rOut.addInt(_iEntityID);
-		rOut.addShort( x==0 ? 0 : 4-(x-1) );
-		rOut.addShort(_vpHeld[x]->getItem().first);
-		rOut.addShort(_vpHeld[x]->getItem().second);
-		rOut.Finalize(FC_QUEUE_HIGH);
+	try{
+		for (char x=0;x<=4;x++) {
+			if (_vpHeld[x]->isEmpty()) {continue;}
+			rOut.addByte(0x5);
+			rOut.addInt(_iEntityID);
+			rOut.addShort( x==0 ? 0 : 4-(x-1) );
+			rOut.addShort(_vpHeld[x]->getItem().first);
+			rOut.addShort(_vpHeld[x]->getItem().second);
+			rOut.Finalize(FC_QUEUE_HIGH);
+		}
+	}catch(FCRuntimeException& ex) {
+		ex.rethrow();
 	}
 }
 
 void EntityLiving::updateEquipment(NetworkOut& rOut,EquipmentArray& rOldEquip) {
 	if (rOldEquip.size() != 5) {throw FCRuntimeException("Illegal size");}
+	try{
+		for (char x=0;x<=4;x++) {
+			if (_vpHeld[x]->isEmpty() && rOldEquip[x]->isEmpty()) {continue;} //Both are empty - nothing changed
 
-	for (char x=0;x<=4;x++) {
-		if (_vpHeld[x]->isEmpty() && rOldEquip[x]->isEmpty()) {continue;} //Both are empty - nothing changed
+			if (_vpHeld[x]->isEmpty() && !rOldEquip[x]->isEmpty()) { //A slot was cleared
+				rOldEquip[x]->clear();
 
-		if (_vpHeld[x]->isEmpty() && !rOldEquip[x]->isEmpty()) { //A slot was cleared
-			rOldEquip[x]->clear();
-			
-			rOut.addByte(0x5);
-			rOut.addInt(_iEntityID);
-			rOut.addShort(x==0 ? 0 : 4-(x-1));
-			rOut.addShort(-1);
-			rOut.addShort(0);
-			rOut.Finalize(FC_QUEUE_HIGH);
-			continue;
+				rOut.addByte(0x5);
+				rOut.addInt(_iEntityID);
+				rOut.addShort(x==0 ? 0 : 4-(x-1));
+				rOut.addShort(-1);
+				rOut.addShort(0);
+				rOut.Finalize(FC_QUEUE_HIGH);
+				continue;
+			}
+
+
+			if ((*_vpHeld[x]) != (*rOldEquip[x])) { //ItemID change
+				rOldEquip[x]->setItem(_vpHeld[x]->getItem());
+
+				rOut.addByte(0x5);
+				rOut.addInt(_iEntityID);
+				rOut.addShort(x==0 ? 0 : 4-(x-1));
+				rOut.addShort(_vpHeld[x]->getItem().first);
+				rOut.addShort(_vpHeld[x]->getItem().second);
+				rOut.Finalize(FC_QUEUE_HIGH);
+				continue;
+			}
 		}
-		 
-
-		if ((*_vpHeld[x]) != (*rOldEquip[x])) { //ItemID change
-			rOldEquip[x]->setItem(_vpHeld[x]->getItem());
-
-			rOut.addByte(0x5);
-			rOut.addInt(_iEntityID);
-			rOut.addShort(x==0 ? 0 : 4-(x-1));
-			rOut.addShort(_vpHeld[x]->getItem().first);
-			rOut.addShort(_vpHeld[x]->getItem().second);
-			rOut.Finalize(FC_QUEUE_HIGH);
-			continue;
-		}
+	}catch(FCRuntimeException& ex) {
+		ex.rethrow();
 	}
 }
 
