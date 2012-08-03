@@ -68,7 +68,7 @@ void FCRuntimeException::printStacktrace() {
 			}
         }
 
-        delete symbol;
+        free(symbol);
     #elif defined(__linux__)
         void *array[15];
         size_t size;
