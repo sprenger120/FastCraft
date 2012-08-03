@@ -22,7 +22,8 @@ EntityListEntry::EntityListEntry(Entity* pEntity) {
 
 
 	if (pEntity->isAlive()) {
-		EntityLiving* pLiving = (EntityLiving*)pEntity;
+		EntityLiving* pLiving = dynamic_cast<EntityLiving*>(pEntity);
+		if (pLiving == NULL) {throw FCRuntimeException("Unable to cast entity instance");}
 		Equipment.resize(5);
 		
 		_iType = pLiving->getType();
