@@ -59,12 +59,12 @@ NBTTagCompound* NBTBinaryParser::parse(char* pStr, char iInputType,int iLen) {
 		inflator.close();
 
 		_iSize = ssOutput.str().length();
-		if (_iSize <= 0) {FCRuntimeException("Unable to extract data");}
+		if (_iSize <= 0) {throw FCRuntimeException("Unable to extract data");}
 
 		pStr = new char[_iSize];
 		memcpy(pStr,ssOutput.str().c_str(),_iSize);
 	}else{
-		if (iLen <= 0) {FCRuntimeException("Illegal lenght");}
+		if (iLen <= 0) {throw FCRuntimeException("Illegal lenght");}
 		_iSize = iLen;
 	}
 
