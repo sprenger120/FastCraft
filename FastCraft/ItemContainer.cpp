@@ -29,6 +29,7 @@ ItemContainer::ItemContainer(char iCount,MinecraftServer* pMCServer,char iType) 
 
 	_pMCServer = pMCServer;
 	_iType = iType;
+	_pPreferredRange = NULL;
 
 	_pInHand = new ItemSlot(_pMCServer->getItemInfoProvider());
 	for (char x = 0;x<=iCount-1;x++) {
@@ -172,7 +173,7 @@ void ItemContainer::readClickWindow(PlayerThread* pPlayer,NetworkIn& rIn) {
 				return;
 			}
 		}else{
-			if (_vSlots[iSlot]->isEmpty()) {return;} //Kicked on an empty slot
+			if (_vSlots[iSlot]->isEmpty()) {return;} //Clicked on an empty slot
 		}
 
 		mergeStacks(&_vSlots[iSlot],&_pInHand);
@@ -247,15 +248,19 @@ bool ItemContainer::mergeStacks(ItemSlot** item1,ItemSlot** item2,bool fUseEmpty
 }
 
 void ItemContainer::syncInventory(NetworkOut& rOut) {
-	rOut.addByte(0x68);
-	rOut.addByte(_iType);
-	rOut.addShort(_vSlots.size()); //Slots in inventory
+	try{
+		rOut.addByte(0x68);
+		rOut.addByte(_iType);
+		rOut.addShort(_vSlots.size()); //Slots in inventory
 
-	for (short x=0;x<=_vSlots.size()-1;x++){
-		_vSlots[x]->writeToNetwork(rOut);
+		for (short x=0;x<=_vSlots.size()-1;x++){
+			_vSlots[x]->writeToNetwork(rOut);
+		}
+
+		rOut.Finalize(FC_QUEUE_HIGH);
+	}catch(FCRuntimeException& ex) {
+		ex.rethrow();
 	}
-
-	rOut.Finalize(FC_QUEUE_HIGH);
 }
 
 void ItemContainer::clear() {
@@ -267,10 +272,14 @@ void ItemContainer::clear() {
 void ItemContainer::syncSlot(NetworkOut& rOut,short iSlot) {
 	if (iSlot < 0 || iSlot > _vSlots.size() -1) {throw FCRuntimeException("Invalid slotID");}
 
-	rOut.addByte(0x67);
-	rOut.addByte(_iType);
-	rOut.addShort(iSlot); 
-	_vSlots[iSlot]->writeToNetwork(rOut);
+	try{
+		rOut.addByte(0x67);
+		rOut.addByte(_iType);
+		rOut.addShort(iSlot); 
+		_vSlots[iSlot]->writeToNetwork(rOut);
+	}catch(FCRuntimeException& ex) {
+		ex.rethrow();
+	}
 }
 
 bool ItemContainer::isAllowedToPlace(short,ItemID) {

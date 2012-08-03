@@ -21,7 +21,7 @@ GNU General Public License for more details.
 #include <Poco/ScopedLock.h>
 
 ItemSlot::ItemSlot(ItemInformationProvider* pIIP): 
-_vEnchantments(0)
+	_vEnchantments(0)
 {
 	_pItemInfoProvider = pIIP;
 	_Item.first = _Item.second = 0;
@@ -202,7 +202,7 @@ void ItemSlot::readFromNetwork(NetworkIn& rNetwork) {
 		if (iItemID != -1) {
 			_iStackSize = rNetwork.readByte();
 			short Usage = rNetwork.readShort();
-			
+
 			switch (_pItemInfoProvider->isBlock(iItemID)) {
 			case true:
 				_Item = ItemID(iItemID,char(Usage));
@@ -284,19 +284,23 @@ void ItemSlot::readFromNetwork(NetworkIn& rNetwork) {
 
 void ItemSlot::writeToNetwork(NetworkOut& Out) {
 	//Poco::Mutex::ScopedLock scopelock(_Mutex);
-	if (isEmpty()) {
-		Out.addShort(-1);
-		return;
-	}else{
-		Out.addShort(_Item.first);
-		Out.addByte(_iStackSize);
-
-		if (_pItemCache_Item != NULL && _pItemCache_Item->Damageable) {
-			Out.addShort(_iUsage);
+	try{
+		if (isEmpty()) {
 			Out.addShort(-1);
+			return;
 		}else{
-			Out.addShort(_Item.second);
+			Out.addShort(_Item.first);
+			Out.addByte(_iStackSize);
+
+			if (_pItemCache_Item != NULL && _pItemCache_Item->Damageable) {
+				Out.addShort(_iUsage);
+				Out.addShort(-1);
+			}else{
+				Out.addShort(_Item.second);
+			}
 		}
+	}catch(FCRuntimeException& ex) {
+		ex.rethrow();
 	}
 }
 

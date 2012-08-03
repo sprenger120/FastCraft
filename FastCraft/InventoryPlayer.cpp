@@ -42,7 +42,11 @@ void InventoryPlayer::reset() {
 }
 
 void InventoryPlayer::readHeldItemChange() {
-	_iActionBarSelection = (char)_rNetworkIn.readShort();
+	try {
+		_iActionBarSelection = (char)_rNetworkIn.readShort();
+	}catch(FCRuntimeException& ex) {
+		ex.rethrow();
+	}
 	if (_iActionBarSelection < 0 || _iActionBarSelection > 8) {_pPlayer->Disconnect("Illegal ActionBarSelection ID");}
 }
 
@@ -51,8 +55,12 @@ void InventoryPlayer::onDisconnect() {
 }
 
 void InventoryPlayer::onLogin() {
+	try{
 	NetworkOut Out(_pPlayer->getNetworkOutRoot());
 	syncInventory(Out);
+	}catch(FCRuntimeException& ex) {
+		ex.rethrow();
+	}
 }
 
 ItemSlot* InventoryPlayer::getSelectedSlot() {
@@ -70,7 +78,7 @@ void InventoryPlayer::DecreaseInHandStack() {
 }
 
 bool InventoryPlayer::isAllowedToPlace(short iSlot,ItemID itemID) {
-	if (iSlot <= 5 && iSlot >= 8){ 
+	if (iSlot >= 5 && iSlot <= 8){ 
 		if (!_vSlots[iSlot]->isEmpty()) {return false;}
 		if (_vSlots[iSlot]->getStackSize() + 1 > 1){return false;}
 	}
@@ -115,6 +123,10 @@ bool InventoryPlayer::isAllowedToPlace(short iSlot,ItemID itemID) {
 }
 
 void InventoryPlayer::syncInHandStack() {
-	NetworkOut Out(_pPlayer->getNetworkOutRoot());
-	syncSlot(Out,36+_iActionBarSelection);
+	try{
+		NetworkOut Out(_pPlayer->getNetworkOutRoot());
+		syncSlot(Out,36+_iActionBarSelection);
+	}catch(FCRuntimeException& ex) {
+		ex.rethrow();
+	}
 }
