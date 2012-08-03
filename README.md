@@ -10,6 +10,8 @@ FastCraft is a SMP Minecraft Server, written in C++.  The current version suppor
 [FastCraft CI](http://ci.fastcraft-server.tk/job/FastCraft/)
 
 Framework: [POCO](http://pocoproject.org/)
+Other libraries: [Crypto++](http://www.cryptopp.com)
+
 
 ***
 
