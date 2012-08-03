@@ -19,7 +19,7 @@ GNU General Public License for more details.
 
 EntityCoordinates::EntityCoordinates() {
 	X = Y = Z = Stance = 0.0;
-	Yaw = Pitch = 0.0F;
+	Yaw = Pitch = HeadYaw = 0.0F;
 	OnGround = false;
 }
 
