@@ -169,7 +169,7 @@ string& NetworkOut::getStr() {
 void NetworkOut::Finalize(char iType) {
 	if (iType != FC_QUEUE_LOW && iType != FC_QUEUE_HIGH) {throw FCRuntimeException("Unknown queue type");}
 	if (_pNetworkBuffer->empty()) {return;}
-	if (!_pMaster->_pPlayer->isAssigned()) {return;}
+	if (!_pMaster->_pPlayer->isAssigned()) {throw FCRuntimeException("Unable to encode data",false);}
 
 	string* pCiphed = NULL;
 
@@ -184,8 +184,7 @@ void NetworkOut::Finalize(char iType) {
 			); 
 		}catch(CryptoPP::Exception) {
 			delete pCiphed;
-			std::cout<<"Unable to encrypt data\n";
-			return;
+			throw FCRuntimeException("Unable to encode data",false);
 		}
 
 		_pMaster->Add(iType,pCiphed);

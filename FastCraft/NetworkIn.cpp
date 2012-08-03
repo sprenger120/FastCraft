@@ -197,6 +197,8 @@ void NetworkIn::read(int iLenght,char* pBuffer) {
 	int iUnderflowCount=0;
 	bool fUnderflow = false;
 
+	if (!_pPlayer->isAssigned()) {throw FCRuntimeException("Not connected",false);}
+
 	while ( iReadedLenght < iLenght) {
 		try {
 			switch(fUnderflow) {

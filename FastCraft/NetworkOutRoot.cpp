@@ -35,7 +35,7 @@ NetworkOutRoot::~NetworkOutRoot() {
 }
 
 ThreadSafeQueue<string*> & NetworkOutRoot::getLowQueue() {
-	return _lowQueue;
+	return  _lowQueue;
 }
 
 ThreadSafeQueue<string*> & NetworkOutRoot::getHighQueue() {

@@ -67,7 +67,8 @@ public:
 
 
 	/*
-	* Explicit write members for this class
+	* Write functions
+	* All functions throw FCRuntimeException if client isn't connected
 	*/
 	void addByte(unsigned char);
 	void addBool(bool);

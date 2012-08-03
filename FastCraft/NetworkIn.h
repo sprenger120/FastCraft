@@ -67,7 +67,9 @@ public:
 
 	/*
 	* Read functions
-	* Will throw FCRuntimeException if connection get aborted
+	* Throw FCRuntimeException if 
+	   - connection aborts
+	   - client isn't connected
 	*/
 	char readByte(); 
 	bool readBool();
