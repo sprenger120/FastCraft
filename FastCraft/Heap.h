@@ -328,7 +328,7 @@ bool Heap<tDataType,tAdressType>::has(tAdressType ID) {
 template<typename tDataType,typename tAdressType>
 void Heap<tDataType,tAdressType>::erase(tAdressType ID) {
 	HeapElement* p = getElement(ID);
-	if (p == NULL || p->pElement == NULL) {throw 1;FCRuntimeException("Element doesn't exists");}
+	if (p == NULL || p->pElement == NULL) {throw FCRuntimeException("Element doesn't exists");}
 	
 	Poco::ScopedLock<Poco::Mutex> sLock(_Mutex);
 
