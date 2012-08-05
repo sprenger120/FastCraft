@@ -28,7 +28,7 @@ Entity::Entity(MinecraftServer* pServer,World* pWorld,bool fGRabNewEID) {
 	}else{
 		_iEntityID = -1;
 	}
-	_iCreation = pServer->getInGameTime();
+	_iCreation = pServer->getTimestamp();
 	_pWorld = pWorld;
 	_pMCServer = pServer;
 }
@@ -45,7 +45,7 @@ World* Entity::getWorld() {
 }
 
 Tick Entity::getLiveTime() {
-	return _pMCServer->getInGameTime() - _iCreation;
+	return _pMCServer->getTimestamp() - _iCreation;
 }
 
 
