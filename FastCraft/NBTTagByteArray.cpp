@@ -59,3 +59,7 @@ char NBTTagByteArray::operator[] (int index) {
 	if (index > _iLen-1) { throw FCRuntimeException("Index out of bound!"); }
 	return _pData[index];
 }
+
+int NBTTagByteArray::size(){
+	return _iLen;
+}

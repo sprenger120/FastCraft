@@ -67,5 +67,11 @@ public:
 	* Will throw FCRuntimeException if index is out of bound or invalid
 	*/
 	char operator[] (int);
+
+
+	/*
+	* Returns size of internal char array
+	*/
+	int size();
 };
 #endif
