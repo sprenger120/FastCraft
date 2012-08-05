@@ -119,7 +119,7 @@ NBTTagBase* NBTTagCompound::search(string sPath, char iType) {
 			iPathLevel != iExitLevel)
 			)
 		{
-			throw FCRuntimeException("Not found");
+			return NULL;
 		}
 		if (iPathLevel == iExitLevel) {break;}
 
@@ -136,4 +136,21 @@ NBTTagBase* NBTTagCompound::getElementByName(string sName) {
 		if (_vpElements[x]->getName().compare(sName) == 0) {return  _vpElements[x];}
 	}
 	return NULL;
+}
+
+
+bool NBTTagCompound::has(string sName) {
+	if (_vpElements.empty()) { return false;}
+	for (unsigned int x=0;x<=_vpElements.size()-1;x++) {
+		if (_vpElements[x]->getName().compare(sName) == 0) {return true;}
+	}
+	return false;
+}
+
+bool NBTTagCompound::has(string sName,char iType) {
+	if (_vpElements.empty()) { return false;}
+	for (unsigned int x=0;x<=_vpElements.size()-1;x++) {
+		if (_vpElements[x]->getName().compare(sName) == 0 && _vpElements[x]->getTagType() == iType) {return true;}
+	}
+	return false;
 }
