@@ -17,9 +17,8 @@ GNU General Public License for more details.
 #include <string>
 #include <stack>
 
+
 /* This class is not thread-safe! */ 
-
-
 union NBTU_Short {
 	char sData[2];
 	short iData;
@@ -40,6 +39,7 @@ union NBTU_Int64 {
 using std::stack;
 using std::string;
 class NBTTagCompound;
+class NBTTagBase;
 
 class NBTBinaryParser {
 private:
@@ -86,12 +86,3 @@ private:
 	NBTTagCompound* handleCompound(bool = true);
 };
 #endif
-
-
-//NBTTagShort* pElement = NULL;
-//
-//if (pElement) {delete pElement;}
-//
-//
-//
-//if (_byteIndex + 2 > _iSize-1)
