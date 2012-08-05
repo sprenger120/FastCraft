@@ -31,6 +31,7 @@ GNU General Public License for more details.
 #include <osrng.h>
 #include <rsa.h>
 #include <files.h>
+#include "Types.h"
 
 //Forward definitions
 class AcceptThread;
@@ -45,8 +46,6 @@ using std::string;
 using std::vector;
 using CryptoPP::RSA;
 using CryptoPP::RSA;
-
-typedef unsigned long long Tick;
 
 class MinecraftServer : public ServerThreadBase {
 	friend class NetworkIn;
@@ -85,8 +84,6 @@ private:
 
 	/* Time stuff */
 	Poco::Stopwatch _clockCreation;
-	Tick   _iInGameTime;
-
 
 	/* Other */
 	bool _fMarkedForShutdown;
@@ -256,13 +253,7 @@ public:
 
 
 	/*
-	* Returns actual in-game time
-	*/
-	Tick getInGameTime();
-
-
-	/*
-	* Returns time in milliseconds since class was created
+	* Returns actual timestamp
 	*/
 	Tick getTimestamp();
 

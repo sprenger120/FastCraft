@@ -43,7 +43,6 @@ MinecraftServer::MinecraftServer(string sName,Poco::Path sRootPath,vector<unsign
 	_vsAdditionalWorlds		(0),
 	_vpWorlds				(0),
 	ServerThreadBase		("Minecraft Server"),
-	_iInGameTime			(0),
 	_pathServerDir			(sRootPath)
 {
 	_iPort						= 25565;
@@ -120,13 +119,24 @@ MinecraftServer::MinecraftServer(string sName,Poco::Path sRootPath,vector<unsign
 		_pItemInformationProvider = new ItemInformationProvider(sRootPath);
 	}
 
-
 	//load words
-	cout<<"Loading worlds...\n";
-	_vpWorlds.push_back(new World(_sMainMapName,0,this));
-	if (!_vsAdditionalWorlds.empty()) {
-		for(int x=0;x<=_vsAdditionalWorlds.size()-1;x++) {
-			_vpWorlds.push_back(new World(_vsAdditionalWorlds[x],0,this));
+	{
+		cout<<"Loading worlds...\n";
+
+		cout<<"\tloading: "<<_sMainMapName<<"\n";
+		_vpWorlds.push_back(new World(_sMainMapName,0,this));
+		
+		cout<<"\tloading: "<<_sMainMapName<<"_nether\n";
+		_vpWorlds.push_back(new World(_sMainMapName + "_nether",-1,this));
+		
+		cout<<"\tloading: "<<_sMainMapName<<"_the_end\n";
+		_vpWorlds.push_back(new World(_sMainMapName + "_the_end",1,this));
+		
+		if (!_vsAdditionalWorlds.empty()) {
+			for(int x=0;x<=_vsAdditionalWorlds.size()-1;x++) {
+				cout<<"\tloading: "<<_vsAdditionalWorlds[x]<<"\n";
+				_vpWorlds.push_back(new World(_vsAdditionalWorlds[x],0,this));
+			}
 		}
 	}
 
@@ -160,14 +170,10 @@ MinecraftServer::MinecraftServer(string sName,Poco::Path sRootPath,vector<unsign
 
 
 	//start accept thread
-	try{
-		cout<<"Init network...\n";
-		_pAcceptThread = new AcceptThread(this);
-		rvUsedPorts.push_back(_iPort);
-	}catch(FCRuntimeException& ex) { 
-		cout<<"Unable to start server: "<< ex.getMessage()<<"\n"<<std::endl;
-		return;
-	}
+	cout<<"Init network...\n";
+	_pAcceptThread = new AcceptThread(this);
+	rvUsedPorts.push_back(_iPort);
+
 
 	startThread(this);
 	cout<<sName<<" started successfully! (Startup time:"
@@ -178,7 +184,10 @@ MinecraftServer::MinecraftServer(string sName,Poco::Path sRootPath,vector<unsign
 
 }catch(CryptoPP::Exception){
 	throw FCRuntimeException("Unable to generate RSA key");
+}catch(FCRuntimeException& ex) {
+	ex.rethrow();
 }
+
 
 MinecraftServer::~MinecraftServer() {
 	if (isRunning()) {cout<<"Shutting down server "<<_sServerName<<"...\n";}
@@ -201,13 +210,8 @@ MinecraftServer::~MinecraftServer() {
 void MinecraftServer::run() {
 	_iThreadStatus = FC_THREADSTATUS_RUNNING;
 
-	/*Poco::Stopwatch _TickClock;
-	_TickClock.start();*/
-
-
-	while(_iThreadStatus==FC_THREADSTATUS_RUNNING)  {
+	while(_iThreadStatus == FC_THREADSTATUS_RUNNING)  {
 		Poco::Thread::sleep(50);
-		_iInGameTime += 1;
 	}
 
 	_iThreadStatus = FC_THREADSTATUS_DEAD;
@@ -457,12 +461,8 @@ World* MinecraftServer::getWorldByName(string sName) {
 }
 
 
-Tick MinecraftServer::getInGameTime() {
-	return _iInGameTime;
-}
-
 Tick MinecraftServer::getTimestamp() {
-	return _clockCreation.elapsed() / 1000;
+	return Tick(_clockCreation.elapsed() / 50000);
 }
 
 int MinecraftServer::generateID(){
