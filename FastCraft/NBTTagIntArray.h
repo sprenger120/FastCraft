@@ -27,12 +27,17 @@ private:
 public:
 	/*
 	* Constructor
+	* Throws FCRuntimeException if count is below zero
 
 	Parameter:
 	@1 : Name of element
+
+	Parameter:
+	@1 : Name of element
+	@2 : Element count
 	*/
 	NBTTagIntArray(string);
-
+	NBTTagIntArray(string,int);
 
 	/*
 	* Writes content to target string
@@ -82,5 +87,14 @@ public:
 	@1 : Index of element to delete
 	*/
 	void erase(int);
+
+
+	/*
+	* Resizes the integer array
+
+	Parameter:
+	@1 : new size
+	*/
+	void setSize(int);
 };
 #endif

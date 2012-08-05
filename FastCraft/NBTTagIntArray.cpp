@@ -22,6 +22,16 @@ NBTTagIntArray::NBTTagIntArray(string sName) :
 {
 }
 
+NBTTagIntArray::NBTTagIntArray(string sName,int iSize) : 
+	NBTTagBase(sName,FC_NBT_TYPE_INTARRAY)
+{
+	if (iSize < 0) {throw FCRuntimeException("Illegal size");}
+	_vpElements.resize(iSize);
+}
+
+
+
+
 void NBTTagIntArray::write(string& rStr,char iType,bool fHeaderless)  {
 	string sTemp("");
 	string& rTarget = ( iType == FC_NBT_IO_RAW ? rStr : sTemp);
@@ -72,4 +82,9 @@ void NBTTagIntArray::erase(int index) {
 
 void NBTTagIntArray::addSubElement(int i) {
 	_vpElements.push_back(i);
+}
+
+void NBTTagIntArray::setSize(int iSize) {
+	if (iSize < 0) {throw FCRuntimeException("Illegal size");}
+	_vpElements.resize(iSize);
 }
