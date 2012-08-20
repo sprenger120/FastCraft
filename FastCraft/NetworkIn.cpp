@@ -30,7 +30,7 @@ NetworkIn::NetworkIn(StreamSocket& r,MinecraftServer* pMCServer,PlayerThread* pP
 	_pPlayer = pPlayer;
 	_fCryptMode = false;
 	_aesDecryptor = NULL;
-	_cfbEncryptor = NULL;
+	_cfbDecryptor = NULL;
 }
 
 NetworkIn::~NetworkIn() {
@@ -236,9 +236,9 @@ void NetworkIn::setCryptMode(bool fVal) {
 	if (fVal) {
 		memcpy(_IV,_pPlayer->getSecretKey().first,_pPlayer->getSecretKey().second);
 		if (_aesDecryptor != NULL) {delete _aesDecryptor;}
-		if (_cfbEncryptor != NULL) {delete _cfbEncryptor;}
+		if (_cfbDecryptor != NULL) {delete _cfbDecryptor;}
 		_aesDecryptor = new CryptoPP::CFB_Mode<AES>::Decryption((byte*)_pPlayer->getSecretKey().first,(unsigned int)_pPlayer->getSecretKey().second,_IV,1);
-		_cfbEncryptor = new CryptoPP::StreamTransformationFilter(*_aesDecryptor, new StringSink(_sDecryptOutput));
+		_cfbDecryptor = new CryptoPP::StreamTransformationFilter(*_aesDecryptor, new StringSink(_sDecryptOutput));
 	}
 }
 
@@ -247,8 +247,8 @@ void NetworkIn::AESdecrypt(char* pSrc,int iLen) {
 	try {
 		_sDecryptOutput.clear();
 
-		_cfbEncryptor->Put((byte*)pSrc, iLen);
-		_cfbEncryptor->MessageEnd();
+		_cfbDecryptor->Put((byte*)pSrc, iLen);
+		_cfbDecryptor->MessageEnd();
 
 		if (_sDecryptOutput.length() != iLen) {throw;}
 
