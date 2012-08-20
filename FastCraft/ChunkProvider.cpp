@@ -41,12 +41,10 @@ char ChunkProvider::_sDespawnCode[] = {0x1, //ground up continuous
 	0x78,0x9C,0x63,0x64,0x1C,0xD9,0x00,0x00,0x81,0x80,0x01,0x01};
 
 ChunkProvider::ChunkProvider(NetworkOutRoot& rNetwork,
-							 PackingThread& rPackingThread,
 							 PlayerThread* pPlayer,
 							 MinecraftServer* pServer
 							 ) :
 _rNetwork(rNetwork),
-	_rPackingThread(rPackingThread),
 	ServerThreadBase("ChunkProvider")
 {
 	_pPlayer = pPlayer;

@@ -36,13 +36,12 @@ using std::cout;
 PlayerPool::PlayerPool(MinecraftServer* pServer) :
 _vPlayerThreads(pServer->getPlayerSlotCount()),
 	ServerThreadBase("PlayerPool"),
-	_qEvents(),
-	_PackingThread()
+	_qEvents()
 {	
 	_pMinecraftServer = pServer;
 
 	for (int x=0;x<=_vPlayerThreads.size()-1;x++) {
-		_vPlayerThreads[x] = new PlayerThread(_PackingThread,pServer);
+		_vPlayerThreads[x] = new PlayerThread(pServer);
 	}	
 	startThread(this);
 }

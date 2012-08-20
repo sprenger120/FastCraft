@@ -28,9 +28,7 @@ GNU General Public License for more details.
 #include "ThreadSafeQueue.h"
 #include "EntityPlayer.h"
 #include "ServerThreadBase.h"
-#include "PackingThread.h"
 
-class PlayerThread;
 class PackingThread;
 class PlayerEventBase;
 class MinecraftServer;
@@ -43,8 +41,6 @@ private:
 	MinecraftServer* _pMinecraftServer;
 	vector<PlayerThread*> _vPlayerThreads;
 	ThreadSafeQueue<PlayerEventBase*> _qEvents;
-	
-	PackingThread _PackingThread;
 public:
 	/*
 	* Constructor

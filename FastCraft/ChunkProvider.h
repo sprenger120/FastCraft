@@ -37,7 +37,6 @@ private:
 
 	World* _pWorld;
 	NetworkOutRoot& _rNetwork;
-	PackingThread& _rPackingThread;
 	PlayerThread* _pPlayer;
 	MinecraftServer* _pMCServer;
 
@@ -52,7 +51,7 @@ public:
 	@2 : Servers PackingThread instance
 	@3 : Clients this pointer
 	*/ 
-	ChunkProvider(NetworkOutRoot&,PackingThread&,PlayerThread*,MinecraftServer*);
+	ChunkProvider(NetworkOutRoot&,PlayerThread*,MinecraftServer*);
 
 
 	/*

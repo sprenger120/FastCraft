@@ -37,7 +37,6 @@ GNU General Public License for more details.
 class AcceptThread;
 class SettingsHandler;
 class PlayerPool;
-class PackingThread;
 class ItemInformationProvider;
 class PlayerPool;
 class World;
