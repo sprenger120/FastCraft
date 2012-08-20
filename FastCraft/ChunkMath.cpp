@@ -17,6 +17,7 @@ GNU General Public License for more details.
 #include "Constants.h"
 #include <cmath>
 #include <stdlib.h>
+#include <iostream>
 
 ChunkCoordinates ChunkMath::toChunkCoords(BlockCoordinates BlockCoords) {
 	ChunkCoordinates ChunkCoordinates;
@@ -59,14 +60,10 @@ int ChunkMath::Distance(ChunkCoordinates c1,ChunkCoordinates c2) {
 	return int(distance);
 }
 
-int ChunkMath::toIndex(int x,short y,int z) {
-	int count = y + (z * 128) + (x * 128 * 16);
+int ChunkMath::toIndex(int x,int y,int z) {
+	return x + (z<<4) + (y<<8);
 
-	if (!isIndexInBound(count)) {
-		return -1;
-	}
-
-	return count;
+	//x + (z * Width) + (y * Height * Width); 
 }
 
 bool ChunkMath::isIndexInBound(int index) {

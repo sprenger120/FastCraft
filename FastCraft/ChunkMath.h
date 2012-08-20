@@ -77,7 +77,7 @@ public:
 	@2 : Y in chunk internal coordinates
 	@3 : Z in chunk internal coordinates
 	*/
-	static int toIndex(int,short,int); //Only for full chunks
+	static int toIndex(int,int,int);
 
 
 	/*
