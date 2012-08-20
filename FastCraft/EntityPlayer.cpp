@@ -77,10 +77,11 @@ void EntityPlayer::spawn(NetworkOut& rOut) {
 		rOut.addByte(char((Coordinates.Pitch * 256.0F) / 360.0F));
 
 		rOut.addShort(_vpHeld[0] == NULL || _vpHeld[0]->isEmpty() ? 0 : _vpHeld[0]->getItem().first);
+		appendMetadata(rOut);
 		rOut.Finalize(FC_QUEUE_HIGH);
 
 		sendEquipment(rOut);
-		sendMetadata(rOut);
+		
 	}catch(FCRuntimeException& ex) {
 		ex.rethrow();
 	}
@@ -88,9 +89,10 @@ void EntityPlayer::spawn(NetworkOut& rOut) {
 
 
 void EntityPlayer::appendMetadata(NetworkOut& rOut) {
-	//Flags
-	//            DataID      Data Type);
+
 	try{
+		//Flags
+		//            DataID      Data Type);
 		rOut.addByte((0&0x1f) | ((0<<5)&0xe0)); 
 
 		std::bitset<5> bitFlags;

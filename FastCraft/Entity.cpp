@@ -106,6 +106,12 @@ void Entity::syncCoordinates(NetworkOut& rOut,EntityCoordinates& lastCoordinates
 				rOut.addByte( (char) ((Coordinates.Yaw * 256.0F) / 360.0F) );
 				rOut.addByte( (char) ((Coordinates.Pitch * 256.0F) / 360.0F) );
 				rOut.Finalize(FC_QUEUE_HIGH);
+
+
+				rOut.addByte(0x23); //Entity Look
+				rOut.addInt(_iEntityID);
+				rOut.addByte( (char) ((Coordinates.Yaw * 256.0F) / 360.0F) );
+				rOut.Finalize(FC_QUEUE_HIGH);
 				return;
 			}
 			if (fabs(dX) <= 4.0 && fabs(dY) <= 4.0 && fabs(dZ) <= 4.0 ) {//Movement under 4 blocks
@@ -116,6 +122,11 @@ void Entity::syncCoordinates(NetworkOut& rOut,EntityCoordinates& lastCoordinates
 				rOut.addByte((char) (dZ*32.0) );
 				rOut.addByte((char) ((Coordinates.Yaw * 256.0F) / 360.0F) );
 				rOut.addByte((char) ((Coordinates.Pitch * 256.0F) / 360.0F) );
+				rOut.Finalize(FC_QUEUE_HIGH);
+
+				rOut.addByte(0x23); //Entity Look
+				rOut.addInt(_iEntityID);
+				rOut.addByte( (char) ((Coordinates.Yaw * 256.0F) / 360.0F) );
 				rOut.Finalize(FC_QUEUE_HIGH);
 				return;
 			}
