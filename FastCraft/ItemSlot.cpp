@@ -202,6 +202,7 @@ void ItemSlot::readFromNetwork(NetworkIn& rNetwork) {
 		if (iItemID != -1) {
 			_iStackSize = rNetwork.readByte();
 			short Usage = rNetwork.readShort();
+			rNetwork.readShort();
 
 			switch (_pItemInfoProvider->isBlock(iItemID)) {
 			case true:
@@ -297,6 +298,7 @@ void ItemSlot::writeToNetwork(NetworkOut& Out) {
 				Out.addShort(-1);
 			}else{
 				Out.addShort(_Item.second);
+				Out.addShort(-1);
 			}
 		}
 	}catch(FCRuntimeException& ex) {
