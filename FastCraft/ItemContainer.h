@@ -164,7 +164,7 @@ private:
 
 
 	Parameter:
-	@1 : SlotRamge pointer
+	@1 : SlotRange pointer
 	@2 : slotID
 	*/
 	bool insertItem(SlotRange*,short);
