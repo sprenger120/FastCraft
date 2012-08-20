@@ -339,7 +339,7 @@ ItemID World::getBlock(int X,short Y,int Z) {
 		MapChunk* pChunk = getChunk(Coords.first.X,Coords.first.Z);
 
 		return pChunk->getBlock((char)Coords.second.X,
-			(char)Coords.second.Y,
+			(short)Coords.second.Y,
 			(char)Coords.second.Z
 			);
 	} catch (FCRuntimeException& ex) {
