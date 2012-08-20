@@ -28,25 +28,163 @@ GNU General Public License for more details.
 #include "Entity.h"
 #include "PlayerThread.h"
 #include <cmath>
+#include "MapChunk.h"
+#include "WorldFileHandler.h"
+#include "NBTAll.h"
+#include "IOFile.h"
+#include <exception>
 using std::cout;
 
 
 World::World(string Name,char iDimension,MinecraftServer* pServer) :
-_WorldName(Name),
+	_WorldName(Name),
 	_iDimension(iDimension)
 {
-	_pMinecraftServer = pServer;
-	generateChunks(-10,-10,10,10);
+	_pMinecraftServer	= pServer;
+	_pWorldFileHandler	= NULL;
+	_pSettings			= NULL;
+	_pLevelDataFile		= NULL;
+
+	/* Init settings */
+	_fHardcore		= false;
+	_iMapFeatures	= 1;
+	_fRaining		= false;
+	_fThundering	= false;
+	_iGameType		= 0;
+	_iRainTime		= 0;
+	_iSpawnX		= 0;
+	_iSpawnY		= 0;
+	_iSpawnZ		= 0;
+	_iThunderTime	= 0;
+	_iVersion		= 19133;
+	_iLastPlayed	= 0L;
+	_iSeed			= 0L;
+	_iSizeOnDisk	= 0L;
+	_iTime			= 0L;
+	_sGeneratorName.assign("default");
+	_sLevelName.assign("world");
+
+	/* Prepare path */	
+	Poco::Path path(pServer->getServerDirectory());
+	path.pushDirectory(_WorldName);
+
+	try {
+		/* Check existance of needed directories */
+		IOFile::createDir(path);
+		path.pushDirectory("data");
+		IOFile::createDir(path);
+		path.popDirectory();
+		path.pushDirectory("players");
+		IOFile::createDir(path);
+		path.popDirectory();
+		path.pushDirectory("region");
+		IOFile::createDir(path);
+		path.popDirectory();
+		path.setFileName("level.dat");
+
+
+		/* try to load level.dat */
+		Poco::File filepath(path);
+		NBTTagCompound* pCompData;
+		char* pData = NULL;
+
+		try {
+			try { //Seperate exception catchnig for bad errors
+				_pLevelDataFile = new IOFile(filepath);
+			}catch(FCRuntimeException& ex) {
+				throw std::exception(ex.what());
+			}
+
+			if (_pLevelDataFile->getSize() < 2)  {throw FCRuntimeException("Unable to read level.dat",false);}
+
+			pData = new char[_pLevelDataFile->getSize()];
+			_pLevelDataFile->read(pData,_pLevelDataFile->getSize());
+
+			NBTBinaryParser parser;
+			_pSettings = parser.parse(pData,FC_NBT_IO_GZIP,_pLevelDataFile->getSize());
+			pCompData = dynamic_cast<NBTTagCompound*>(_pSettings->getElementByName("Data"));
+			if (pCompData == NULL) {throw FCRuntimeException("No Data compound");}
+			delete [] pData;
+
+		}catch(FCRuntimeException) {
+			/* Something failed, generate own one */
+			if (pData) {delete [] pData;}
+			if (_pSettings) {delete _pSettings;}
+
+			_pSettings = new NBTTagCompound("");
+			_pSettings->addSubElement(pCompData = new NBTTagCompound("Data"));
+		}catch(std::exception){
+			throw FCRuntimeException("Unable to open/create level.dat");
+		}
+
+
+		NBTHelper<NBTTagByte,char>::read(pCompData,"hardcore",_fHardcore);
+		NBTHelper<NBTTagByte,char>::read(pCompData,"MapFeatures",_iMapFeatures);
+		NBTHelper<NBTTagByte,char>::read(pCompData,"raining",_fRaining);
+		NBTHelper<NBTTagByte,char>::read(pCompData,"thundering",_fThundering);
+		NBTHelper<NBTTagInt,int>::read(pCompData,"GameType",_iGameType);
+		NBTHelper<NBTTagInt,int>::read(pCompData,"generatorVersion",_iGeneratorVersion);
+		NBTHelper<NBTTagInt,int>::read(pCompData,"rainTime",_iRainTime);
+		NBTHelper<NBTTagInt,int>::read(pCompData,"SpawnX",_iSpawnX);
+		NBTHelper<NBTTagInt,int>::read(pCompData,"SpawnY",_iSpawnY);
+		NBTHelper<NBTTagInt,int>::read(pCompData,"SpawnZ",_iSpawnZ);
+		NBTHelper<NBTTagInt,int>::read(pCompData,"thunderTime",_iThunderTime);
+		NBTHelper<NBTTagInt,int>::read(pCompData,"version",_iVersion);
+		NBTHelper<NBTTagInt64,Tick>::read(pCompData,"LastPlayed",_iLastPlayed);
+		NBTHelper<NBTTagInt64,long long>::read(pCompData,"RandomSeed",_iSeed);
+		NBTHelper<NBTTagInt64,long long>::read(pCompData,"SizeOnDisk",_iSizeOnDisk);
+		NBTHelper<NBTTagInt64,Tick>::read(pCompData,"Time",_iTime);
+		NBTHelper<NBTTagString,string>::read(pCompData,"generatorName",_sGeneratorName);
+		NBTHelper<NBTTagString,string>::read(pCompData,"LevelName",_sLevelName);
+
+
+		/* Open region files */
+		path.setFileName("");
+		_pWorldFileHandler = new WorldFileHandler(path);
+
+
+
+		/* Load chunks around the spawn point */
+		int iLoadedChunks = 0;
+		int iChunkSpawnX = _iSpawnX/16;
+		int iChunkSpawnZ = _iSpawnZ/16;
+		Poco::Stopwatch nextOutput;
+		Poco::Stopwatch loadingTime;
+	
+		nextOutput.start();
+		loadingTime.start();
+		for (int x = iChunkSpawnX - 12;x<=iChunkSpawnX + 12;x++) {
+			for (int z = iChunkSpawnZ - 12;z<=iChunkSpawnZ + 12;z++) {
+				getChunk(x,z);
+				iLoadedChunks++;
+
+				if (nextOutput.elapsed() >= 1000000) {
+					cout<<"\tProgress "<<((iLoadedChunks*100)/625)<<"%\n";
+					nextOutput.restart();
+				}
+			}
+		}
+		loadingTime.stop();
+		cout<<"\tLoading done in "<<(loadingTime.elapsed()/1000000)<<"s\n";
+	}catch(FCRuntimeException& ex) {
+		ex.rethrow();
+	}
 }
 
 World::~World() {
+	delete _pWorldFileHandler; 
+	delete _pSettings;
+	delete _pLevelDataFile;
 }
 
 void World::generateChunks(int FromX,int FromZ,int ToX,int ToZ) {
 	try {	
+		MapChunk* pChunk; 
 		for (int x=FromX;x<=ToX;x++) {
 			for(int z=FromZ;z<=ToZ;z++) {
-				generateChunk(x,z);
+				pChunk = new MapChunk(x,z);
+				generateChunk(pChunk);
+				_heapChunks.add(generateIndex(pChunk->getX(),pChunk->getZ()),pChunk);
 			}
 		}
 	} catch(FCRuntimeException) {
@@ -54,41 +192,32 @@ void World::generateChunks(int FromX,int FromZ,int ToX,int ToZ) {
 	}
 }
 
-MapChunk* World::generateChunk(int X,int Z) {
-	long long ChunkIndex = generateIndex(X,Z);
-	MapChunk* pChunk = _heapChunks.get(ChunkIndex); 
+void World::generateChunk(MapChunk* pChunk) {
+	long long ChunkIndex = generateIndex(pChunk->getX(),pChunk->getZ());
 
-	if (pChunk != NULL) {return pChunk;} /* Is this chunk already generated? */
-	
-	pChunk = new MapChunk;
-	
-	std::memset(pChunk->Blocks,0x00,FC_CHUNK_DATACOUNT);
-	std::memset(pChunk->Metadata,0x00,FC_CHUNK_NIBBLECOUNT);
-	std::memset(pChunk->BlockLight,0x00,FC_CHUNK_NIBBLECOUNT);
-	std::memset(pChunk->SkyLight,0xFF,FC_CHUNK_NIBBLECOUNT);
-
-	for (short y=0;y<=60;y++) {
-		for (int x=0;x<=15;x++) {
-			for (int z=0;z<=15;z++) {
-				pChunk->Blocks[ChunkMath::toIndex(x,y,z)] = 12;
-			}
-		}
-	}
+	pChunk->alloc();
+	pChunk->addSegment();
+	std::memset(pChunk->_vpBlocks[0].first,12,4098);
 
 	_heapChunks.add(ChunkIndex,pChunk);
-
-	return pChunk;
 }
 
 
-MapChunk* World::getChunkByChunkCoordinates(int X,int Z) {
+MapChunk* World::getChunk(int X,int Z) {
 	long long Index = generateIndex(X,Z);
 	MapChunk* pChunk = _heapChunks.get(Index);
 
 	if (pChunk != NULL) {return pChunk;} 
-	
+
 	try  {
-		pChunk = generateChunk(X,Z);
+		pChunk = new MapChunk(X,Z);
+
+		if (_pWorldFileHandler->loadChunk(pChunk)) {
+			_heapChunks.add(Index,pChunk);
+		}else{
+			generateChunk(pChunk);
+		}
+
 		return pChunk;
 	} catch(FCRuntimeException& ex) {
 		ex.rethrow();
@@ -96,54 +225,37 @@ MapChunk* World::getChunkByChunkCoordinates(int X,int Z) {
 	return NULL;
 }
 
-pair<ChunkCoordinates,int> World::WorldCoordinateConverter(int X,short Y,int Z) {
-	ChunkCoordinates Coords;
-	int Index;
+std::pair<ChunkCoordinates,BlockCoordinates> World::toBlockAddress(int X,short Y,int Z) {
+	if (Y < 0 || Y > FC_WORLDHEIGHT-1) {throw FCRuntimeException("Y is invalid");}
 
-	if (Y < 0 || Y > FC_WORLDHEIGHT-1) {
-		std::cout<<"World::WorldCoordinateConverter  Y is invalid"<<"\n";
-		throw FCRuntimeException("Y is invalid");
-	}
+	ChunkCoordinates chunkCoordinates;
+	BlockCoordinates chkInternalBlockCoordinates;
 
-	Coords.X = X>>4;
-	Coords.Z = Z>>4;
+	chunkCoordinates.X = X/16;
+	chunkCoordinates.Z = Z/16;
+	chkInternalBlockCoordinates.X = X & 0xF; 
+	chkInternalBlockCoordinates.Z = Z & 0xF;
+	chkInternalBlockCoordinates.Y = (char)Y;
 
-	X = ChunkMath::toChunkInternal(X);
-	Z = ChunkMath::toChunkInternal(Z);	
-
-	try {
-		Index = ChunkMath::toIndex(X,Y,Z);
-	}catch(FCRuntimeException) {
-		std::cout<<"World::WorldCoordinateConverter index error"<<"\n";
-		throw FCRuntimeException("Index error");
-	}
-
-	pair<ChunkCoordinates,int> Pair(Coords,Index);
-	return Pair;
+	return std::make_pair(chunkCoordinates,chkInternalBlockCoordinates);
 }
 
 char World::getHeight(int X,int Z) {
-	MapChunk* pChunk;
+	//MapChunk* pChunk;
 
-	try {
-		pChunk = getChunkByChunkCoordinates(X>>4,Z>>4);
-	}catch (FCRuntimeException& ex) {
-		std::cout<<"World::getFreeSpace chunk not found"<<"\n";
-		ex.rethrow();
-	}
+	//try {
+	//	pChunk = getChunk(X>>4,Z>>4);
+	//}catch (FCRuntimeException& ex) {
+	//	ex.rethrow();
+	//}
 
-	int iOffset = ChunkMath::toIndex(ChunkMath::toChunkInternal(X),0,ChunkMath::toChunkInternal(Z));
+	//int iOffset = ChunkMath::toIndex(ChunkMath::toChunkInternal(X),0,ChunkMath::toChunkInternal(Z));
+	//if (iOffset==-1) {throw FCRuntimeException("toIndex error");}
 
-
-	unsigned char y;
-	if (iOffset==-1) {
-		throw FCRuntimeException("toIndex error");
-	}
-
-	//Get height
-	for (y=FC_WORLDHEIGHT-1;y>=0;y--) { //For from 127 -> 0
-		if (pChunk->Blocks[iOffset+y]) {return y;}
-	}
+	////Get height
+	//for (unsigned char y=FC_WORLDHEIGHT-1;y>=0;y--) { //For from 127 -> 0
+	//	if (pChunk->_pBlocks[iOffset+y]) {return y;}
+	//}
 
 	return char(FC_WORLDHEIGHT);
 }
@@ -160,60 +272,51 @@ bool World::isSuffocating(PlayerThread* pPlayerThread) {
 
 
 bool World::isSuffocating(EntityCoordinates& Coords,float dHeight) {
-	if (Coords.Y > ((double)FC_WORLDHEIGHT)-1.0) {return false;} /* Above the map */
+	//if (Coords.Y > ((double)FC_WORLDHEIGHT)-1.0) {return false;} /* Above the map */
 
-	MapChunk* pChunk;
-	int iOffset;
+	//MapChunk* pChunk;
+	//int iOffset;
 
-	try {
-		pChunk = getChunkByChunkCoordinates(int(Coords.X)>>4,int(Coords.Z)>>4);
-	}catch (FCRuntimeException& ex) {
-		ex.rethrow();
-	}
+	//try {
+	//	pChunk = getChunk(int(Coords.X)>>4,int(Coords.Z)>>4);
+	//}catch (FCRuntimeException& ex) {
+	//	ex.rethrow();
+	//}
 
-	/*cout<<"Y :"<<short(Coords.Y)<<" => "<<short(Coords.Y)+short(ceil(dHeight))<<"\n";*/
-
-	for (short y=short(Coords.Y);y<=short(Coords.Y)+short(ceil(dHeight))-1;y++) {		
-		iOffset = ChunkMath::toIndex(
-		ChunkMath::toChunkInternal((int)floor(Coords.X)),
-		y,
-		ChunkMath::toChunkInternal((int)floor(Coords.Z))
-		);
-
-		/*cout<<"Y = "<<y<<" Blk:"<<int(pChunk->Blocks[iOffset])<<"\n";*/
-		if (_pMinecraftServer->getItemInfoProvider()->getBlock((short)pChunk->Blocks[iOffset])->Solid) {
-			return true;
-		}
-	}
+	//for (short y=short(Coords.Y);y<=short(Coords.Y)+short(ceil(dHeight))-1;y++) {		
+	//	iOffset = ChunkMath::toIndex(
+	//		ChunkMath::toChunkInternal((int)floor(Coords.X)),
+	//		y,
+	//		ChunkMath::toChunkInternal((int)floor(Coords.Z))
+	//		);
+	//	if (_pMinecraftServer->getItemInfoProvider()->getBlock((short)pChunk->_pBlocks[iOffset])->Solid) {
+	//		return true;
+	//	}
+	//}
 
 	return false;
 }
 
+
 void World::setBlock(int X,short Y,int Z,ItemID& Block) {
-	if (!_pMinecraftServer->getItemInfoProvider()->isRegistered(Block)) {
-		throw FCRuntimeException("Block not registered");
-	}
-	MapChunk* p;
+	if (!_pMinecraftServer->getItemInfoProvider()->isRegistered(Block)) {throw FCRuntimeException("Block not registered");}
 
 	try {
-		auto Coords = WorldCoordinateConverter(X,Y,Z);
-		int iNibbleIndex = Coords.second/2;
+		auto Coords = toBlockAddress(X,Y,Z);
+		MapChunk* pChunk = getChunk(Coords.first.X,Coords.first.Z);
 
-		p = getChunkByChunkCoordinates(Coords.first.X,Coords.first.Z);
-		
-		p->Blocks[Coords.second] = (char)Block.first; //Set Block
-		p->Metadata[iNibbleIndex] = prepareNibble(  //Set Metadata
-												char(Coords.second%2),
-												p->Metadata[iNibbleIndex],
-												Block.second
-												);
+		pChunk->setBlock(Block,
+			(char)Coords.second.X,
+			(char)Coords.second.Y,
+			(char)Coords.second.Z
+			);
 
 		//Push event
 		BlockCoordinates BlockCoords;
 		BlockCoords.X = X;
 		BlockCoords.Y = (char)Y;
 		BlockCoords.Z = Z;
-		
+
 		PlayerEventBase* p = new PlayerSetBlockEvent(BlockCoords,Block,this);
 		_pMinecraftServer->getPlayerPool()->addEvent(p);
 	} catch (FCRuntimeException& ex) {
@@ -221,84 +324,38 @@ void World::setBlock(int X,short Y,int Z,ItemID& Block) {
 	}
 }
 
+void World::setBlock(BlockCoordinates& Coords,ItemID& Data) {
+	try{
+		setBlock(Coords.X,Coords.Y,Coords.Z,Data);
+	}catch(FCRuntimeException& ex) {
+		ex.rethrow();
+	}
+}
 
 
 ItemID World::getBlock(int X,short Y,int Z) {
-	MapChunk* p;
-
 	try {
-		auto Coords = WorldCoordinateConverter(X,Y,Z);
-		p = getChunkByChunkCoordinates(Coords.first.X,Coords.first.Z);
-		
-		ItemID Data;
-		Data.first = p->Blocks[Coords.second];
-		Data.second = p->Metadata[Coords.second/2];
+		auto Coords = toBlockAddress(X,Y,Z);
+		MapChunk* pChunk = getChunk(Coords.first.X,Coords.first.Z);
 
-		if (Coords.second%2) {
-			 Data.second = Data.second>>4;
-		}else{
-			 Data.second &= 15;
-		}
-
-		return Data;
+		return pChunk->getBlock((char)Coords.second.X,
+			(char)Coords.second.Y,
+			(char)Coords.second.Z
+			);
 	} catch (FCRuntimeException& ex) {
 		ex.rethrow();
 	}
-	return ItemID(0,0);
+	return ItemID(0,0); /* Compiler warning fix */
 }
 
 ItemID World::getBlock(BlockCoordinates& Coords) {
-	return getBlock(Coords.X,(short)Coords.Y,Coords.Z);
-} 
-
-bool World::isSurroundedByAir(BlockCoordinates& TargetBlock) {
-	BlockCoordinates Temp = TargetBlock;
-
 	try {
-
-		//X--
-		if (getBlock(Temp.X-1,Temp.Y,Temp.Z).first != 0) {
-			return false;
-		}
-
-		//X++
-		if (getBlock(Temp.X+1,Temp.Y,Temp.Z).first != 0) {
-			return false;
-		}
-
-		//Z--
-		if (getBlock(Temp.X,Temp.Y,Temp.Z-1).first != 0) {
-			return false;
-		}
-
-		//Z++
-		if (getBlock(Temp.X,Temp.Y,Temp.Z+1).first != 0) {
-			return false;
-		}
-
-		//Y--
-		if (TargetBlock.Y >= 1) {
-			if (getBlock(Temp.X,Temp.Y-1,Temp.Z).first != 0) {
-				return false;
-			}
-		}
-
-		//Y++
-		if (TargetBlock.Y <= FC_WORLDHEIGHT-1) {
-			if (getBlock(Temp.X,Temp.Y+1,Temp.Z).first != 0) {
-				return false;
-			}
-		}
-
+		return getBlock(Coords.X,(short)Coords.Y,Coords.Z);
 	}catch(FCRuntimeException& ex) {
-		cout<<"Exception World::isSurroundedByAir: "<<ex.getMessage()<<"\n";
+		ex.rethrow();
 	}
-	return true;
-}
-
-void World::Load(Poco::Path& worldPath) {
-	cout<<"Loading: "<<worldPath[worldPath.depth()-1]<<"\n";
-}
+	return ItemID(0,0);
+} 
 
 string World::getName() {
 	return _WorldName;
@@ -308,61 +365,120 @@ char World::getDimension() {
 	return _iDimension;
 }
 
-char World::prepareNibble(char iMod,char iOld,char iNew) {
-	iNew &= 15; //Filter bottom 4 bit 
 
-	if (iMod) { //Set top 4 bits
-		iOld |= iNew<<4;
-	}else{      //Set lower 4 bits
-		iOld |= iNew;
-	}	
-	return iOld;
+void World::setBlockLight(BlockCoordinates& Coords,char iLL) {
+	try {
+		setBlockLight(Coords.X,Coords.Y,Coords.Z,iLL);
+	}catch(FCRuntimeException& ex) {
+		ex.rethrow();
+	}
 }
 
-
 void World::setBlockLight(int X,short Y,int Z,char iLightLevel) {
+	if (Y < 0 || Y > FC_WORLDHEIGHT-1 || iLightLevel < 0 || iLightLevel > 15) {throw FCRuntimeException("Illegal parameter(s)");}
 	try {
-		auto coord = WorldCoordinateConverter(X,Y,Z);
-		if (coord.second==-1) {
-			cout<<"World::setBlockLight invalid coordinates\n";
-			throw FCRuntimeException("Invalid coordinates");
-		}
-		if (iLightLevel<0 || iLightLevel > 15) {
-			cout<<"World::setBlockLight invalid light level\n";
-			throw FCRuntimeException("Invalid light level");
-		}
+		auto Coords = toBlockAddress(X,Y,Z);
+		MapChunk* pChunk = getChunk(Coords.first.X,Coords.first.Z);
 
-		MapChunk* p = getChunkByChunkCoordinates(coord.first.X,coord.first.Z);
-		int iNibbleIndex = coord.second/2;
-
-
-		p->BlockLight[iNibbleIndex] = prepareNibble( 
-												char(coord.second%2),
-												p->BlockLight[iNibbleIndex],
-												iLightLevel
-												);
-		p->SkyLight[iNibbleIndex] = prepareNibble( 
-												char(coord.second%2),
-												p->BlockLight[iNibbleIndex],
-												iLightLevel
-												);
-
+		pChunk->setBlockLight(iLightLevel,
+			(char)Coords.second.X,
+			(char)Coords.second.Y,
+			(char)Coords.second.Z
+			);
 	}catch (FCRuntimeException& ex) {
 		ex.rethrow();
 	}
 }
 
-void World::setBlockLight(BlockCoordinates& Coords,char iLL) {
-	setBlockLight(Coords.X,Coords.Y,Coords.Z,iLL);
+char World::getBlockLight(BlockCoordinates& Coords) {
+	try {
+		return getBlockLight(Coords.X,Coords.Y,Coords.Z);
+	}catch(FCRuntimeException& ex) {
+		ex.rethrow();
+	}
+	return 0;
 }
 
-void World::setBlock(BlockCoordinates& Coords,ItemID& Data) {
-	setBlock(Coords.X,Coords.Y,Coords.Z,Data);
+char World::getBlockLight(int X,short Y,int Z) {
+	try {
+		auto Coords = toBlockAddress(X,Y,Z);
+		MapChunk* pChunk = getChunk(Coords.first.X,Coords.first.Z);
+
+		return pChunk->getBlockLight((char)Coords.second.X,
+			(char)Coords.second.Y,
+			(char)Coords.second.Z
+			);
+	} catch (FCRuntimeException& ex) {
+		ex.rethrow();
+	}
+	return 0;
+}
+
+
+
+void World::setSkyLight(BlockCoordinates& Coords,char iLL) {
+	try {
+		setSkyLight(Coords.X,Coords.Y,Coords.Z,iLL);
+	}catch(FCRuntimeException& ex) {
+		ex.rethrow();
+	}
+}
+
+void World::setSkyLight(int X,short Y,int Z,char iLightLevel) {
+	if (Y < 0 || Y > FC_WORLDHEIGHT-1 || iLightLevel < 0 || iLightLevel > 15) {throw FCRuntimeException("Illegal parameter(s)");}
+	try {
+		auto Coords = toBlockAddress(X,Y,Z);
+		MapChunk* pChunk = getChunk(Coords.first.X,Coords.first.Z);
+
+		pChunk->setSkyLight(iLightLevel,
+			(char)Coords.second.X,
+			(char)Coords.second.Y,
+			(char)Coords.second.Z
+			);
+	}catch (FCRuntimeException& ex) {
+		ex.rethrow();
+	}
+}
+
+char World::getSkyLight(BlockCoordinates& Coords) {
+	try {
+		return getSkyLight(Coords.X,Coords.Y,Coords.Z);
+	}catch(FCRuntimeException& ex) {
+		ex.rethrow();
+	}
+	return 0;
+}
+
+char World::getSkyLight(int X,short Y,int Z) {
+	try {
+		auto Coords = toBlockAddress(X,Y,Z);
+		MapChunk* pChunk = getChunk(Coords.first.X,Coords.first.Z);
+
+		return pChunk->getSkyLight((char)Coords.second.X,
+			(char)Coords.second.Y,
+			(char)Coords.second.Z
+			);
+	} catch (FCRuntimeException& ex) {
+		ex.rethrow();
+	}
+	return 0; 
 }
 
 long long World::generateIndex(int X,int Z) {
 	long long x = X;
 	long long z = Z;
-	
-	return ((x<<32) & 0xffffffff00000000) | (z & 0x00000000ffffffff);
+
+	return ((x<<32) & 0xffffffff00000000) | (z & 0xffffffff);
+}
+
+int World::getSpawnX() {
+	return _iSpawnX;
+}
+
+int World::getSpawnY() {
+	return _iSpawnY;
+}
+
+int World::getSpawnZ() {
+	return _iSpawnZ;
 }

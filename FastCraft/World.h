@@ -12,8 +12,6 @@ but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 */
-
-
 #ifndef _FASTCRAFTHEADER_WORLD
 #define _FASTCRAFTHEADER_WORLD
 #include <string>
@@ -23,22 +21,49 @@ GNU General Public License for more details.
 #include "EntityCoordinates.h"
 #include "ItemInformationProvider.h"
 #include "Heap.h"
+#include "Types.h"
 
 using std::string;
 using std::pair;
 class MinecraftServer;
 class Entity;
 class PlayerThread;
-struct MapChunk;
+class WorldFileHandler;
+class MapChunk;
+class NBTTagCompound;
+class IOFile;
 
 class World {
 private:
 	string _WorldName;
 	char _iDimension;
-	Heap<MapChunk*,long long> _heapChunks;
-
 	Poco::Mutex _Mutex;
+
+	Heap<MapChunk*,long long> _heapChunks;
 	MinecraftServer* _pMinecraftServer;
+	WorldFileHandler* _pWorldFileHandler;
+	NBTTagCompound* _pSettings;
+	IOFile* _pLevelDataFile;
+
+	/* Settings */
+	char _fHardcore;
+	char _iMapFeatures;
+	char _fRaining;
+	char _fThundering;
+	int _iGameType;
+	int _iGeneratorVersion;
+	int _iRainTime;
+	int _iSpawnX;
+	int _iSpawnY;
+	int _iSpawnZ;
+	int _iThunderTime;
+	int _iVersion;
+	Tick _iLastPlayed;
+	long long _iSeed;
+	long long _iSizeOnDisk;
+	Tick _iTime;
+	string _sGeneratorName;
+	string _sLevelName;
 public:
 	/*
 	* Constructs a new World
@@ -69,21 +94,7 @@ public:
 	@1 : X in chunkcoordinates
 	@2 : Z in chunkcoordiantes
 	*/
-	MapChunk* getChunkByChunkCoordinates(int,int);
-
-
-	/*
-	* Converts WorldCoordinates to chunk coordinates and block index
-	* Will not check chunk existance
-	* Will not generate chunk
-	* Will throw FCRuntimeException if Y is out of bound
-
-	Parameter:
-	@1 : X in world coordiantes
-	@2 : Y in world coordiantes
-	@3 : Z in world coordiantes
-	*/
-	static pair<ChunkCoordinates,int> WorldCoordinateConverter(int,short,int);
+	MapChunk* getChunk(int,int);
 
 
 	/*
@@ -148,24 +159,6 @@ public:
 
 
 	/*
-	* Returns true if block at given coordinates is fully surrounded by air
-
-	Parameters:
-	@1 : BlockCoordinates of target block
-	*/
-	bool isSurroundedByAir(BlockCoordinates&);
-
-
-	/*
-	* Loads world data from given path
-
-	Parameter:
-	@1 : Path to world folder (contains directories: region,players, level.dat)
-	*/
-	void Load(Poco::Path&);
-
-
-	/*
 	* Returns worldname
 	*/
 	string getName();
@@ -180,7 +173,7 @@ public:
 	/*
 	* Sets block light of given block
 	* Will throw FCRuntimeException if block light is invalid
-	* Will rethrow all errors of getChunkByChunkCoordinates
+	* Will rethrow all errors of getChunk
 
 	Parameters:
 	@1 : X in WorldCoordinates
@@ -188,26 +181,31 @@ public:
 	@3 : Z in WorldCoordinates
 	@4 : new light level
 	*/
-	void setBlockLight(int,short,int,char);
 	void setBlockLight(BlockCoordinates&,char);
+	void setBlockLight(int,short,int,char);
+
+	char getBlockLight(BlockCoordinates&);
+	char getBlockLight(int,short,int);
+
+	void setSkyLight(BlockCoordinates&,char);
+	void setSkyLight(int,short,int,char);
+
+	char getSkyLight(BlockCoordinates&);
+	char getSkyLight(int,short,int);
 
 
 	/*
-	* Generates the index out of the given X and Z coordinate
-
-	Parameter:
-	@1 : X coordinate
-	@2 : Z coordinate
+	* Returns spawn coordinates
 	*/
-	static long long generateIndex(int,int);
+	int getSpawnX();
+	int getSpawnY();
+	int getSpawnZ();
 private:
 	void generateChunks(int,int,int,int);
-	MapChunk* generateChunk(int,int);
+	void generateChunk(MapChunk*);
 
-	char prepareNibble(char, /* Modulo of Nibble index and 2 */
-					   char, /* Old value */
-					   char /* Value to set */
-					   );
+	std::pair<ChunkCoordinates,BlockCoordinates> toBlockAddress(int,short,int);
+	long long generateIndex(int,int);
 }; 
 
 #endif
