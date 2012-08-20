@@ -25,6 +25,8 @@ GNU General Public License for more details.
 #include "World.h"
 #include "Constants.h"
 #include "MinecraftServer.h"
+#include <Poco\DeflatingStream.h>
+#include <sstream>
 
 using std::cout;
 using std::endl;
@@ -32,21 +34,30 @@ using std::memcpy;
 using std::stringstream;
 using Poco::DeflatingOutputStream;
 
+char ChunkProvider::_sDespawnCode[] = {0x1, //ground up continuous
+	0x0,0x0, //primary bit field  
+	0x0,0x0, //add bit field
+	0x0,0x0,0x0,0xc,  //data length
+	0x78,0x9C,0x63,0x64,0x1C,0xD9,0x00,0x00,0x81,0x80,0x01,0x01};
 
 ChunkProvider::ChunkProvider(NetworkOutRoot& rNetwork,
-                             PackingThread& rPackingThread,
-                             PlayerThread* pPlayer,
-                             MinecraftServer* pServer
-                            ) :
-	_rNetwork(rNetwork),
-	_rPackingThread(rPackingThread)
+							 PackingThread& rPackingThread,
+							 PlayerThread* pPlayer,
+							 MinecraftServer* pServer
+							 ) :
+_rNetwork(rNetwork),
+	_rPackingThread(rPackingThread),
+	ServerThreadBase("ChunkProvider")
 {
 	_pPlayer = pPlayer;
 	_pWorld = NULL;
 	_pMCServer = pServer;
+	_fHasToClear = false;
+	startThread(this);
 }
 
 ChunkProvider::~ChunkProvider() {
+	killThread();
 }
 
 void ChunkProvider::HandleNewPlayer() {
@@ -54,63 +65,43 @@ void ChunkProvider::HandleNewPlayer() {
 }
 
 void ChunkProvider::HandleDisconnect() {
-	_vSpawnedChunks.clear();
-	_vToBeSendChunks.clear();
+	_fHasToClear = true;
 }
 
-void ChunkProvider::HandleMovement(const EntityCoordinates& PlayerCoordinates) {
-	_PlayerCoordinates = ChunkMath::toChunkCoords(PlayerCoordinates);
+void ChunkProvider::run() {
+	_iThreadStatus = FC_THREADSTATUS_RUNNING;
 
+	while (_iThreadStatus == FC_THREADSTATUS_RUNNING) {
+		Poco::Thread::sleep(10);
+		if (_fHasToClear) {
+			_vSpawnedChunks.clear();
+			_vToBeSendChunks.clear();
+			_fHasToClear = false;
+		}
+		if (!_pPlayer->isSpawned()) {continue;}
 
-	if (isChunkListEmpty()) {
-		if (!CheckChunkCircle()) {
-			throw FCRuntimeException("Chunk delivering failed");
+		_PlayerCoordinates = ChunkMath::toChunkCoords(_pPlayer->getCoordinates());
+
+		try {
+			if ((_vSpawnedChunks.empty() && _vToBeSendChunks.empty()) ||
+				(_oldPlayerCoordinates.X != _PlayerCoordinates.X ||  _oldPlayerCoordinates.Z != _PlayerCoordinates.Z)) 
+			{
+				_oldPlayerCoordinates = _PlayerCoordinates;
+				CheckChunkList(_vSpawnedChunks); //Check spawned chunks and despawn if too distant
+				CheckChunkCircle(); //Spawn new chunks
+			}
+
+			NextChunks();
+		}catch(FCRuntimeException) {
+			continue;
 		}
 
-		_oldPlayerCoordinates = _PlayerCoordinates;
-		return;
 	}
 
-
-	if (_oldPlayerCoordinates.X != _PlayerCoordinates.X ||  _oldPlayerCoordinates.Z != _PlayerCoordinates.Z) {
-		CheckSpawnedChunkList(); //Check spawned chunks and despawn if too distant
-		if (!CheckChunkCircle()) { //check player's chunk circle and spawn if there is a hole
-			throw FCRuntimeException("Chunk delivering failed");
-		}
-		_oldPlayerCoordinates = _PlayerCoordinates;
-		return;
-	}
+	_iThreadStatus = FC_THREADSTATUS_DEAD;
 }
 
-bool ChunkProvider::isChunkListEmpty() {
-	return _vSpawnedChunks.empty();
-}
-
-
-void ChunkProvider::sendSpawn(int X,int Z) {
-	NetworkOut Out(&_rNetwork);
-
-	Out.addByte(0x32);
-	Out.addInt(X);
-	Out.addInt(Z);
-	Out.addBool(true);
-
-	Out.Finalize(FC_QUEUE_HIGH);
-}
-
-void ChunkProvider::sendDespawn(int X,int Z){
-	NetworkOut Out(&_rNetwork);
-
-	Out.addByte(0x32);
-	Out.addInt(X);
-	Out.addInt(Z);
-	Out.addBool(false);
-
-	Out.Finalize(FC_QUEUE_HIGH);
-}
-
-
-bool ChunkProvider::isSpawned(ChunkCoordinates coord) {
+bool ChunkProvider::isSpawned(ChunkCoordinates& coord) {
 	if(_vSpawnedChunks.empty()) {return false;}
 	for ( int x=0;x<=_vSpawnedChunks.size()-1;x++) {
 		if (_vSpawnedChunks[x].X == coord.X && _vSpawnedChunks[x].Z == coord.Z) {
@@ -120,158 +111,174 @@ bool ChunkProvider::isSpawned(ChunkCoordinates coord) {
 	return false;
 }
 
-bool ChunkProvider::CheckChunkCircle() {
-	MapChunk* pChunk;
-	ChunkCoordinates CircleRoot,Temp;
-	PackJob Job;
-	char iViewDistance = char(FC_VIEWDISTANCE);
-
-	Job.pNetwork = &(_rNetwork);
-	Job.pPlayer = _pPlayer;
-
-	/*
-	Check already queued chunks
-	*/
-	if (!_vToBeSendChunks.empty()) {
-		bool fDespawn=false; 
-
-		for (int x=_vToBeSendChunks.size()-1;x>=0;x--) {
-			if (_vToBeSendChunks[x].X < _PlayerCoordinates.X - iViewDistance) {fDespawn=true;}
-			if (_vToBeSendChunks[x].X > _PlayerCoordinates.X + iViewDistance) {fDespawn=true;}
-			if (_vToBeSendChunks[x].Z < _PlayerCoordinates.Z - iViewDistance) {fDespawn=true;}
-			if (_vToBeSendChunks[x].Z > _PlayerCoordinates.Z + iViewDistance) {fDespawn=true;}
-
-			if(fDespawn) {
-				sendDespawn(_vToBeSendChunks[x].X,_vToBeSendChunks[x].Z);
-				_vToBeSendChunks.erase(_vToBeSendChunks.begin()+x);
-			}
-			fDespawn = false;
-		}
-	}
-
-
-	try {
-		if (!isSpawned(_PlayerCoordinates)) { //Check chunk who player stands on
-			pChunk = _pWorld->getChunkByChunkCoordinates(_PlayerCoordinates.X,_PlayerCoordinates.Z);
-
-			Job.X = _PlayerCoordinates.X;
-			Job.Z = _PlayerCoordinates.Z;
-
-			Job.pChunk = pChunk;
-			sendSpawn(Job.X,Job.Z);
-			_vToBeSendChunks.push_back(Job); //Queue chunk
-			AddChunkToList(_PlayerCoordinates.X,_PlayerCoordinates.Z);
-		}	
-
-		int X;
-		int Z;
-
-		for ( int iCircle = 1;iCircle<=iViewDistance;iCircle++) {
-			X = CircleRoot.X = _PlayerCoordinates.X + iCircle;
-			Z = CircleRoot.Z = _PlayerCoordinates.Z + iCircle;
-
-			int iStep = 1;
-
-			while(1) {
-				Temp.X = X;
-				Temp.Z = Z;
-
-				if ( ! isSpawned(Temp)) {
-					pChunk = _pWorld->getChunkByChunkCoordinates(X,Z);
-					
-					Job.X = X;
-					Job.Z = Z;
-					Job.pChunk = pChunk;
-
-					sendSpawn(X,Z);
-					_vToBeSendChunks.push_back(Job);
-					AddChunkToList(X,Z);
-				}
-
-				switch (iStep){
-				case 1:
-					if (X == CircleRoot.X-(iCircle*2)) {
-						Z--;
-						iStep++;
-						break;
-					}
-					X--;
-					break;
-				case 2:
-					if (Z == CircleRoot.Z-(iCircle*2)) {
-						X++;
-						iStep++;
-						break;
-					}
-					Z--;
-					break;
-				case 3:
-					if (X == CircleRoot.X) {
-						Z++;
-						iStep++;
-						break;			
-					}
-					X++;
-					break;
-				case 4:
-					if (Z == CircleRoot.Z-1) {
-						iStep++;
-						break;			
-					}
-					Z++;
-					break;
-				}
-
-
-				if (iStep==5) {
-					break;
-				}
-
-			}
-		}
-	}catch(FCRuntimeException &err ) {
-		cout<<"CheckChunkCircle error:"<<err.getMessage()<<"\n";
-		return false;
-	}
-	return true;
-}
-
-
-void ChunkProvider::CheckSpawnedChunkList() {
-	if (_vSpawnedChunks.empty()) { return; }
-
+void ChunkProvider::CheckChunkList(vector<ChunkCoordinates>& rVec,bool fShouldDespawn) {
+	if(rVec.empty()) {return;}
 	bool fDespawn=false; 
 	int iViewDistance = FC_VIEWDISTANCE,x;
 
-	for (x=_vSpawnedChunks.size()-1;x>=0;x--) {
-		if (_vSpawnedChunks[x].X < _PlayerCoordinates.X - iViewDistance) {fDespawn=true;}
-		if (_vSpawnedChunks[x].X > _PlayerCoordinates.X + iViewDistance) {fDespawn=true;}
-		if (_vSpawnedChunks[x].Z < _PlayerCoordinates.Z - iViewDistance) {fDespawn=true;}
-		if (_vSpawnedChunks[x].Z > _PlayerCoordinates.Z + iViewDistance) {fDespawn=true;}
+	for (x=rVec.size()-1;x>=0;x--) {
+		if (rVec[x].X < _PlayerCoordinates.X - iViewDistance) {fDespawn=true;}
+		if (rVec[x].X > _PlayerCoordinates.X + iViewDistance) {fDespawn=true;}
+		if (rVec[x].Z < _PlayerCoordinates.Z - iViewDistance) {fDespawn=true;}
+		if (rVec[x].Z > _PlayerCoordinates.Z + iViewDistance) {fDespawn=true;}
 
 		if(fDespawn) {
-			sendDespawn(_vSpawnedChunks[x].X,_vSpawnedChunks[x].Z);
-			_vSpawnedChunks.erase(_vSpawnedChunks.begin()+x);
+			try {
+				if (fShouldDespawn) {despawnChunk(rVec[x]);}
+			}catch(FCRuntimeException& ex) {
+				ex.rethrow();
+			}
+			rVec.erase(rVec.begin()+x);
 		}
 
 		fDespawn = false;
 	}
 }
 
-void ChunkProvider::AddChunkToList(int X,int Z) {
+
+
+void ChunkProvider::despawnChunk(ChunkCoordinates& coords) {
+	try {
+		NetworkOut Out(_pPlayer->getNetworkOutRoot());
+		Out.addByte(0x33);
+		Out.addInt(coords.X);
+		Out.addInt(coords.Z);
+		Out.getStr().append(_sDespawnCode,sizeof(_sDespawnCode));
+		Out.Finalize(FC_QUEUE_LOW);		
+	}catch(FCRuntimeException& ex) {
+		ex.rethrow();
+	}
+}
+
+
+void ChunkProvider::CheckChunkCircle() {
+	ChunkCoordinates CircleRoot,Temp;
+	char iViewDistance = char(FC_VIEWDISTANCE);
+
+
+	CheckChunkList(_vToBeSendChunks,false); //Check already queued chunks
+	if (!isSpawned(_PlayerCoordinates)) {addSpawnJob(_PlayerCoordinates.X,_PlayerCoordinates.Z);} //Chunk who player stands on
+	int X;
+	int Z;
+
+	for ( int iCircle = 1;iCircle<=iViewDistance;iCircle++) {
+		X = CircleRoot.X = _PlayerCoordinates.X + iCircle;
+		Z = CircleRoot.Z = _PlayerCoordinates.Z + iCircle;
+
+		int iStep = 1;
+
+		while(1) {
+			Temp.X = X;
+			Temp.Z = Z;
+
+			if (!isSpawned(Temp)) {addSpawnJob(X,Z);}
+
+			switch (iStep){
+			case 1:
+				if (X == CircleRoot.X-(iCircle*2)) {
+					Z--;
+					iStep++;
+					break;
+				}
+				X--;
+				break;
+			case 2:
+				if (Z == CircleRoot.Z-(iCircle*2)) {
+					X++;
+					iStep++;
+					break;
+				}
+				Z--;
+				break;
+			case 3:
+				if (X == CircleRoot.X) {
+					Z++;
+					iStep++;
+					break;			
+				}
+				X++;
+				break;
+			case 4:
+				if (Z == CircleRoot.Z-1) {
+					iStep++;
+					break;			
+				}
+				Z++;
+				break;
+			}
+
+
+			if (iStep==5) {
+				break;
+			}
+
+		}
+	}
+}
+
+
+void ChunkProvider::addSpawnJob(int X,int Z) {
 	ChunkCoordinates Coord;
 	Coord.X = X;
 	Coord.Z = Z;
 
-	_vSpawnedChunks.push_back(Coord);
+	_vToBeSendChunks.push_back(Coord);
 }
 
-void ChunkProvider::NextChunk() {
-	if (_vToBeSendChunks.empty()) {
-		return;
-	}
+void ChunkProvider::NextChunks() {
+	if (_vToBeSendChunks.empty()) {return;}
 	if(_pPlayer->getChunksInQueue() > 20) { return; }
-	PackJob & rJob = _vToBeSendChunks.front();
-	_rPackingThread.AddJob(rJob);
-	_vToBeSendChunks.erase(_vToBeSendChunks.begin());
+
+	try {
+		/*Poco::Stopwatch time;
+		time.start();*/
+
+		short iSendQueue = _vToBeSendChunks.size() > 5 ? 5 : _vToBeSendChunks.size();
+		std::stringstream _stringStrm;
+		Poco::DeflatingOutputStream _deflatingStrm(_stringStrm,Poco::DeflatingStreamBuf::STREAM_ZLIB,-1);
+		MapChunk* pChk;
+		NetworkOut Out(_pPlayer->getNetworkOutRoot());
+		vector<pair<short,ChunkCoordinates>> vMetadata;
+
+
+		for(;iSendQueue>0;iSendQueue--) {
+			ChunkCoordinates ChkCoords = _vToBeSendChunks.front();
+			pChk = _pWorld->getChunk(ChkCoords.X,ChkCoords.Z);
+
+			_vToBeSendChunks.erase(_vToBeSendChunks.begin());
+			_vSpawnedChunks.push_back(ChkCoords);
+
+			if (pChk->isEmpty()) {continue;}
+
+			vMetadata.push_back(std::make_pair(pChk->packData(_deflatingStrm),ChkCoords));
+		}
+
+		if (vMetadata.empty()) {return;}
+		_deflatingStrm.flush();
+
+		short iTransferredChunks=0;
+
+		Out.addByte(0x38);
+		Out.addShort((iTransferredChunks=vMetadata.size()));
+		Out.addInt(_stringStrm.str().length());
+		Out.getStr().append(_stringStrm.str());
+
+		while(!vMetadata.empty()) {
+			pair<short,ChunkCoordinates>& rJob = vMetadata.front();
+
+			Out.addInt(rJob.second.X);
+			Out.addInt(rJob.second.Z);
+			Out.addShort(rJob.first);
+			Out.addShort(0);
+
+			vMetadata.erase(vMetadata.begin());
+		}
+		Out.Finalize(FC_QUEUE_LOW);
+
+	/*	time.stop();
+		cout<<"transferred "<<iTransferredChunks<<" chunks in "<<(time.elapsed()/1000)<<"ms\n";*/
+	}catch(FCRuntimeException& ex) {
+		ex.rethrow();
+	}
 }
+
