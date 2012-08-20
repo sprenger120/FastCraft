@@ -31,36 +31,40 @@ GNU General Public License for more details.
 #include "MinecraftServer.h"
 #include "FCRuntimeException.h"
 #include "EntityListEntry.h"
+#include <rsa.h>
+#include <cryptlib.h>
+#include <Poco\ByteOrder.h>
+#include <Poco\SHA1Engine.h>
 
 using Poco::Thread;
 using std::cout;
 using std::endl;
 using std::dec;
 
-PlayerThread::PlayerThread(PackingThread& rPackingThread,MinecraftServer* pServer) : 
+PlayerThread::PlayerThread(MinecraftServer* pServer) : 
+	_fSpawned(false),
+	_fHandshakeReceived(false),
+	_fAssigned(false),
+	_fKeysExchanged(false),
+	_fCanSpawnChunks(false),
 	ServerThreadBase("PlayerThread"),
-	_rPackingThread(rPackingThread),
-
-	_NetworkOutRoot(pServer),
-	_NetworkInRoot(_Connection,pServer),
+	_NetworkOutRoot(pServer,this),
+	_NetworkInRoot(_Connection,pServer,this),
 	_NetworkWriter(_NetworkOutRoot.getLowQueue(),_NetworkOutRoot.getHighQueue(),_Connection,this),
-
 	_Web_Session("session.minecraft.net"),
-
-	_ChunkProvider(_NetworkOutRoot,rPackingThread,this,pServer),
+	_ChunkProvider(_NetworkOutRoot,this,pServer),
 	_Inventory(this,pServer,_NetworkInRoot),
-
 	_timeJobServer(this)
 {
 	_iEntityID = FC_UNKNOWNEID;
+
 	_iHealth = 0;
 	_iFood = 0;
 	_nSaturation = 0.0F;
+
 	_Spawned_PlayerInfoList = 0;
 	_dRunnedMeters = 0.0;
-	_fSpawned = false;
-	_fHandshakeSent = false;
-	_fAssigned = false;
+
 	_iPlayerPing = -1;
 
 	_pActualWorld = NULL;
@@ -68,6 +72,12 @@ PlayerThread::PlayerThread(PackingThread& rPackingThread,MinecraftServer* pServe
 
 	_timeJobServer.addJob(&PlayerThread::Interval_KeepAlive,15000);
 	_timeJobServer.addJob(&PlayerThread::Interval_CheckEating,100);
+
+
+	_sSecretKey.first = NULL;
+	_iViewDistance = 0;
+	_iChatFlags = 0;
+	_iDifficulty = 0;
 
 	startThread(this);
 }
@@ -113,28 +123,36 @@ void PlayerThread::run() {
 			_timeJobServer.doJobs();
 
 			iPacket = _NetworkInRoot.readByte();
+			/*cout<<std::hex<<(int(iPacket)&0xff)<<"\n";*/
+
 			qLastPackages.push(iPacket);
 			if (qLastPackages.size() > 10) {qLastPackages.pop();}
 
-			if (!_fSpawned &&  (iPacket!=0x01 && iPacket!=0x02 && iPacket!=0xFE)) {
-				Disconnect("Login not done!");
-				continue;
-			}
 
-			if (_fSpawned && (iPacket==0x01 || iPacket==0x02 || iPacket==0xFE)){
-				Disconnect("Login already done!");
-				continue;
+			if (!_fSpawned) { //Avoid accepting packets that require a successful login when not logged in completely
+				switch(iPacket) {
+				case 0x0:
+				case 0xFE:
+				case 0x2:
+				case 0xFC:
+				case 0xCD:
+					break;
+				default:
+					Disconnect("Illegal login order");
+					break;
+				}
 			}
 
 			switch (iPacket) {
 			case 0x0:
 				Packet0_KeepAlive();
 				break;
-			case 0x1:
-				Packet1_Login();
-				break;
 			case 0x2:
-				Packet2_Handshake();
+				if (!_fHandshakeReceived && !_fSpawned && !_fKeysExchanged/* && !_fClientReadyToLogin*/) {
+					Packet2_Handshake();
+				}else{
+					Disconnect("Illegal login order");
+				}
 				break;
 			case 0x3:
 				Packet3_Chat();
@@ -156,7 +174,7 @@ void PlayerThread::run() {
 				break;
 			case 0xf: 
 				Packet15_PlayerBlockPlacement();
-				break;
+				break;	
 			case 0x10: 
 				Packet16_HoldingChange();
 				break;
@@ -172,6 +190,30 @@ void PlayerThread::run() {
 			case 0x66:
 				Packet102_WindowClick();
 				break;
+			case 0xCA: 
+				Packet202_PlayerAbilities();
+				break;
+			case 0xCC:
+				Packet204_LocalesAndViewDistance();
+				break;
+			case 0xCD: 
+				if (_fHandshakeReceived && _fSpawned && _fKeysExchanged /*&& _fClientReadyToLogin*/) {
+					Packet205_ClientStatus();
+				}else{
+					if (_fHandshakeReceived && !_fSpawned && _fKeysExchanged /*&& !_fClientReadyToLogin*/) {
+						Packet205_ClientStatus();
+						continue;
+					}
+					Disconnect("Illegal login order");
+				}	
+				break;
+			case 0xFC:
+				if (_fHandshakeReceived && !_fSpawned && !_fKeysExchanged/* && !_fClientReadyToLogin*/) {
+					Packet252_EncryptionKeyResponse();
+				}else{
+					Disconnect("Illegal login order");
+				}
+				break;
 			case 0xFE: 
 				Packet254_ServerListPing();
 				break;
@@ -184,8 +226,9 @@ void PlayerThread::run() {
 
 				if (!qLastPackages.empty()) {
 					cout<<"Last packets:";
-					for(char i=0;i<=qLastPackages.size()-1;i++) {
-						cout<<"0x"<<std::hex<<(int(qLastPackages.front())&0xff)<<(i!=qLastPackages.size()-1 ? "," : "");
+					while(!qLastPackages.empty()) {
+						cout<<"0x"<<std::hex<<(int(qLastPackages.front())&0xff);
+						if (qLastPackages.size() != 1) {cout<<",";}
 						qLastPackages.pop();
 					}
 					cout<<"\n";
@@ -201,47 +244,48 @@ void PlayerThread::run() {
 }
 
 void PlayerThread::Disconnect(string sReason,bool fShow) {
-	if (!isAssigned()) {return;}
-	if(isSpawned()) {
-		_fSpawned=false;
+	try {
+		if (!isAssigned()) {return;}
+		if(isSpawned()) {
+			_fSpawned=false;
 
-		_NetworkWriter.clearQueues();
+			_NetworkWriter.clearQueues();
 
-		stringstream strStrm;
-		strStrm<<_sName<<" was kicked"<< (sReason.compare("")==0 ? "." : " for: ")<<sReason; 
-		cout<<strStrm.str()<<"\n"; //Writer kick message to chat
+			stringstream strStrm;
+			strStrm<<_sName<<" was kicked"<< (sReason.compare("")==0 ? "." : " for: ")<<sReason; 
+			cout<<strStrm.str()<<"\n"; //Writer kick message to chat
 
-		NetworkOut Out(&_NetworkOutRoot);
-		Out.addByte(0xFF);
-		Out.addString(sReason);
-		Out.Finalize(FC_QUEUE_HIGH);
+			NetworkOut Out(&_NetworkOutRoot);
+			Out.addByte(0xFF);
+			Out.addString(sReason);
+			Out.Finalize(FC_QUEUE_HIGH);
 
-		ProcessQueue();
-		Disconnect(FC_LEAVE_KICK);
+			_NetworkWriter.ProcessHighQueue();
+			Disconnect(FC_LEAVE_KICK);
 
-		if (fShow) { //Write kick message
-			PlayerEventBase* p = new PlayerChatEvent(this,"§6" + strStrm.str(),_Coordinates);
-			_pMinecraftServer->getPlayerPool()->addEvent(p);
+			if (fShow) { //Write kick message
+				PlayerEventBase* p = new PlayerChatEvent(this,"§6" + strStrm.str(),_Coordinates);
+				_pMinecraftServer->getPlayerPool()->addEvent(p);
+			}
+		}else{
+			NetworkOut Out(&_NetworkOutRoot);
+			Out.addByte(0xFF);
+			Out.addString(sReason);
+			/*cout<<Out.getStr().length()<<"\n";*/
+
+			Out.Finalize(FC_QUEUE_HIGH);
+			_NetworkWriter.ProcessHighQueue();
+
+			Disconnect(FC_LEAVE_QUIT);
 		}
-	}else{
-		NetworkOut Out(&_NetworkOutRoot);
-		Out.addByte(0xFF);
-		Out.addString(sReason);
-		/*cout<<Out.getStr().length()<<"\n";*/
-
-		Out.Finalize(FC_QUEUE_HIGH);
-		ProcessQueue();
-
-		Disconnect(FC_LEAVE_QUIT);
+	}catch(FCRuntimeException) {
+		Disconnect(FC_LEAVE_OTHER);
 	}
 }
 
 void PlayerThread::Disconnect(char iLeaveMode) {
 	if (!_fAssigned) { return; }
 	if (isSpawned() || iLeaveMode == FC_LEAVE_KICK) {
-		_ChunkProvider.HandleDisconnect();
-		_Inventory.onDisconnect();
-
 		PlayerEventBase* p = new PlayerDisconnectEvent(this,_iEntityID,_sName);
 
 		switch (iLeaveMode) {
@@ -273,10 +317,14 @@ void PlayerThread::Disconnect(char iLeaveMode) {
 	_sIP.clear();
 	_Connection.close();
 	_iPlayerPing = -1;
+	_iViewDistance = 0;
+	_iChatFlags = 0;
+	_iDifficulty = 0;
 
 	_NetworkWriter.clearQueues();
-
 	_heapSpawnedEntities.cleanupElements();
+	_ChunkProvider.HandleDisconnect();
+	_Inventory.onDisconnect();
 
 	_timer_Ping.reset();
 	_timer_LastBlockPut.reset();
@@ -285,9 +333,20 @@ void PlayerThread::Disconnect(char iLeaveMode) {
 	/*_timer_lastPositionUpdateEvent.reset();*/
 	_timer_StartedEating.reset();
 
-	_fSpawned       = false;
-	_fHandshakeSent = false;
-	_fAssigned      = false;
+	if (_sSecretKey.first != NULL) {
+		delete [] _sSecretKey.first;
+		_sSecretKey.first = NULL;
+	}
+
+	_NetworkInRoot.setCryptMode(false);
+	_NetworkWriter.setCryptMode(false);
+
+	_fSpawned			= false;
+	_fHandshakeReceived = false;
+	_fKeysExchanged		= false;
+	/*_fClientReadyToLogin= false;*/
+	_fCanSpawnChunks    = false;
+	_fAssigned			= false;
 }
 
 
@@ -325,49 +384,66 @@ string PlayerThread::generateConnectionHash() {
 }
 
 void PlayerThread::sendTime() {
-	NetworkOut Out(&_NetworkOutRoot);
-	Out.addByte(0x4);
-	Out.addInt64(_pMinecraftServer->getInGameTime());
-	Out.Finalize(FC_QUEUE_HIGH);
+	try{
+		NetworkOut Out(&_NetworkOutRoot);
+		Out.addByte(0x4);
+		Out.addInt64(_pMinecraftServer->getTimestamp());
+		//Out.addInt64(_pMinecraftServer->getTimestamp()%24000L);
+		Out.Finalize(FC_QUEUE_HIGH);
+	}catch(FCRuntimeException) {
+		Disconnect(FC_LEAVE_OTHER);
+	}
 }
 
 
 void PlayerThread::sendClientPosition() {
-	NetworkOut Out(&_NetworkOutRoot);
+	try{
+		NetworkOut Out(&_NetworkOutRoot);
 
-	Out.addByte(0x0D);
-	Out.addDouble(_Coordinates.X);
+		Out.addByte(0x0D);
+		Out.addDouble(_Coordinates.X);
 
-	switch(_Flags.isCrouched()) {//FastCraft will never modify Stance so we have to calculate it
-	case true:
-		_Coordinates.Stance = _Coordinates.Y + 1.5; 
-		break;
-	case false:
-		_Coordinates.Stance = _Coordinates.Y + 1.6;
-		break;
+		switch(_Flags.isCrouched()) {//FastCraft will never modify Stance so we have to calculate it
+		case true:
+			_Coordinates.Stance = _Coordinates.Y + 1.5; 
+			break;
+		case false:
+			_Coordinates.Stance = _Coordinates.Y + 1.6;
+			break;
+		}
+		Out.addDouble(_Coordinates.Stance);
+		Out.addDouble(_Coordinates.Y);
+		Out.addDouble(_Coordinates.Z);
+		Out.addFloat(_Coordinates.Yaw);
+		Out.addFloat(_Coordinates.Pitch);
+		Out.addBool(_Coordinates.OnGround);
+
+		Out.Finalize(FC_QUEUE_HIGH);
+	}catch(FCRuntimeException) {
+		Disconnect(FC_LEAVE_OTHER);
 	}
-	Out.addDouble(_Coordinates.Stance);
-	Out.addDouble(_Coordinates.Y);
-	Out.addDouble(_Coordinates.Z);
-	Out.addFloat(_Coordinates.Yaw);
-	Out.addFloat(_Coordinates.Pitch);
-	Out.addBool(_Coordinates.OnGround);
-
-	Out.Finalize(FC_QUEUE_HIGH);
 }
 
 void PlayerThread::Interval_KeepAlive() {
-	if (!isSpawned()){return;}
-	sendKeepAlive();
+	try {
+		if (!isSpawned()){return;}
+		sendKeepAlive();
+	}catch(FCRuntimeException) {
+		Disconnect(FC_LEAVE_OTHER);
+	}
 }
 
 void PlayerThread::syncHealth() {
-	NetworkOut Out(&_NetworkOutRoot);
-	Out.addByte(0x8);
-	Out.addShort(fixRange<short>(_iHealth,0,20));
-	Out.addShort(fixRange<short>(_iFood,0,20));
-	Out.addFloat(fixRange<float>(_nSaturation,0.0F,5.0F));
-	Out.Finalize(FC_QUEUE_HIGH);
+	try{
+		NetworkOut Out(&_NetworkOutRoot);
+		Out.addByte(0x8);
+		Out.addShort(fixRange<short>(_iHealth,0,20));
+		Out.addShort(fixRange<short>(_iFood,0,20));
+		Out.addFloat(fixRange<float>(_nSaturation,0.0F,5.0F));
+		Out.Finalize(FC_QUEUE_HIGH);
+	}catch(FCRuntimeException) {
+		Disconnect(FC_LEAVE_OTHER);
+	}
 }
 
 
@@ -391,220 +467,76 @@ bool PlayerThread::isSpawned() {
 
 
 void PlayerThread::insertChat(string rString) {
-	NetworkOut Out(&_NetworkOutRoot);
-	Out.addByte(0x3);
-	Out.addString(rString);
-	Out.Finalize(FC_QUEUE_HIGH);
-}
-
-
-void PlayerThread::ProcessQueue() {			
-	//All elements from high queue
-	while (!_NetworkOutRoot.getHighQueue().empty()) {
-		string & rJob = _NetworkOutRoot.getHighQueue().front();
-
-		try {
-			_Connection.sendBytes(rJob.c_str(),rJob.length()); //Send
-		}catch(...) {
-			Disconnect(FC_LEAVE_OTHER);
-			return;
-		}
-
-		_NetworkOutRoot.getHighQueue().pop();
+	try{
+		NetworkOut Out(&_NetworkOutRoot);
+		Out.addByte(0x3);
+		Out.addString(rString);
+		Out.Finalize(FC_QUEUE_HIGH);
+	}catch(FCRuntimeException) {
+		Disconnect(FC_LEAVE_OTHER);
 	}
 }
 
 void PlayerThread::Packet0_KeepAlive() {
-	_NetworkInRoot.readInt(); 
-}
-
-void PlayerThread::Packet1_Login() {
-	int iProtocolVersion = 0;
-	if (!_fHandshakeSent) { Disconnect("Incorrect login order!",false); }
-
-	try {
-		/* Check Version */
-		iProtocolVersion = _NetworkInRoot.readInt(); //Protocol Version
-
-		if (iProtocolVersion > FC_SUPPORTED_PROTOCOLVERSION) {
-			Disconnect("Outdated server! Needed Version: " + string(FC_SUPPORTED_MINCRAFTVERSION));
-			return;
-		}
-
-		if (iProtocolVersion <  FC_SUPPORTED_PROTOCOLVERSION) {
-			Disconnect("Outdated client! Needed Version: " + string(FC_SUPPORTED_MINCRAFTVERSION));
-			return;
-		}
-
-
-		/* Read unused stuff */
-		_NetworkInRoot.readString(); //Username (already known)	
-		_NetworkInRoot.readInt64();
-		_NetworkInRoot.readString();
-		_NetworkInRoot.readInt();
-		_NetworkInRoot.readInt(); //This are 4 unused byte fields
-
-
-		/* Check premium if needed */
-		if (_pMinecraftServer->isOnlineModeActivated()) {
-			string sPath("/game/checkserver.jsp?user=");
-			sPath.append(_sName);
-			sPath.append("&serverId=");
-			sPath.append(_sConnectionHash);
-
-			Poco::Net::HTTPRequest Request ( 
-				Poco::Net::HTTPRequest::HTTP_GET, 
-				sPath,
-				Poco::Net::HTTPMessage::HTTP_1_1);
-
-			_Web_Session.sendRequest(Request);
-			std::istream &is = _Web_Session.receiveResponse(_Web_Response);
-			string sErg;
-			is>>sErg;
-
-			if (sErg.compare("YES") != 0) {
-				Disconnect("Failed to verify username!",false);
-				return;
-			}
-		}
-
-
-		/* Check if there is a player with the same name */
-		PlayerThread* pPlayer = _pMinecraftServer->getPlayerPool()->getPlayerByName(_sName,this);
-		if (pPlayer != NULL) {
-			pPlayer->Disconnect("Logged in from another location.",false);
-		}
-
-
-		/* Login passed*/
-		_iEntityID = _pMinecraftServer->generateID();
-
-
-		/* Resolving spawn world*/
-		_pActualWorld = _pMinecraftServer->getWorldByName(_pMinecraftServer->getMainWorldName());
-		if(_pActualWorld == NULL) {
-			Disconnect("Spawn world not found!");
-			return;
-		}
-
-		/* set spawn Coordinates */
-		_Coordinates.X = 0.0;
-		_Coordinates.Y = 65.0;
-		_Coordinates.Z = 0.0;
-		_Coordinates.Stance = 0.0;
-		_Coordinates.OnGround = false;
-		_Coordinates.Pitch = 0.0F;
-		_Coordinates.Yaw = 0.0F;
-		_lastCoordinates = _Coordinates;
-		CheckPosition();
-
-
-		/* Building response packet*/
-		NetworkOut Out(&_NetworkOutRoot);
-		Out.addByte(0x01);
-		Out.addInt(_iEntityID);
-		Out.addString("");
-		Out.addInt64(-345L);
-		Out.addString("SUPERFLAT");
-		Out.addInt((_pMinecraftServer->getServerMode() ? 1 : 0));
-		Out.addByte(0);
-		Out.addByte(_pMinecraftServer->getDifficulty());
-		Out.addByte(FC_WORLDHEIGHT);
-		Out.addByte((unsigned char)_pMinecraftServer->getPlayerSlotCount());
-		Out.Finalize(FC_QUEUE_HIGH);
-
-
-		/* sending compass */
-		Out.addByte(0x6);
-		Out.addInt(0); 
-		Out.addInt(0); 
-		Out.addInt(0);  
-		Out.Finalize(FC_QUEUE_HIGH);
-
-		/* sending time */
-		sendTime();
-
-		_ChunkProvider.HandleNewPlayer();
-		_ChunkProvider.HandleMovement(_Coordinates); //Pre Chunks
-
-		/* sending/setting health */
-		_iHealth	= 10;
-		_iFood		= 0;
-		_nSaturation= 0.0F;
-		syncHealth();
-
-
-		/* sending/setting inventory */
-		_Inventory[37]->setItem(ItemID(298,0));
-		_Inventory[37]->setStackSize(1);
-		_Inventory[38]->setItem(ItemID(2,0));
-		_Inventory[38]->setStackSize(64);
-		_Inventory[39]->setItem(ItemID(5,0));
-		_Inventory[39]->setStackSize(64);
-		_Inventory.onLogin();
-
-
-		/* sending clients position */
-		sendClientPosition();
-
-		/* Send all login packets */
-		ProcessQueue(); 
-
-		/* Welcome message */
-		insertChat(_pMinecraftServer->getServerMOTD());
-
-
-		/* Set offically to spawned & push join event */
-		_fSpawned = true;	
-		PlayerEventBase* p = new PlayerJoinEvent(this);//Push PlayerPool Join event
-		_pMinecraftServer->getPlayerPool()->addEvent(p);
-
-
-		/* send active player list */
-		vector<PlayerThread*>& rvPlayers = _pMinecraftServer->getPlayerPool()->ListPlayers();
-		if (!rvPlayers.empty()) {
-			short iSpawnedPlayers=0;
-			for (short x = 0;x<= rvPlayers.size()-1;x++) {
-				if (!rvPlayers[x]->isSpawned()) {continue;}
-				PlayerInfoList(true,rvPlayers[x]->getUsername());
-				iSpawnedPlayers++;
-				if(iSpawnedPlayers == 59) {break;}
-			}
-		}
-
-		/* Start timers */
-		_timer_Ping.start();
-	} catch(FCRuntimeException) {
+	try{
+		_NetworkInRoot.readInt(); 
+	}catch(FCRuntimeException) {
 		Disconnect(FC_LEAVE_OTHER);
 	}
-	cout<<_sName<<" joined ("<<_sIP<<") EID:"<<_iEntityID<<endl;  //Console log
 }
 
 void PlayerThread::Packet2_Handshake() {
 	try {
+		int iProtocolVersion; 
+
+		/* Read from network */
+		iProtocolVersion = _NetworkInRoot.readByte();
 		_sName = _NetworkInRoot.readString();
-	} catch(FCRuntimeException) {
+		_NetworkInRoot.readString();
+		_NetworkInRoot.readInt();
+
+
+		/* Check data */
+		if (iProtocolVersion > FC_SUPPORTED_PROTOCOLVERSION) {
+			Disconnect("Update your client to " + string(FC_SUPPORTED_MINCRAFTVERSION));
+			return;
+		}
+
+		if (iProtocolVersion < FC_SUPPORTED_PROTOCOLVERSION) {
+			Disconnect("Downgrade your client to " + string(FC_SUPPORTED_MINCRAFTVERSION));
+			return;
+		}
+
+		if (_sName.length() > 16) {
+			Disconnect("Username too long");
+			return;
+		}
+
+		/* Response */
+		NetworkOut Out(&_NetworkOutRoot);
+		Out.addByte(0xFD);
+
+		if (_pMinecraftServer->isOnlineModeActivated()) {
+			Out.addString(generateConnectionHash());
+		}else{
+			Out.addString(string("-"));
+		}
+
+		Poco::Random rnd;
+		rnd.seed();
+		_iVerifyToken = rnd.next();
+
+		Out.addByteArray(_pMinecraftServer->getCertificate());
+		Out.addByteArray(std::make_pair((char*)&_iVerifyToken,(short)4));
+
+		Out.Finalize(FC_QUEUE_HIGH);
+
+		_fHandshakeReceived = true;
+		_NetworkWriter.ProcessHighQueue();
+	} catch(FCRuntimeException& ex) {
+		cout<<"Exception catched "<<ex.what()<<"\n";
 		Disconnect(FC_LEAVE_OTHER);
 	}
-
-	if (_sName.length() > 16) {
-		Disconnect("Username too long");
-		return;
-	}
-
-	//Send response (Connection Hash)
-	NetworkOut Out(&_NetworkOutRoot);
-	Out.addByte(0x02);
-
-	if (_pMinecraftServer->isOnlineModeActivated()) {
-		Out.addString(generateConnectionHash());
-	}else{
-		Out.addString("-");
-	}
-	Out.Finalize(FC_QUEUE_HIGH);
-
-	_fHandshakeSent = true;
-	ProcessQueue();
 }
 
 void PlayerThread::Packet3_Chat() {
@@ -636,13 +568,10 @@ void PlayerThread::Packet3_Chat() {
 void PlayerThread::Packet10_Player() {
 	try {
 		_Coordinates.OnGround = _NetworkInRoot.readBool();
+
+		if (isSpawned()) {updatePing();}
 	} catch(FCRuntimeException) {
 		Disconnect(FC_LEAVE_OTHER);
-	}
-
-	if (isSpawned()) {
-		_ChunkProvider.NextChunk();
-		updatePing();
 	}
 }
 
@@ -666,16 +595,14 @@ void PlayerThread::Packet11_Position() {
 		_dRunnedMeters += MathHelper::distance2D(_Coordinates,TmpCoord);
 		_lastCoordinates = _Coordinates;
 		_Coordinates = TmpCoord;
+
+		if (isSpawned()) {
+			CheckPosition();
+			updatePing();
+			syncMovement();
+		}
 	} catch(FCRuntimeException) {
 		Disconnect(FC_LEAVE_OTHER);
-	}
-
-	if (isSpawned()) {
-		CheckPosition();
-		_ChunkProvider.HandleMovement(_Coordinates);
-		_ChunkProvider.NextChunk();
-		updatePing();
-		syncMovement();
 	}
 }
 
@@ -693,13 +620,13 @@ void PlayerThread::Packet12_Look() {
 		}
 
 		_Coordinates = TmpCoord;
+
+		if (isSpawned()) {
+			updatePing();
+			syncMovement();
+		}
 	} catch(FCRuntimeException) {
 		Disconnect(FC_LEAVE_OTHER);
-	}
-	if (isSpawned()) {
-		_ChunkProvider.NextChunk();
-		updatePing();
-		syncMovement();
 	}
 }
 
@@ -724,16 +651,14 @@ void PlayerThread::Packet13_PosAndLook() {
 		_dRunnedMeters += MathHelper::distance2D(_Coordinates,TmpCoord);
 		_lastCoordinates = _Coordinates;
 		_Coordinates = TmpCoord;
+
+		if (isSpawned()) {
+			CheckPosition();
+			updatePing();
+			syncMovement();
+		}
 	} catch(FCRuntimeException) {
 		Disconnect(FC_LEAVE_OTHER);
-	}
-
-	if (isSpawned()) {
-		CheckPosition();
-		_ChunkProvider.HandleMovement(_Coordinates);
-		_ChunkProvider.NextChunk();
-		updatePing();
-		syncMovement();
 	}
 }
 
@@ -770,12 +695,16 @@ void PlayerThread::PlayerInfoList(bool fSpawn,string Name) {
 		_Spawned_PlayerInfoList--;
 	}
 
-	NetworkOut Out(&_NetworkOutRoot);
-	Out.addByte(0xc9);
-	Out.addString(Name);
-	Out.addBool(fSpawn);
-	Out.addShort(10);
-	Out.Finalize(FC_QUEUE_HIGH);
+	try {
+		NetworkOut Out(&_NetworkOutRoot);
+		Out.addByte(0xc9);
+		Out.addString(Name);
+		Out.addBool(fSpawn);
+		Out.addShort(10);
+		Out.Finalize(FC_QUEUE_HIGH);
+	}catch(FCRuntimeException) {
+		Disconnect(FC_LEAVE_OTHER);
+	}
 }
 
 void PlayerThread::Packet16_HoldingChange() {
@@ -787,7 +716,7 @@ void PlayerThread::Packet16_HoldingChange() {
 
 
 		if (_Flags.isRightClicking()){ 
-			ItemEntry* pItem = _Inventory.getSelectedSlot()->getItemEntryCache();
+			//ItemEntry* pItem = _Inventory.getSelectedSlot()->getItemEntryCache();
 
 			_Flags.setRightClicking(false); //Kill right klick flag
 
@@ -802,7 +731,7 @@ void PlayerThread::Packet16_HoldingChange() {
 
 void PlayerThread::Packet101_CloseWindow() {
 	try {	
-		char iWinID = _NetworkInRoot.readByte();
+		_NetworkInRoot.readByte();
 		cout<<"PlayerThread::Packet101_CloseWindow() is not implemented\n";
 	} catch(FCRuntimeException) {
 		Disconnect(FC_LEAVE_OTHER);
@@ -810,14 +739,18 @@ void PlayerThread::Packet101_CloseWindow() {
 }
 
 void PlayerThread::Packet102_WindowClick() {
-	_Inventory.readClickWindow(this,_NetworkInRoot);
-	
+	try{
+		_Inventory.readClickWindow(this,_NetworkInRoot);
+
 #ifdef _DEBUG
-	NetworkOut Out(&_NetworkOutRoot);
-	_Inventory.syncInventory(Out);
+		NetworkOut Out(&_NetworkOutRoot);
+		_Inventory.syncInventory(Out);
 #endif
 
-	_pMinecraftServer->getPlayerPool()->addEvent(new PlayerChangeHeldEvent(this));
+		_pMinecraftServer->getPlayerPool()->addEvent(new PlayerChangeHeldEvent(this));
+	}catch(FCRuntimeException) {
+		Disconnect(FC_LEAVE_OTHER);
+	}
 }
 
 void PlayerThread::syncMovement() {
@@ -833,10 +766,15 @@ void PlayerThread::spawnEntity(Entity* pEntity) {
 	if (!isSpawned()) {throw FCRuntimeException("Not spawned!");}
 	if (pEntity == NULL)  {throw FCRuntimeException("Nullpointer");}
 
-	NetworkOut out(&_NetworkOutRoot);
-	pEntity->spawn(out);
+	try {
+		NetworkOut out(&_NetworkOutRoot);
+		pEntity->spawn(out);
 
-	_heapSpawnedEntities.add(pEntity->getEntityID(),new EntityListEntry(pEntity));
+		_heapSpawnedEntities.add(pEntity->getEntityID(),new EntityListEntry(pEntity));
+	}catch(FCRuntimeException& ex) {
+		cout<<"Exception catched "<<ex.what()<<"\n";
+		Disconnect(FC_LEAVE_OTHER);
+	}
 }
 
 bool PlayerThread::isEntitySpawned(int ID) {
@@ -846,26 +784,34 @@ bool PlayerThread::isEntitySpawned(int ID) {
 void PlayerThread::updateEntityPosition(Entity* pEntity) {
 	if (!isSpawned()) {throw FCRuntimeException("Not spawned!");}
 	if (pEntity == NULL)  {throw FCRuntimeException("Nullpointer");}
+	try {
 
-	EntityListEntry* ptr;
-	if ((ptr = _heapSpawnedEntities.get(pEntity->getEntityID())) == NULL) {throw FCRuntimeException("Not spawned!");}
+		EntityListEntry* ptr;
+		if ((ptr = _heapSpawnedEntities.get(pEntity->getEntityID())) == NULL) {throw FCRuntimeException("Not spawned!");}
 
-	NetworkOut Out(&_NetworkOutRoot);
-	pEntity->syncCoordinates(Out,ptr->Position);
+		NetworkOut Out(&_NetworkOutRoot);
+		pEntity->syncCoordinates(Out,ptr->Position);
 
-	ptr->Position = pEntity->Coordinates;
+		ptr->Position = pEntity->Coordinates;
+	}catch(FCRuntimeException) {
+		Disconnect(FC_LEAVE_OTHER);
+	}
 }
 
 void PlayerThread::despawnEntity(int ID) {
 	if (!isSpawned()) {throw FCRuntimeException("Not spawned!");}
 	if (!_heapSpawnedEntities.has(ID)) {throw FCRuntimeException("Entity not spawned");}
+	try {
 
-	_heapSpawnedEntities.erase(ID);
+		_heapSpawnedEntities.erase(ID);
 
-	NetworkOut Out(&_NetworkOutRoot);
-	Out.addByte(0x1D);
-	Out.addInt(ID);
-	Out.Finalize(FC_QUEUE_HIGH);
+		NetworkOut Out(&_NetworkOutRoot);
+		Out.addByte(0x1D);
+		Out.addInt(ID);
+		Out.Finalize(FC_QUEUE_HIGH);
+	}catch(FCRuntimeException) {
+		Disconnect(FC_LEAVE_OTHER);
+	}
 }
 
 int PlayerThread::getEntityID() {
@@ -947,12 +893,16 @@ void PlayerThread::Packet19_EntityAction() {
 void PlayerThread::playAnimationOnEntity(int ID,char AnimID) {
 	if (!isEntitySpawned(ID)) {throw FCRuntimeException("Not spawned!");}
 	if (!Constants::isDefined(AnimID,"/Entity/Alive/Animation/")){throw FCRuntimeException("Animation is not defined");}
+	try{
 
-	NetworkOut Out(&_NetworkOutRoot);
-	Out.addByte(0x12);
-	Out.addInt(ID);
-	Out.addByte(AnimID);
-	Out.Finalize(FC_QUEUE_HIGH);
+		NetworkOut Out(&_NetworkOutRoot);
+		Out.addByte(0x12);
+		Out.addInt(ID);
+		Out.addByte(AnimID);
+		Out.Finalize(FC_QUEUE_HIGH);
+	}catch(FCRuntimeException) {
+		Disconnect(FC_LEAVE_OTHER);
+	}
 }
 
 
@@ -960,8 +910,12 @@ void PlayerThread::updateEntityMetadata(EntityLiving* pEntity) {
 	if (!isSpawned()) {throw FCRuntimeException("Not spawned!");}
 	if (pEntity == NULL)  {throw FCRuntimeException("Nullpointer");}
 
-	NetworkOut Out(&_NetworkOutRoot);
-	pEntity->sendMetadata(Out);
+	try {
+		NetworkOut Out(&_NetworkOutRoot);
+		pEntity->sendMetadata(Out);
+	}catch(FCRuntimeException) {
+		Disconnect(FC_LEAVE_OTHER);
+	}
 }
 
 //void PlayerThread::Interval_CheckSpeed() {
@@ -996,10 +950,14 @@ EntityFlags PlayerThread::getFlags() {
 void PlayerThread::updateEntityEquipment(EntityLiving* pEntity) {
 	if (!isEntitySpawned(pEntity->getEntityID())) {throw FCRuntimeException("Not spawned!");}
 
-	EntityListEntry* pEntityLEntry = _heapSpawnedEntities.get(pEntity->getEntityID());
+	try {
+		EntityListEntry* pEntityLEntry = _heapSpawnedEntities.get(pEntity->getEntityID());
 
-	NetworkOut Out(&_NetworkOutRoot);
-	pEntity->updateEquipment(Out,pEntityLEntry->Equipment);
+		NetworkOut Out(&_NetworkOutRoot);
+		pEntity->updateEquipment(Out,pEntityLEntry->Equipment);
+	}catch(FCRuntimeException) {
+		Disconnect(FC_LEAVE_OTHER);
+	}
 }
 
 void PlayerThread::CheckPosition() {
@@ -1024,6 +982,10 @@ void PlayerThread::Packet15_PlayerBlockPlacement() {
 		Direction = _NetworkInRoot.readByte();
 		Slot.readFromNetwork(_NetworkInRoot);
 
+		/* Crosshair pos*/
+		_NetworkInRoot.readByte(); 
+		_NetworkInRoot.readByte();
+		_NetworkInRoot.readByte();
 
 		Poco::Timestamp::TimeDiff lastBlockPut = _timer_LastBlockPut.elapsed()/1000;
 
@@ -1154,6 +1116,7 @@ void PlayerThread::Packet15_PlayerBlockPlacement() {
 			ItemEntry* Entry = InHand->getItemEntryCache();
 			if (Entry->ConnectedBlock.first == -1 && Entry->ConnectedBlock.second == -1) { //No connected item
 				spawnBlock(blockCoordinates,ItemID(0,0));
+				_Inventory.syncInHandStack();
 				return; 
 			}
 			idSelectedBlock = Entry->ConnectedBlock;
@@ -1165,9 +1128,9 @@ void PlayerThread::Packet15_PlayerBlockPlacement() {
 
 		/* Prevent: set a block above the map */
 		if (pSelectedBlock->Fluid) { /* Fluids can be placed one block above the max block level */
-			if (blockCoordinates.Y >= FC_WORLDHEIGHT-1) { return;}
+			if (blockCoordinates.Y >= FC_WORLDHEIGHT-1) {return;}
 		}else{
-			if (blockCoordinates.Y >= FC_WORLDHEIGHT-2) { return;}
+			if (blockCoordinates.Y >= FC_WORLDHEIGHT-2) {return;}
 		}
 
 		/* Prevent: set a block under the map */
@@ -1184,12 +1147,14 @@ void PlayerThread::Packet15_PlayerBlockPlacement() {
 		/* Prevent: Set a block into a non fluid block/non air */
 		if (BlockAt.first != 0 && !pBlockAt->Fluid && !pBlockAt->isSpreadBlock) {			
 			spawnBlock(blockCoordinates,BlockAt);
+			_Inventory.syncInHandStack();
 			return;
 		}
 
 		/* Prevent: Set not placeable blocks */
 		if (!pSelectedBlock->Placeable) {
 			spawnBlock(blockCoordinates,ItemID(0,0));
+			_Inventory.syncInHandStack();
 			return;
 		}
 
@@ -1205,12 +1170,13 @@ void PlayerThread::Packet15_PlayerBlockPlacement() {
 				coords.Y = int(floor(rvpPlayerThreads[x]->getCoordinates().Y));
 				coords.Z = int(floor(rvpPlayerThreads[x]->getCoordinates().Z));
 
-				if ( coords.X == blockCoordinates.X &&
+				if (coords.X == blockCoordinates.X &&
 					coords.Z == blockCoordinates.Z &&
 					(coords.Y == blockCoordinates.Y ||coords.Y+1 == blockCoordinates.Y)
 					)
 				{ /* it will hurt someone */
 					spawnBlock(blockCoordinates,ItemID(0,0));
+					_Inventory.syncInHandStack();
 					return;
 				}
 			}
@@ -1228,6 +1194,7 @@ void PlayerThread::Packet15_PlayerBlockPlacement() {
 				)
 			{
 				spawnBlock(blockCoordinates,ItemID(0,0));
+				_Inventory.syncInHandStack();
 				return;
 			}
 		}
@@ -1243,8 +1210,7 @@ void PlayerThread::Packet15_PlayerBlockPlacement() {
 
 		_timer_LastBlockPut.reset();
 		_timer_LastBlockPut.start();
-	} catch(FCRuntimeException& ex ) {
-		cout<<"Exception cateched: "<<ex.getMessage()<<"\n";
+	} catch(FCRuntimeException) {
 		Disconnect(FC_LEAVE_OTHER);
 	}
 }
@@ -1257,22 +1223,20 @@ void PlayerThread::spawnBlock(BlockCoordinates& blockCoords,ItemID& Item) {
 	if (!_pMinecraftServer->getItemInfoProvider()->isRegistered(Item)) {
 		throw FCRuntimeException("Block not registered");
 	}
+	try {
+		ChunkCoordinates Coords = ChunkMath::toChunkCoords(blockCoords);
 
-	ChunkCoordinates Coords;
-	Coords = ChunkMath::toChunkCoords(blockCoords);
-
-	if (!_ChunkProvider.isSpawned(Coords)) {
-		return;
+		NetworkOut Out(&_NetworkOutRoot);
+		Out.addByte(0x35);
+		Out.addInt(blockCoords.X);
+		Out.addByte((char)blockCoords.Y);
+		Out.addInt(blockCoords.Z);
+		Out.addByte((unsigned char)Item.first);
+		Out.addByte(Item.second);	
+		Out.Finalize(FC_QUEUE_HIGH);
+	}catch(FCRuntimeException) {
+		Disconnect(FC_LEAVE_OTHER);
 	}
-
-	NetworkOut Out(&_NetworkOutRoot);
-	Out.addByte(0x35);
-	Out.addInt(blockCoords.X);
-	Out.addByte((char)blockCoords.Y);
-	Out.addInt(blockCoords.Z);
-	Out.addByte((unsigned char)Item.first);
-	Out.addByte(Item.second);	
-	Out.Finalize(FC_QUEUE_HIGH);
 }
 
 
@@ -1313,8 +1277,7 @@ void PlayerThread::Packet14_Digging() {
 
 
 		/*	cout<<"iStatus:"<<int(iStatus)<<"\tiFace:"<<int(iFace)<<"\n";*/
-	} catch(FCRuntimeException& ex ) {
-		cout<<"Exception cateched: "<<ex.getMessage()<<"\n";
+	} catch(FCRuntimeException ) {
 		Disconnect(FC_LEAVE_OTHER);
 	}
 }
@@ -1324,12 +1287,16 @@ World* PlayerThread::getWorld() {
 }
 
 void PlayerThread::setEntityStatus(char iCode) {
-	NetworkOut Out(&_NetworkOutRoot);
+	try {
+		NetworkOut Out(&_NetworkOutRoot);
 
-	Out.addByte(0x26);
-	Out.addInt(_iEntityID);
-	Out.addByte(iCode);
-	Out.Finalize(FC_QUEUE_HIGH);
+		Out.addByte(0x26);
+		Out.addInt(_iEntityID);
+		Out.addByte(iCode);
+		Out.Finalize(FC_QUEUE_HIGH);
+	}catch(FCRuntimeException) {
+		Disconnect(FC_LEAVE_OTHER);
+	}
 }
 
 void PlayerThread::setEntityStatus(int iID,char iCode) {
@@ -1337,12 +1304,16 @@ void PlayerThread::setEntityStatus(int iID,char iCode) {
 		cout<<"PlayerThread::setEntityStatus "<<iID<<" is not spawned!\n";
 		return;
 	}
-	NetworkOut Out(&_NetworkOutRoot);
+	try{
+		NetworkOut Out(&_NetworkOutRoot);
 
-	Out.addByte(0x26);
-	Out.addInt(iID);
-	Out.addByte(iCode);
-	Out.Finalize(FC_QUEUE_HIGH);
+		Out.addByte(0x26);
+		Out.addInt(iID);
+		Out.addByte(iCode);
+		Out.Finalize(FC_QUEUE_HIGH);
+	}catch(FCRuntimeException) {
+		Disconnect(FC_LEAVE_OTHER);
+	}
 }
 
 void PlayerThread::Interval_CheckEating() {
@@ -1387,10 +1358,14 @@ void PlayerThread::handleEating() {
 }
 
 void PlayerThread::sendKeepAlive() {
-	NetworkOut Out(&_NetworkOutRoot);
-	Out.addByte(0x0);
-	Out.addInt(_Rand.next());
-	Out.Finalize(FC_QUEUE_HIGH);
+	try{
+		NetworkOut Out(&_NetworkOutRoot);
+		Out.addByte(0x0);
+		Out.addInt(_Rand.next());
+		Out.Finalize(FC_QUEUE_HIGH);
+	}catch(FCRuntimeException) {
+		Disconnect(FC_LEAVE_OTHER);
+	}
 }
 
 void PlayerThread::updatePing() {
@@ -1410,16 +1385,286 @@ MinecraftServer* PlayerThread::getMinecraftServer(){
 void PlayerThread::cleanupSpawnedPlayers() {
 	auto it = _heapSpawnedEntities.begin();
 	char iTypePlayer = Constants::get("/Entity/Alive/TypeID/Player");
+	try {
 
-	while (!it.isEndReached()) {
-		if (!it->isAlive() || it->getType() != iTypePlayer) {continue;}
-		if (MathHelper::distance2D(it->Position,_Coordinates) > FC_PLAYERSPAWNRADIUS) { /* too distant -> despawn */
-			despawnEntity(it->getEntiyID());
+		while (!it.isEndReached()) {
+			if (!it->isAlive() || it->getType() != iTypePlayer) {continue;}
+			if (MathHelper::distance2D(it->Position,_Coordinates) > FC_PLAYERSPAWNRADIUS) { /* too distant -> despawn */
+				despawnEntity(it->getEntiyID());
+			}
+			it++;
 		}
-		it++;
+	}catch(FCRuntimeException) {
+		Disconnect(FC_LEAVE_OTHER);
 	}
 }
 
 NetworkOutRoot* PlayerThread::getNetworkOutRoot() {
 	return &_NetworkOutRoot;
+}
+
+void PlayerThread::Packet252_EncryptionKeyResponse() {
+	try {
+		_sSecretKey = _NetworkInRoot.readByteArray(true);
+		if (_sSecretKey.second != 16) {throw FCRuntimeException("Illegal key length");}
+
+		pair<char*,short> VerifyToken = _NetworkInRoot.readByteArray(true);
+		if (VerifyToken.second != 4) {throw FCRuntimeException("Illegal key length");}
+
+		int iClientToken;
+		memcpy(&iClientToken,VerifyToken.first,4);
+		delete [] VerifyToken.first;
+
+		if(_sSecretKey.second == 0) {throw FCRuntimeException("Illegal encryption key");}
+		if (iClientToken != _iVerifyToken) {throw FCRuntimeException("Invalid token");}
+
+
+		/* Check premium if needed */
+		if (_pMinecraftServer->isOnlineModeActivated()) {
+			//Compute connection hash for minecraft.net
+			Poco::SHA1Engine sha1;
+			bool fNegative = false;
+			sha1.update(_sConnectionHash.c_str(),_sConnectionHash.length());
+			sha1.update(_sSecretKey.first,_sSecretKey.second);
+			sha1.update(_pMinecraftServer->getCertificate().first,_pMinecraftServer->getCertificate().second);
+
+
+			vector<unsigned char> digests = sha1.digest();
+			if (digests.size() != 20) {
+				Disconnect("Unable to verify username (internal error)");
+				return;
+			}
+			if (digests[0] & 0x80) {
+				fNegative = true;
+				char x;
+				for (x=0;x<=19;x++) {
+					digests[x] = ~(digests[x]);
+				}
+
+				bool fCarry = true;
+				x = 19;
+
+				while (fCarry) {
+					fCarry = bool(digests[x] == 0xff);
+					digests[x--]++;
+				}
+			}
+
+			string serverID( fNegative ? "-" : "");
+			serverID.append(sha1.digestToHex(digests));
+
+			if (serverID.size() < 40) {
+				Disconnect("Unable to verify username (internal error)");
+				return;
+			}
+
+			//Remove leading zeros
+			char iOffset = fNegative ? 1 : 0;
+			if (serverID[iOffset] == '0') {
+				for (int x = iOffset;x<=serverID.size()-1;x++) {
+					if (serverID[x] != '0') {
+						serverID.erase(iOffset,x-iOffset);
+						break;
+					}
+				}
+			}
+
+
+			/* Send it */
+			string sPath("/game/checkserver.jsp?user=");
+			sPath.append(_sName);
+			sPath.append("&serverId=");
+			sPath.append(serverID);
+
+			Poco::Net::HTTPRequest Request ( 
+				Poco::Net::HTTPRequest::HTTP_GET, 
+				sPath,
+				Poco::Net::HTTPMessage::HTTP_1_1);
+
+			_Web_Session.sendRequest(Request);
+			std::istream &is = _Web_Session.receiveResponse(_Web_Response);
+			string sErg;
+			is>>sErg;
+
+			if (sErg.compare("YES") != 0) {
+				Disconnect("Failed to verify username!",false);
+				return;
+			}
+		}
+
+		_fKeysExchanged = true;
+
+		NetworkOut Out(&_NetworkOutRoot);
+		Out.addByte(0xFC);
+		Out.addShort(0);
+		Out.addShort(0);
+		Out.Finalize(FC_QUEUE_HIGH);
+		_NetworkWriter.ProcessHighQueue();
+
+		_NetworkInRoot.setCryptMode(true);
+		//_NetworkOutRoot.setCryptMode(true);
+		_NetworkWriter.setCryptMode(true);
+	}catch(FCRuntimeException) {
+		Disconnect(FC_LEAVE_OTHER);
+	}
+}
+
+pair<char*,short>& PlayerThread::getSecretKey() {
+	return _sSecretKey;
+}
+
+void PlayerThread::Packet205_ClientStatus() {
+	try {
+		char iStatus = _NetworkInRoot.readByte();
+
+		if (!_fSpawned) {
+			if (iStatus != 0) {
+				Disconnect("Illegal login order");
+				return;
+			}
+			/* Init stuff */
+			_pActualWorld = _pMinecraftServer->getWorldByName(_pMinecraftServer->getMainWorldName());
+			if(_pActualWorld == NULL) {
+				Disconnect("Spawn world not found!");
+				return;
+			}
+
+			PlayerThread* pPlayer = _pMinecraftServer->getPlayerPool()->getPlayerByName(_sName,this);
+			if (pPlayer != NULL) {
+				pPlayer->Disconnect("Logged in from another location.",false);
+			}
+
+			_iEntityID = _pMinecraftServer->generateID();
+
+
+			/* Build login request */
+			NetworkOut Out(&_NetworkOutRoot);
+			Out.addByte(0x1);
+			Out.addInt(_iEntityID);
+			Out.addString(string("SUPERFLAT"));
+			Out.addByte(_pMinecraftServer->getServerMode() ? 1 : 0);
+			Out.addByte(_pActualWorld->getDimension());
+			Out.addByte(_pMinecraftServer->getDifficulty());
+			Out.addByte(0); //Unused
+			Out.addByte((_pMinecraftServer->getPlayerSlotCount() > 255 ? 255 : (unsigned char)_pMinecraftServer->getPlayerSlotCount()));
+			Out.Finalize(FC_QUEUE_HIGH);
+
+
+			_Coordinates.X = (double)_pActualWorld->getSpawnX();
+			_Coordinates.Y = 120.0; //(double)_pActualWorld->getSpawnY();
+			_Coordinates.Z = (double)_pActualWorld->getSpawnZ();
+			_Coordinates.Stance = 0.0;
+			_Coordinates.OnGround = false;
+			_Coordinates.Pitch = 0.0F;
+			_Coordinates.Yaw = 0.0F;
+			_lastCoordinates = _Coordinates;
+			CheckPosition();
+
+
+			/* sending compass */
+			Out.addByte(0x6);
+			Out.addInt(0); 
+			Out.addInt(0); 
+			Out.addInt(0);  
+			Out.Finalize(FC_QUEUE_HIGH);
+
+			/* sending time */
+			sendTime();
+
+			_ChunkProvider.HandleNewPlayer();
+
+			/* sending/setting health */
+			_iHealth	= 10;
+			_iFood		= 0;
+			_nSaturation= 0.0F;
+			syncHealth();
+
+
+			/* sending clients position */
+			sendClientPosition();
+
+
+			/* Push join event */
+			_fSpawned = true;
+			PlayerEventBase* p = new PlayerJoinEvent(this);//Push PlayerPool Join event
+			_pMinecraftServer->getPlayerPool()->addEvent(p);
+
+
+			/* send active player list */
+			vector<PlayerThread*>& rvPlayers = _pMinecraftServer->getPlayerPool()->ListPlayers();
+			if (!rvPlayers.empty()) {
+				short iSpawnedPlayers=0;
+				for (short x = 0;x<= rvPlayers.size()-1;x++) {
+					if (!rvPlayers[x]->isSpawned()) {continue;}
+					PlayerInfoList(true,rvPlayers[x]->getUsername());
+					iSpawnedPlayers++;
+					if(iSpawnedPlayers == 59) {break;}
+				}
+			}
+
+
+			/* sending/setting inventory */
+			_Inventory[37]->setItem(ItemID(276,0));
+			_Inventory[37]->setStackSize(1);
+			_Inventory[38]->setItem(ItemID(2,0));
+			_Inventory[38]->setStackSize(5);
+			_Inventory[39]->setItem(ItemID(5,0));
+			_Inventory[39]->setStackSize(64);
+			_Inventory.onLogin();
+
+
+			/* Welcome message */
+			insertChat(_pMinecraftServer->getServerMOTD());
+			_timer_Ping.start();
+			cout<<_sName<<" joined ("<<_sIP<<") EID:"<<_iEntityID<<endl; 
+		}
+	}catch(FCRuntimeException& ex) {
+		cout<<"Exception catched: "<<ex.getMessage()<<"\n";
+		Disconnect(FC_LEAVE_OTHER);
+	}
+}
+
+void PlayerThread::Packet204_LocalesAndViewDistance() {
+	try {
+		_sPlayerLocale = _NetworkInRoot.readString();
+		_iViewDistance = _NetworkInRoot.readByte();
+		_iChatFlags	   = _NetworkInRoot.readByte();
+		_iDifficulty   = _NetworkInRoot.readByte();
+
+		if (_sPlayerLocale.empty()) {
+			Disconnect("Illegal locale");
+			return;
+		}
+
+		if (_iViewDistance < 0 || _iViewDistance > 3) {
+			Disconnect("Illegal view distance");
+			return;
+		}
+		_fCanSpawnChunks = true;
+	}catch(FCRuntimeException& ex) {
+		cout<<"Exception catched: "<<ex.getMessage()<<"\n";
+		Disconnect(FC_LEAVE_OTHER);
+	}
+}
+
+char PlayerThread::getViewDistance() {
+	return _iViewDistance;
+}
+
+void PlayerThread::Packet202_PlayerAbilities() {
+	try {
+		_NetworkInRoot.readByte();
+		_NetworkInRoot.readByte();
+		_NetworkInRoot.readByte();
+
+		//NetworkOut Out(&_NetworkOutRoot);
+		//Out.addByte(0xCA);
+		//Out.addByte(14);
+		//Out.addByte(50);
+		//Out.addByte(50);
+		//Out.Finalize(FC_QUEUE_HIGH);
+	}catch(FCRuntimeException& ex) {
+		cout<<"Exception catched: "<<ex.getMessage()<<"\n";
+		Disconnect(FC_LEAVE_OTHER);
+	}
 }

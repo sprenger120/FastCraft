@@ -72,11 +72,14 @@ private:
 	double _dRunnedMeters;
 
 
-	/* System */
-	bool _fSpawned;
-	bool _fHandshakeSent;
+	/* Login */
 	bool _fAssigned;
-
+	bool _fHandshakeReceived;
+	bool _fKeysExchanged;
+	/*bool _fClientReadyToLogin;*/
+	bool _fCanSpawnChunks;
+	bool _fSpawned;
+	
 
 	/* Network */
 	string _sIP;
@@ -88,7 +91,6 @@ private:
 
 
 	/* Data delivering */
-	PackingThread& _rPackingThread;
 	ChunkProvider _ChunkProvider;
 	NetworkWriter _NetworkWriter;
 
@@ -106,23 +108,33 @@ private:
 	World* _pActualWorld;
 	Heap<EntityListEntry*,int> _heapSpawnedEntities;
 
+
     /* Time Management */
 	TimeJobServer<PlayerThread> _timeJobServer;
     Poco::Stopwatch _timer_Ping;
 	Poco::Stopwatch _timer_LastBlockPut;
 	Poco::Stopwatch _timer_StartedEating;
-	//Poco::Stopwatch _timer_lastSpeedCalculation;
 	Poco::Stopwatch _timer_lastArmSwing;
-	//Poco::Stopwatch _timer_lastPositionUpdateEvent;
+
+
+	/* Encryption */
+	int _iVerifyToken;
+	pair<char*,short> _sSecretKey;
+
+
+	/* Locale and view distance */
+	string _sPlayerLocale;
+	char _iViewDistance;
+	char _iChatFlags;
+	char _iDifficulty;
 public:
 	/*
 	* Constructor
 
 	Parameter:
-	@1 : PackingThread of this Minecraft Server instance
-	@2 : MinecraftServer instance that runs this class
+	@1 : MinecraftServer instance that runs this class
 	*/
-	PlayerThread(PackingThread&,MinecraftServer*);
+	PlayerThread(MinecraftServer*);
 
 
 	/* 
@@ -351,6 +363,18 @@ public:
 	* Returns a pointer to players NetworkOutRoot instance
 	*/ 
 	NetworkOutRoot* getNetworkOutRoot();
+
+
+	/*
+	* Returns the RC4 key
+	*/
+	pair<char*,short>& getSecretKey();
+
+
+	/*
+	* Returns clients current view distance
+	*/
+	char getViewDistance();
 private:
 	//Interval functions
 	void Interval_KeepAlive();
@@ -373,11 +397,14 @@ private:
 	void Packet19_EntityAction();
 	void Packet101_CloseWindow();
 	void Packet102_WindowClick();
+	void Packet202_PlayerAbilities();
+	void Packet204_LocalesAndViewDistance();
+	void Packet205_ClientStatus();
+	void Packet252_EncryptionKeyResponse();
 	void Packet254_ServerListPing();
 	void Packet255_Disconnect();
 
 	//Network
-	void ProcessQueue();
 	void sendTime();
 	void sendClientPosition();
 	void sendKeepAlive();
