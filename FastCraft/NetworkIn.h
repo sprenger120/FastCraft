@@ -45,7 +45,7 @@ private:
 	RSAES<PKCS1v15>::Decryptor _rsaDecryptor;
 	CryptoPP::CFB_Mode<AES>::Decryption* _aesDecryptor;
 	byte _IV[AES::BLOCKSIZE];
-	CryptoPP::StreamTransformationFilter* _cfbEncryptor;
+	CryptoPP::StreamTransformationFilter* _cfbDecryptor;
 
 	bool _fCryptMode;
 	string _sDecryptOutput;
