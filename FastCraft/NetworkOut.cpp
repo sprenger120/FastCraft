@@ -19,7 +19,6 @@ GNU General Public License for more details.
 #include <cstring>
 #include "FCRuntimeException.h"
 #include "PlayerThread.h"
-using namespace CryptoPP;
 //using CryptoPP::StringSink;
 
 NetworkOut::NetworkOut(NetworkOutRoot* p) 
@@ -170,30 +169,13 @@ void NetworkOut::Finalize(char iType) {
 	if (iType != FC_QUEUE_LOW && iType != FC_QUEUE_HIGH) {throw FCRuntimeException("Unknown queue type");}
 	if (_pNetworkBuffer->empty()) {return;}
 	if (!_pMaster->_pPlayer->isAssigned()) {throw FCRuntimeException("Unable to encode data",false);}
-
-	string* pCiphed = NULL;
-
-	if (_pMaster->_fCryptMode) {
-		pCiphed = new string("");
-
-		try {
-			StringSource(*_pNetworkBuffer, true, 
-				new StreamTransformationFilter( *_pMaster->_aesEncryptor,
-				new StringSink(*pCiphed)
-				)     
-			); 
-		}catch(CryptoPP::Exception) {
-			delete pCiphed;
-			throw FCRuntimeException("Unable to encode data",false);
-		}
-
-		_pMaster->Add(iType,pCiphed);
-		_pNetworkBuffer->clear();
-		return;
+	
+	try {
+		_pMaster->Add(iType,_pNetworkBuffer);
+		_pNetworkBuffer = new string("");
+	}catch(FCRuntimeException &ex) {
+		ex.rethrow();
 	}
-
-	_pMaster->Add(iType,_pNetworkBuffer);
-	_pNetworkBuffer = new string("");
 }
 
 void NetworkOut::addByteArray(string& rTarget,std::pair<char*,short>& rData) {

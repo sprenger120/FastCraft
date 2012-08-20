@@ -18,17 +18,10 @@ GNU General Public License for more details.
 #include "ThreadSafeQueue.h"
 #include "NetworkOut.h"
 #include <string>
-#include <rsa.h>
-#include <modes.h>
-#include <aes.h>
 
 using std::string;
-using CryptoPP::RSAES;
-using CryptoPP::PKCS1v15;
-using CryptoPP::AES;
 class MinecraftServer;
 class PlayerThread;
-
 
 class NetworkOutRoot {
 friend class NetworkOut;
@@ -37,10 +30,6 @@ private:
 	ThreadSafeQueue<string*> _highQueue;
 	MinecraftServer* _pMCServer;
 	PlayerThread* _pPlayer;
-
-	bool _fCryptMode;
-	CryptoPP::CFB_Mode<AES>::Encryption* _aesEncryptor;
-	byte _IV[AES::BLOCKSIZE];
 public:
 	/*
 	* Constructor
@@ -54,7 +43,7 @@ public:
 	/*
 	* Destuctor
 	*/
-	~NetworkOutRoot();
+	//~NetworkOutRoot();
 
 
 	/*
@@ -78,11 +67,5 @@ public:
 	@2 : Pointer tot data
 	*/
 	void Add(char,string*);
-
-
-	/*
-	* De-/enables traffic encryption
-	*/
-	void setCryptMode(bool);
 };
 #endif

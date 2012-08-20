@@ -20,19 +20,16 @@ GNU General Public License for more details.
 #include "PlayerThread.h"
 #include <cstring>
 #include <utility>
-
+using namespace CryptoPP;
 using std::pair;
 
 NetworkOutRoot::NetworkOutRoot(MinecraftServer* pMCServer,PlayerThread* pPlayer) {
 	_pMCServer = pMCServer;
-	_fCryptMode = false;
 	_pPlayer = pPlayer;
-	_aesEncryptor = NULL;
 }
 
-NetworkOutRoot::~NetworkOutRoot() {
-	if (_aesEncryptor != NULL) {delete _aesEncryptor;}
-}
+//NetworkOutRoot::~NetworkOutRoot() {
+//}
 
 ThreadSafeQueue<string*> & NetworkOutRoot::getLowQueue() {
 	return  _lowQueue;
@@ -44,6 +41,7 @@ ThreadSafeQueue<string*> & NetworkOutRoot::getHighQueue() {
 
 void NetworkOutRoot::Add(char iType,string* pData) {
 	_pMCServer->_iWriteTraffic+=pData->length();
+
 	switch(iType) {
 	case FC_QUEUE_LOW:
 		_lowQueue.push(pData);
@@ -56,14 +54,3 @@ void NetworkOutRoot::Add(char iType,string* pData) {
 	}
 }
 
-void NetworkOutRoot::setCryptMode(bool fMode) {
-	_fCryptMode = fMode;
-	if(fMode) {
-		if (_aesEncryptor != NULL) {delete _aesEncryptor;}
-		pair<char*,short>& rKey = _pPlayer->getSecretKey();
-
-		memcpy(_IV,rKey.first,rKey.second);
-
-		_aesEncryptor = new CryptoPP::CFB_Mode<AES>::Encryption((byte*)rKey.first,(unsigned int)rKey.second,_IV,1);
-	}
-}

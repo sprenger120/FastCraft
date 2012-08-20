@@ -18,10 +18,15 @@ GNU General Public License for more details.
 #include <string>
 #include "ThreadSafeQueue.h"
 #include "ServerThreadBase.h"
-
+#include <rsa.h>
+#include <modes.h>
+#include <aes.h>
 
 class PlayerThread;
 using std::string;
+using CryptoPP::RSAES;
+using CryptoPP::PKCS1v15;
+using CryptoPP::AES;
 
 class NetworkWriter : public ServerThreadBase { 
 private:
@@ -31,6 +36,9 @@ private:
 	PlayerThread* _pPlayer;
 
 	bool _fClear;
+	bool _fCryptMode;
+	CryptoPP::CFB_Mode<AES>::Encryption* _aesEncryptor;
+	byte _IV[AES::BLOCKSIZE];
 public:
 	/*
 	* Constructor
@@ -52,7 +60,6 @@ public:
 	* Destructor
 	*/
 	~NetworkWriter();
-
 	
 	/*
 	* Thread main
@@ -64,7 +71,21 @@ public:
 	* Exception preventing method for clearing the write queues
 	*/
 	void clearQueues();
+
+
+	/*
+	* Enables encryption
+	*/
+	void setCryptMode(bool);
+
+
+	/*
+	* Processes quque elements
+	*/
+	void ProcessHighQueue();
 private:
+	void ProcessQueueElement(ThreadSafeQueue<string*>&);
 	void waitTillDisconnected();
+	void clearQueue(ThreadSafeQueue<string*>&);
 };
 #endif

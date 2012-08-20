@@ -20,9 +20,10 @@ GNU General Public License for more details.
 #include "FCRuntimeException.h"
 
 using Poco::Thread;
+using namespace CryptoPP;
 
 NetworkWriter::NetworkWriter(ThreadSafeQueue<string*>& lowQ,ThreadSafeQueue<string*>& highQ,Poco::Net::StreamSocket& s,PlayerThread* p) :
-_rLowQueue(lowQ),
+	_rLowQueue(lowQ),
 	_rHighQueue(highQ),
 	_rStrm(s),
 	_pPlayer(p),
@@ -30,12 +31,16 @@ _rLowQueue(lowQ),
 {
 	_fClear = false;
 	startThread(this);
+
+	_fCryptMode = false;
+	_aesEncryptor = NULL;
 }
 
 NetworkWriter::~NetworkWriter() {
 	killThread();
 	if (!_rLowQueue.empty()) {_rLowQueue.clear();}
 	if (!_rHighQueue.empty()) {_rHighQueue.clear();}
+	if (_aesEncryptor != NULL) {delete _aesEncryptor;}
 }
 
 void NetworkWriter::run() {
@@ -44,19 +49,8 @@ void NetworkWriter::run() {
 		if (_fClear) {
 			_fClear = false;
 
-			string* pStr = NULL;
-
-			while(!_rLowQueue.empty()) {
-				pStr = _rLowQueue.front();
-				delete pStr;
-				_rLowQueue.pop();
-			}
-
-			while(!_rHighQueue.empty()) {
-				pStr = _rHighQueue.front();
-				delete pStr;
-				_rHighQueue.pop();
-			}
+			clearQueue(_rLowQueue);
+			clearQueue(_rHighQueue);
 		}
 
 		if (!_pPlayer->isSpawned()) {
@@ -65,29 +59,17 @@ void NetworkWriter::run() {
 		}
 
 		try {
-			string* pStr = NULL;
-
 			/* High priority packets */
 			while (!_rHighQueue.empty()) {
-				pStr = _rHighQueue.front();
-				
-				_rStrm.sendBytes(pStr->c_str(),pStr->length()); 
-				
-				_rHighQueue.pop();
-				delete pStr;
+				ProcessQueueElement(_rHighQueue);
 			}
-
 
 			/* Low priority packets */
 			if (_rLowQueue.empty()) {
 				Thread::sleep(10);
 				continue;
 			}
-			pStr = _rLowQueue.front();
-			_rStrm.sendBytes(pStr->c_str(),pStr->length()); 
-			
-			_rLowQueue.pop();
-			delete pStr;
+			ProcessQueueElement(_rLowQueue);
 		}catch(...) {
 			waitTillDisconnected();
 			continue;
@@ -104,4 +86,60 @@ void NetworkWriter::waitTillDisconnected() {
 
 void NetworkWriter::clearQueues() {
 	_fClear = true;
+}
+
+
+void NetworkWriter::setCryptMode(bool fMode) {
+	_fCryptMode = fMode;
+	if(fMode) {
+		if (_aesEncryptor != NULL) {delete _aesEncryptor;}
+		pair<char*,short>& rKey = _pPlayer->getSecretKey();
+		memcpy(_IV,rKey.first,rKey.second);
+		_aesEncryptor = new CryptoPP::CFB_Mode<AES>::Encryption((byte*)rKey.first,(unsigned int)rKey.second,_IV,1);
+	}
+}
+
+
+void NetworkWriter::ProcessQueueElement(ThreadSafeQueue<string*>& rQueue) {
+	try {
+		if (rQueue.empty()) {return;}
+		string* pStr = rQueue.front();
+
+		if (_fCryptMode) {
+			string Crypted("");
+
+			StringSource(*pStr, true, 
+				new StreamTransformationFilter( *_aesEncryptor,
+				new StringSink(Crypted),BlockPaddingSchemeDef::NO_PADDING
+				)   
+				); 
+
+
+			_rStrm.sendBytes(Crypted.c_str(),Crypted.length()); 
+		}else{
+			_rStrm.sendBytes(pStr->c_str(),pStr->length()); 
+		}
+
+		delete pStr;
+		rQueue.pop();
+	}catch(...) {
+		throw FCRuntimeException("Queue processing error");
+	}
+}
+
+void NetworkWriter::ProcessHighQueue() {
+	try {
+		ProcessQueueElement(_rHighQueue);
+	}catch(FCRuntimeException& ex) {
+		ex.rethrow();
+	}
+}
+
+void NetworkWriter::clearQueue(ThreadSafeQueue<string*>& rQueue) {
+	string* pStr;
+	while(!rQueue.empty()) {
+		pStr = rQueue.front();
+		delete pStr;
+		rQueue.pop();
+	}
 }
