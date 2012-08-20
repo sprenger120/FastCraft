@@ -15,7 +15,6 @@ GNU General Public License for more details.
 
 #include "PlayerPool.h"
 #include "PlayerThread.h"
-#include "PackingThread.h"
 #include "EntityFlags.h"
 #include "MathHelper.h"
 #include "EntityCoordinates.h"
