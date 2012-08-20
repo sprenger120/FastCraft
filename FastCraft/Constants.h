@@ -21,7 +21,7 @@ GNU General Public License for more details.
 
 //Core Constants
 #define FC_VERSION						"0.0.3 Alpha"
-#define FC_SUPPORTED_MINCRAFTVERSION	"1.3.1"
+#define FC_SUPPORTED_MINCRAFTVERSION	"1.3.2"
 #define FC_SUPPORTED_DOCVER				4
 #define FC_SUPPORTED_PROTOCOLVERSION	39
 
