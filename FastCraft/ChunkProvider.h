@@ -17,7 +17,6 @@ GNU General Public License for more details.
 #define _FASTCRAFTHEADER_CHUNKPROVIDER
 #include "Structs.h"
 #include "EntityCoordinates.h"
-#include "PackingThread.h"
 #include <vector>
 #include "ServerThreadBase.h"
 

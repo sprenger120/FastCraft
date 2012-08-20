@@ -27,6 +27,7 @@ GNU General Public License for more details.
 #include "MinecraftServer.h"
 #include <Poco\DeflatingStream.h>
 #include <sstream>
+#include "MapChunk.h"
 
 using std::cout;
 using std::endl;
