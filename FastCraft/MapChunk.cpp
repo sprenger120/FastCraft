@@ -66,7 +66,7 @@ void MapChunk::setBlock(ItemID& item,char X,short Y,char Z) {
 	_iLastAccess = _timestamp.epochTime();
 
 	char iPtrArrIndex = getSegment(Y>>4);
-	int index = ChunkMath::toIndex(X,Y - (Y>>4),Z);
+	int index = ChunkMath::toIndex(X,Y%16,Z);
 	
 	_vpBlocks[iPtrArrIndex].first[index] = (char)item.first;
 	setNibble(index,item.second,_vpMetadata[iPtrArrIndex]);
@@ -79,7 +79,7 @@ ItemID MapChunk::getBlock(char X,short Y,char Z) {
 	_iLastAccess = _timestamp.epochTime();
 
 	char iPtrArrIndex = getSegment(Y>>4);
-	int index = ChunkMath::toIndex(X,Y - (Y>>4),Z);
+	int index = ChunkMath::toIndex(X,Y%16,Z);
 	
 	return ItemID(_vpBlocks[iPtrArrIndex].first[index],getNibble(index,_vpMetadata[iPtrArrIndex]));
 }
@@ -92,7 +92,7 @@ void MapChunk::setBlockLight(char iLvl,char X,short Y,char Z) {
 	_iLastAccess = _timestamp.epochTime();
 
 	char iPtrArrIndex = getSegment(Y>>4);
-	int index = ChunkMath::toIndex(X,Y - (Y>>4),Z);
+	int index = ChunkMath::toIndex(X,Y%16,Z);
 	
 	setNibble(index,iLvl,_vpBlockLight[iPtrArrIndex]);
 }
@@ -104,7 +104,7 @@ char MapChunk::getBlockLight(char X,short Y,char Z) {
 	_iLastAccess = _timestamp.epochTime();
 
 	char iPtrArrIndex = getSegment(Y>>4);
-	int index = ChunkMath::toIndex(X,Y - (Y>>4),Z);
+	int index = ChunkMath::toIndex(X,Y%16,Z);
 	
 	return getNibble(index,_vpBlockLight[iPtrArrIndex]);
 }
@@ -117,7 +117,7 @@ void MapChunk::setSkyLight(char iLvl,char X,short Y,char Z) {
 	_iLastAccess = _timestamp.epochTime();
 
 	char iPtrArrIndex = getSegment(Y>>4);
-	int index = ChunkMath::toIndex(X,Y - (Y>>4),Z);
+	int index = ChunkMath::toIndex(X,Y%16,Z);
 	
 	setNibble(index,iLvl,_vpSkyLight[iPtrArrIndex]);
 }
@@ -129,7 +129,7 @@ char MapChunk::getSkyLight(char X,short Y,char Z) {
 	_iLastAccess = _timestamp.epochTime();
 
 	char iPtrArrIndex = getSegment(Y>>4);
-	int index = ChunkMath::toIndex(X,Y - (Y>>4),Z);
+	int index = ChunkMath::toIndex(X,Y%16,Z);
 	
 	return getNibble(index,_vpSkyLight[iPtrArrIndex]);
 }
@@ -138,7 +138,7 @@ void MapChunk::setNibble(int iBlockOffset,char iNewData,char* apArray) {
 	if (iBlockOffset < 0) {throw FCRuntimeException("Illegal block offset");}
 	int iNibbleOffset = iBlockOffset/2;
 
-	if (iBlockOffset%2) { //Higher 4-bits
+	if (iBlockOffset&1) { //Higher 4-bits   &1 is the same as %2
 		apArray[iNibbleOffset] |= iNewData<<4;
 	}else{//Lower 4-bits
 		apArray[iNibbleOffset] |= iNewData & 0xF;
@@ -149,7 +149,7 @@ char MapChunk::getNibble(int iBlockOffset,char* apArray) {
 	if (iBlockOffset < 0) {throw FCRuntimeException("Illegal block offset");}
 	int iNibbleOffset = iBlockOffset/2;
 
-	if (iBlockOffset%2) { //Higher 4-bits
+	if (iBlockOffset&1) { //Higher 4-bits
 		return apArray[iNibbleOffset]>>4;
 	}else{//Lower 4-bits
 		return apArray[iNibbleOffset]&0xF;
@@ -299,7 +299,7 @@ void MapChunk::addSegment() {
 	memset(pBlocks,0,4096);
 	memset(pMetadata,0,2048);
 	memset(pBlockLight,0,2048);
-	memset(pSkyLight,0,2048);
+	memset(pSkyLight,0xff,2048);
 
 	
 	//Add to pointer arrays
