@@ -3,11 +3,9 @@
 
 FastCraft is a SMP Minecraft Server, written in C++.  The current version supports all client moves (excluding eating food) and the ability to set blocks. 
 
-**Current Version: 0.0.2 Alpha - Green Ruddock**
+**Current Version: 0.0.3 Alpha - Goldwave (Compatible to Minecraft 1.3.2)**
 
 ### Links
-
-[FastCraft CI](http://ci.fastcraft-server.tk/job/FastCraft/)
 
 Framework: [POCO](http://pocoproject.org/)
 Other libraries: [Crypto++](http://www.cryptopp.com)
