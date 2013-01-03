@@ -14,21 +14,21 @@ GNU General Public License for more details.
 */
 
 
-#ifndef _FASTCRAFTHEADER_FCRUNTIMEXCEPTION
-#define _FASTCRAFTHEADER_FCRUNTIMEXCEPTION
+#ifndef _FASTCRAFTHEADER_FCEXCEPTION
+#define _FASTCRAFTHEADER_FCEXCEPTION
 #include <iostream>
 #include <string>
 #if defined(_WIN32)
-	#include <Windows.h>
-	#include <DbgHelp.h>    
+#include <Windows.h>
+#include <DbgHelp.h>    
 #elif defined(__linux__)
-    #include <execinfo.h>
+#include <execinfo.h>
 #endif
 
 
 using std::string;
 
-class FCRuntimeException {
+class FCException {
 private:
 	string _sMessage;
 	int _iCode;
@@ -46,14 +46,14 @@ public:
 	@2 : Error-Code
 	@3 : See above
 	*/
-	FCRuntimeException(string,bool = true);
-	FCRuntimeException(string,int,bool = true);
+	FCException(string,bool = true);
+	FCException(string,int,bool = true);
 
 
 	/*
 	* Destructor
 	*/
-	virtual ~FCRuntimeException();
+	virtual ~FCException();
 
 
 	/*
@@ -76,4 +76,33 @@ public:
 private:
 	void printStacktrace();
 };
+
+
+
+#define FC_DECLARE_EXCEPTION(NAME)		\
+class NAME : public FCException	{		\
+public:									\
+	NAME(bool = true);					\
+	NAME(string,bool = true);			\
+	virtual ~NAME();					\
+};													 
+
+#define FC_IMPLEMENT_EXCEPTION(NAME)               \
+NAME::NAME(std::string str,bool fPrintStacktrace) :\
+	FCException(str,fPrintStacktrace)              \
+{                                                  \
+}                                                  \
+NAME::NAME(bool fPrintStacktrace) :                \
+FCException(std::string(""),fPrintStacktrace)	   \
+{                                                  \
+}                                                  \
+NAME::~NAME()									   \
+{                                                  \
+}
+
+
+FC_DECLARE_EXCEPTION(NBTIncompatibleTypeException)
+FC_DECLARE_EXCEPTION(NBTNotFoundException)
+
+
 #endif
