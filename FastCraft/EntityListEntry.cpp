@@ -14,7 +14,7 @@ GNU General Public License for more details.
 */
 #include "EntityListEntry.h"
 #include "ItemSlot.h"
-#include "FCRuntimeException.h"
+#include "FCException.h"
 
 EntityListEntry::EntityListEntry(Entity* pEntity) {
 	_iEntityID = pEntity->getEntityID();
@@ -23,7 +23,7 @@ EntityListEntry::EntityListEntry(Entity* pEntity) {
 
 	if (pEntity->isAlive()) {
 		EntityLiving* pLiving = dynamic_cast<EntityLiving*>(pEntity);
-		if (pLiving == NULL) {throw FCRuntimeException("Unable to cast entity instance");}
+		if (pLiving == NULL) {throw FCException("Unable to cast entity instance");}
 		Equipment.resize(5);
 		
 		_iType = pLiving->getType();
@@ -51,7 +51,7 @@ bool EntityListEntry::isAlive(){
 }
 
 char EntityListEntry::getType() {
-	if (!_fAlive) {throw FCRuntimeException("Not alive");}
+	if (!_fAlive) {throw FCException("Not alive");}
 	return _iType;
 }
 

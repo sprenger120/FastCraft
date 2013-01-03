@@ -14,7 +14,7 @@ GNU General Public License for more details.
 */
 #include "ItemContainer.h"
 #include "NetworkIn.h"
-#include "FCRuntimeException.h"
+#include "FCException.h"
 #include "MinecraftServer.h"
 #include "ItemSlot.h"
 #include <iostream>
@@ -23,9 +23,9 @@ GNU General Public License for more details.
 using std::cout;
 
 ItemContainer::ItemContainer(char iCount,MinecraftServer* pMCServer,char iType) {
-	if (pMCServer == NULL){throw FCRuntimeException("Nullpointer");}
-	if (iCount < 0) {throw FCRuntimeException("Slot count is below zero");}
-	if (!Constants::isDefined(iType,"/InventoryType/")) {throw FCRuntimeException("Illegal inventory type");}
+	if (pMCServer == NULL){throw FCException("Nullpointer");}
+	if (iCount < 0) {throw FCException("Slot count is below zero");}
+	if (!Constants::isDefined(iType,"/InventoryType/")) {throw FCException("Illegal inventory type");}
 
 	_pMCServer = pMCServer;
 	_iType = iType;
@@ -54,7 +54,7 @@ char ItemContainer::getSlotCount() {
 }
 
 ItemSlot* ItemContainer::operator[](int ID) {
-	if (ID < 0 || ID > _vSlots.size()-1) {throw FCRuntimeException("Invalid ID");}
+	if (ID < 0 || ID > _vSlots.size()-1) {throw FCException("Invalid ID");}
 	return _vSlots[ID];
 }
 
@@ -112,7 +112,7 @@ void ItemContainer::readClickWindow(PlayerThread* pPlayer,NetworkIn& rIn) {
 				return;
 			}
 
-			throw FCRuntimeException("Illegal preferred range");
+			throw FCException("Illegal preferred range");
 		}
 
 		if (fRightClick)  {
@@ -177,7 +177,7 @@ void ItemContainer::readClickWindow(PlayerThread* pPlayer,NetworkIn& rIn) {
 		}
 
 		mergeStacks(&_vSlots[iSlot],&_pInHand);
-	} catch(FCRuntimeException& ex) {
+	} catch(FCException& ex) {
 		std::cout<<"PlayerInventory::HandleWindowClick exception:"<<ex.getMessage()<<"\n";
 		pPlayer->Disconnect(FC_LEAVE_OTHER);
 	}
@@ -189,8 +189,8 @@ bool ItemContainer::isInSlotRange(SlotRange& rRange,short iSlot) {
 }
 
 bool ItemContainer::insertItem(SlotRange* pRange,short iSlot) {
-	if (pRange == NULL) {throw FCRuntimeException("Nullpointer");}
-	if (iSlot < 0 || iSlot > _vSlots.size()-1) {throw FCRuntimeException("Illegal slotID");}
+	if (pRange == NULL) {throw FCException("Nullpointer");}
+	if (iSlot < 0 || iSlot > _vSlots.size()-1) {throw FCException("Illegal slotID");}
 
 	try {
 		short i;
@@ -203,14 +203,14 @@ bool ItemContainer::insertItem(SlotRange* pRange,short iSlot) {
 		for(i = pRange->first; i<= pRange->second;i++) {
 			if (mergeStacks(&_vSlots[i],&_vSlots[iSlot])) {return true;}
 		}
-	}catch(FCRuntimeException& ex){
+	}catch(FCException& ex){
 		ex.rethrow();
 	}
 	return false;
 }
 
 bool ItemContainer::mergeStacks(ItemSlot** item1,ItemSlot** item2,bool fUseEmptySlot) {
-	if (item1 == NULL || item2 == NULL) {throw FCRuntimeException("Nullpointer");}
+	if (item1 == NULL || item2 == NULL) {throw FCException("Nullpointer");}
 	if ((*item1)->isEmpty() && (*item2)->isEmpty()){
 		cout<<"ItemContainer::mergeStacks logic error. Both are empty\n";
 		return false;
@@ -258,7 +258,7 @@ void ItemContainer::syncInventory(NetworkOut& rOut) {
 		}
 
 		rOut.Finalize(FC_QUEUE_HIGH);
-	}catch(FCRuntimeException& ex) {
+	}catch(FCException& ex) {
 		ex.rethrow();
 	}
 }
@@ -270,14 +270,14 @@ void ItemContainer::clear() {
 }
 
 void ItemContainer::syncSlot(NetworkOut& rOut,short iSlot) {
-	if (iSlot < 0 || iSlot > _vSlots.size() -1) {throw FCRuntimeException("Invalid slotID");}
+	if (iSlot < 0 || iSlot > _vSlots.size() -1) {throw FCException("Invalid slotID");}
 
 	try{
 		rOut.addByte(0x67);
 		rOut.addByte(_iType);
 		rOut.addShort(iSlot); 
 		_vSlots[iSlot]->writeToNetwork(rOut);
-	}catch(FCRuntimeException& ex) {
+	}catch(FCException& ex) {
 		ex.rethrow();
 	}
 }

@@ -17,19 +17,18 @@ GNU General Public License for more details.
 #include "Constants.h"
 #include <Poco/ByteOrder.h>
 #include <cstring>
-#include "FCRuntimeException.h"
+#include "FCException.h"
 #include "PlayerThread.h"
 //using CryptoPP::StringSink;
 
 NetworkOut::NetworkOut(NetworkOutRoot* p) 
 {
 	_pMaster = p;
-	_cfbEncryptor = NULL;
+//	_cfbEncryptor = NULL;
 	_pNetworkBuffer = new string("");
 }
 
 NetworkOut::~NetworkOut() {
-	if (_cfbEncryptor != NULL) {delete _cfbEncryptor;}
 	delete _pNetworkBuffer;
 }
 
@@ -166,20 +165,20 @@ string& NetworkOut::getStr() {
 }
 
 void NetworkOut::Finalize(char iType) {
-	if (iType != FC_QUEUE_LOW && iType != FC_QUEUE_HIGH) {throw FCRuntimeException("Unknown queue type");}
+	if (iType != FC_QUEUE_LOW && iType != FC_QUEUE_HIGH) {throw FCException("Unknown queue type");}
 	if (_pNetworkBuffer->empty()) {return;}
-	if (!_pMaster->_pPlayer->isAssigned()) {throw FCRuntimeException("Unable to encode data",false);}
+	if (!_pMaster->_pPlayer->isAssigned()) {throw FCException("Unable to encode data",false);}
 	
 	try {
 		_pMaster->Add(iType,_pNetworkBuffer);
 		_pNetworkBuffer = new string("");
-	}catch(FCRuntimeException &ex) {
+	}catch(FCException &ex) {
 		ex.rethrow();
 	}
 }
 
 void NetworkOut::addByteArray(string& rTarget,std::pair<char*,short>& rData) {
-	if (rData.first == NULL) {throw FCRuntimeException("Nullpointer");}
+	if (rData.first == NULL) {throw FCException("Nullpointer");}
 	addShort(rTarget,rData.second);
 	rTarget.append(rData.first,rData.second);	
 }
@@ -188,7 +187,7 @@ void NetworkOut::addByteArray(string& rTarget,std::pair<char*,short>& rData) {
 void NetworkOut::addByteArray(std::pair<char*,short>& rData) {
 	try {
 		addByteArray(*_pNetworkBuffer,rData);
-	}catch(FCRuntimeException& ex) { 
+	}catch(FCException& ex) { 
 		ex.rethrow();
 	}
 }

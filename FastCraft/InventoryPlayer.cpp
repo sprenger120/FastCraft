@@ -28,7 +28,7 @@ InventoryPlayer::InventoryPlayer(PlayerThread* pPlayer,MinecraftServer* pMCServe
 	_pPreferredRange = &_higherRange;
 	_pPlayer = pPlayer;
 	_iActionBarSelection = 0;
-}catch(FCRuntimeException& ex){
+}catch(FCException& ex){
 	ex.rethrow();
 }
 
@@ -44,7 +44,7 @@ void InventoryPlayer::reset() {
 void InventoryPlayer::readHeldItemChange() {
 	try {
 		_iActionBarSelection = (char)_rNetworkIn.readShort();
-	}catch(FCRuntimeException& ex) {
+	}catch(FCException& ex) {
 		ex.rethrow();
 	}
 	if (_iActionBarSelection < 0 || _iActionBarSelection > 8) {_pPlayer->Disconnect("Illegal ActionBarSelection ID");}
@@ -56,9 +56,9 @@ void InventoryPlayer::onDisconnect() {
 
 void InventoryPlayer::onLogin() {
 	try{
-	NetworkOut Out(_pPlayer->getNetworkOutRoot());
-	syncInventory(Out);
-	}catch(FCRuntimeException& ex) {
+		NetworkOut Out(_pPlayer->getNetworkOutRoot());
+		syncInventory(Out);
+	}catch(FCException& ex) {
 		ex.rethrow();
 	}
 }
@@ -126,7 +126,7 @@ void InventoryPlayer::syncInHandStack() {
 	try{
 		NetworkOut Out(_pPlayer->getNetworkOutRoot());
 		syncSlot(Out,36+_iActionBarSelection);
-	}catch(FCRuntimeException& ex) {
+	}catch(FCException& ex) {
 		ex.rethrow();
 	}
 }

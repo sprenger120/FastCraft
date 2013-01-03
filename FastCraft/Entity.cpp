@@ -18,10 +18,10 @@ GNU General Public License for more details.
 #include "NetworkOut.h"
 #include "Constants.h"
 #include <cmath>
-#include "FCRuntimeException.h"
+#include "FCException.h"
 
 Entity::Entity(MinecraftServer* pServer,World* pWorld,bool fGRabNewEID) {
-	if (pServer == NULL || _pWorld == NULL) {throw FCRuntimeException("Nullpointer are not allowed");}
+	if (pServer == NULL || _pWorld == NULL) {throw FCException("Nullpointer are not allowed");}
 	
 	if(fGRabNewEID) { 
 		_iEntityID = pServer->generateID();
@@ -70,7 +70,7 @@ void Entity::spawn(NetworkOut& rOut) {
 		rOut.addByte(0x1E);
 		rOut.addInt(_iEntityID);
 		rOut.Finalize(FC_QUEUE_HIGH);
-	}catch (FCRuntimeException& ex) {
+	}catch (FCException& ex) {
 		ex.rethrow();
 	}
 }
@@ -146,7 +146,7 @@ void Entity::syncCoordinates(NetworkOut& rOut,EntityCoordinates& lastCoordinates
 		//rOut.addByte( (char) ((Coordinates.HeadYaw * 256.0F) / 360.0F) );
 
 		rOut.Finalize(FC_QUEUE_HIGH);
-	}catch (FCRuntimeException& ex) {
+	}catch (FCException& ex) {
 		ex.rethrow();
 	}
 }

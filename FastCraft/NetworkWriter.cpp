@@ -17,7 +17,7 @@ GNU General Public License for more details.
 #include "Constants.h"
 #include <Poco/Thread.h>
 #include <Poco/Net/NetException.h>
-#include "FCRuntimeException.h"
+#include "FCException.h"
 
 using Poco::Thread;
 using namespace CryptoPP;
@@ -123,14 +123,14 @@ void NetworkWriter::ProcessQueueElement(ThreadSafeQueue<string*>& rQueue) {
 		delete pStr;
 		rQueue.pop();
 	}catch(...) {
-		throw FCRuntimeException("Queue processing error");
+		throw FCException("Queue processing error");
 	}
 }
 
 void NetworkWriter::ProcessHighQueue() {
 	try {
 		ProcessQueueElement(_rHighQueue);
-	}catch(FCRuntimeException& ex) {
+	}catch(FCException& ex) {
 		ex.rethrow();
 	}
 }

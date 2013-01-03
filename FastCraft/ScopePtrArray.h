@@ -15,7 +15,7 @@ GNU General Public License for more details.
 
 #ifndef _FASTCRAFTHEADER_SCOPEPTRARRAY
 #define _FASTCRAFTHEADER_SCOPEPTRARRAY
-#include "FCRuntimeException.h"
+#include "FCException.h"
 
 template <typename type>
 class ScopePtrArray {
@@ -24,7 +24,7 @@ class ScopePtrArray {
 public:
 	/*
 	* Constructor
-	* Throws FCRuntimeException if element count is illegal 
+	* Throws FCException if element count is illegal 
 
 	Parameter
 	@1 : Element count
@@ -40,7 +40,7 @@ public:
 
 	/*
 	* Get operator
-	* Throws FCRuntimeException if index is out of range
+	* Throws FCException if index is out of range
 	*/ 
 	type& operator[](int);
 
@@ -54,7 +54,7 @@ public:
 
 template <typename type>
 ScopePtrArray<type>::ScopePtrArray(int iSize) {
-	if (iSize <= 0) {throw FCRuntimeException("Illegal size");}
+	if (iSize <= 0) {throw FCException("Illegal size");}
 	_pData = new type[iSize];
 	_iSize = iSize;
 }
@@ -68,7 +68,7 @@ ScopePtrArray<type>::~ScopePtrArray() {
 
 template <typename type>
 type& ScopePtrArray<type>::operator[](int index) {
-	if (index < 0 || index > _iSize -1) {throw FCRuntimeException("Illegal index");}
+	if (index < 0 || index > _iSize -1) {throw FCException("Illegal index");}
 	return _pData[index];
 }
 

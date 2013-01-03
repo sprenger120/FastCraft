@@ -17,7 +17,7 @@ GNU General Public License for more details.
 #include "NetworkOut.h"
 #include "ItemSlot.h"
 #include <cmath>
-#include "FCRuntimeException.h"
+#include "FCException.h"
 
 using std::vector;
 
@@ -25,13 +25,13 @@ EntityLiving::EntityLiving(char iType,MinecraftServer* pServer,World* pWorld,boo
 	Entity			(pServer,pWorld,fGrabNew),
 	_vpHeld			(5)
 {
-	if (!Constants::isDefined(iType,"/Entity/Alive/TypeID")) {throw FCRuntimeException("Entity type not defined!");}
+	if (!Constants::isDefined(iType,"/Entity/Alive/TypeID")) {throw FCException("Entity type not defined!");}
 
 	_iHealth = 0;
 	_iType = iType;
 
 	for(char x=0;x<=4;x++) {_vpHeld[x] = new ItemSlot(pServer->getItemInfoProvider());}
-}catch(FCRuntimeException& ex) {
+}catch(FCException& ex) {
 	ex.rethrow();
 }
 
@@ -70,7 +70,7 @@ void EntityLiving::spawn(NetworkOut& rOut) {
 		rOut.Finalize(FC_QUEUE_HIGH);
 
 		sendEquipment(rOut);
-	}catch(FCRuntimeException& ex) {
+	}catch(FCException& ex) {
 		ex.rethrow();
 	}
 }
@@ -79,7 +79,7 @@ void EntityLiving::spawn(NetworkOut& rOut) {
 void EntityLiving::appendMetadata(NetworkOut& rOut) { 
 	try {
 		rOut.addByte(127);
-	}catch(FCRuntimeException& ex) {
+	}catch(FCException& ex) {
 		ex.rethrow();
 	}
 }
@@ -90,7 +90,7 @@ void EntityLiving::sendMetadata(NetworkOut& rOut) {
 		rOut.addInt(_iEntityID);
 		appendMetadata(rOut);
 		rOut.Finalize(FC_QUEUE_HIGH);
-	}catch(FCRuntimeException& ex) {
+	}catch(FCException& ex) {
 		ex.rethrow();
 	}
 }
@@ -114,13 +114,13 @@ void EntityLiving::sendEquipment(NetworkOut& rOut) {
 			rOut.addShort(_vpHeld[x]->getItem().second);
 			rOut.Finalize(FC_QUEUE_HIGH);
 		}
-	}catch(FCRuntimeException& ex) {
+	}catch(FCException& ex) {
 		ex.rethrow();
 	}
 }
 
 void EntityLiving::updateEquipment(NetworkOut& rOut,EquipmentArray& rOldEquip) {
-	if (rOldEquip.size() != 5) {throw FCRuntimeException("Illegal size");}
+	if (rOldEquip.size() != 5) {throw FCException("Illegal size");}
 	try{
 		for (char x=0;x<=4;x++) {
 			if (_vpHeld[x]->isEmpty() && rOldEquip[x]->isEmpty()) {continue;} //Both are empty - nothing changed
@@ -150,14 +150,14 @@ void EntityLiving::updateEquipment(NetworkOut& rOut,EquipmentArray& rOldEquip) {
 				continue;
 			}
 		}
-	}catch(FCRuntimeException& ex) {
+	}catch(FCException& ex) {
 		ex.rethrow();
 	}
 }
 
 
 void EntityLiving::setEquipment(char index,ItemID id) {
-	if (index < 0 || index > 4) {throw FCRuntimeException("Illegal index");}
+	if (index < 0 || index > 4) {throw FCException("Illegal index");}
 
 	if (id.isEmpty()) {
 		_vpHeld[index]->clear();
@@ -167,13 +167,13 @@ void EntityLiving::setEquipment(char index,ItemID id) {
 	try {
 		_vpHeld[index]->setItem(id);
 		_vpHeld[index]->setStackSize(1);
-	}catch(FCRuntimeException & ex) {
+	}catch(FCException & ex) {
 		ex.rethrow();
 	}
 }
 
 ItemID EntityLiving::getEquipment(char index) {
-	if (index < 0 || index > 4) {throw FCRuntimeException("Illegal index");}
+	if (index < 0 || index > 4) {throw FCException("Illegal index");}
 	return _vpHeld[index]->getItem();
 }
 

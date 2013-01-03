@@ -79,9 +79,9 @@ public:
 	/*
 	* Accessators for data arrays
 	* All functions require chunk coordinates (x/z: 0-15, y 0-127)
-	* All functions throw FCRuntimeException if given coordiantes 
+	* All functions throw FCException if given coordiantes 
 	  are invalid
-	* All functions will throw FCRuntimeException if chunk is not loaded
+	* All functions will throw FCException if chunk is not loaded
 	* No functions will check block existance
 	
 	get... Parameters:
@@ -107,7 +107,7 @@ public:
 
 	/*
 	* Appends a MapChunk packet to given NetworkOut
-	* Throws FCRuntimeException if chunk isn't loaded
+	* Throws FCException if chunk isn't loaded
 	*/
 	void send(NetworkOut&);
 
@@ -153,7 +153,7 @@ public:
 	short packData(Poco::DeflatingOutputStream&);
 private:
 	/* 
-	* Throws FCRuntimeException if block offset is invalid
+	* Throws FCException if block offset is invalid
 
 	Parameter:
 	@1 : Block offset

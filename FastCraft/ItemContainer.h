@@ -54,9 +54,9 @@ protected:
 
 	/*
 	* Constructor
-	* Throws FCRuntimeException if slot count is out of range (>0)
-	* Throws FCRuntimeException if MinecraftServer instance is null
-	* Throws FCRuntimeException if inventory type is invalid 
+	* Throws FCException if slot count is out of range (>0)
+	* Throws FCException if MinecraftServer instance is null
+	* Throws FCException if inventory type is invalid 
 
 	@1 : Slot count
 	@2 : Valid MinecraftServer instance
@@ -84,7 +84,7 @@ public:
 	
 	/*
 	* Gets slot at given position
-	* Throws FCRuntimeException if given index is out of bound
+	* Throws FCException if given index is out of bound
 	* Doesn't synchronizes with player
 	*/
 	ItemSlot* operator[](int);
@@ -98,7 +98,7 @@ public:
 	/*
 	* Merges two stacks
 	* Does nothing if ItemIDs don't match
-	* Throws FCRuntimeException if a pointer is null
+	* Throws FCException if a pointer is null
 	* Returns true if stacks were merged successfully
 
 	Parameter:
@@ -126,7 +126,7 @@ public:
 
 	/*
 	* Synchronizes given slot with client
-	* Throws FCRuntimeException if slotID is out of bound
+	* Throws FCException if slotID is out of bound
 
 	Parameter:
 	@1 : NetworkOut instance
@@ -159,8 +159,8 @@ private:
 	* Inserts/merges stack at given slotID into a free field / appropriate stack
 	* Returns true if stack could be merged/inserted into a free slot
 	* False otherwise
-	* Throws FCRuntimeException if SlotRange pointer is NULL 
-	* Throws FCRuntimeException if slotID is out of range
+	* Throws FCException if SlotRange pointer is NULL 
+	* Throws FCException if slotID is out of range
 
 
 	Parameter:

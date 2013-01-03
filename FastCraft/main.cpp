@@ -15,7 +15,7 @@ GNU General Public License for more details.
 #define BUILD_VERSION ""
 #include <iostream>
 #include <Poco/Thread.h>
-#include "FCRuntimeException.h"
+#include "FCException.h"
 #include <Poco/Path.h>
 #include <Poco/File.h>
 #include <Poco/Data/SQLite/Connector.h>
@@ -123,7 +123,7 @@ int main(int argc, char *argv[]) {
 			pathTemp.pushDirectory(pathTemp[pathTemp.depth()]);
 			pathTemp.setFileName("");
 			pServer = new MinecraftServer(pathTemp[pathTemp.depth()-1],pathTemp,vUsedPorts);
-		}catch(FCRuntimeException& ex) {
+		}catch(FCException& ex) {
 			cout<<"Unable to start server ("<<ex.getMessage()<<")\n"<<std::endl;
 			continue;
 		}

@@ -13,7 +13,7 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 */
 #include "EntityPickup.h"
-#include "FCRuntimeException.h"
+#include "FCException.h"
 #include "NetworkOut.h"
 
 EntityPickup::EntityPickup(MinecraftServer* pMCServer,World* pWorld,ItemID ID) try : 
@@ -21,10 +21,10 @@ EntityPickup::EntityPickup(MinecraftServer* pMCServer,World* pWorld,ItemID ID) t
 {
 	if (!_pMCServer->getItemInfoProvider()->isRegistered(ID)) {
 		ID.first = ID.second = 0;
-		FCRuntimeException("Item not registered");
+		FCException("Item not registered");
 	}
 	_itemID = ID;
-}catch(FCRuntimeException& ex) { 
+}catch(FCException& ex) { 
 	ex.rethrow();
 }
 
@@ -66,7 +66,7 @@ void EntityPickup::spawn(NetworkOut& rOut){
 		rOut.addByte(0);
 	
 		rOut.Finalize(FC_QUEUE_HIGH);
-	}catch(FCRuntimeException& ex) {
+	}catch(FCException& ex) {
 		ex.rethrow();
 	}
 }

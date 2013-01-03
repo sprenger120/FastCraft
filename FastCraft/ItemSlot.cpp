@@ -14,7 +14,7 @@ GNU General Public License for more details.
 */
 
 #include "ItemSlot.h"
-#include "FCRuntimeException.h"
+#include "FCException.h"
 #include <iostream>
 #include "NetworkIn.h"
 #include "NetworkOut.h"
@@ -91,9 +91,9 @@ void ItemSlot::setItem(ItemID id) {
 			break;
 		}
 		_Item = id;
-	}catch(FCRuntimeException) {
+	}catch(FCException) {
 		std::cout<<"ItemSlot::setItemID Item wasn't found. Affected:"<<id.first<<":"<<id.second<<"\n";
-		throw FCRuntimeException("ID not registered");
+		throw FCException("ID not registered");
 	}
 	if (id.first==0) {
 		clear();
@@ -141,7 +141,7 @@ void ItemSlot::IncrementUsage() {
 	/*Poco::Mutex::ScopedLock scopelock(_Mutex);*/
 	if (_pItemCache_Item == NULL || !_pItemCache_Item->Damageable) {
 		std::cout<<"ItemSlot::IncrementUsage Not a tool!"<<"\n";
-		throw FCRuntimeException("Not a tool");
+		throw FCException("Not a tool");
 	}
 	short iMaxUsage = _pItemCache_Item->Durability;
 
@@ -162,7 +162,7 @@ void ItemSlot::setUsage(short iUsage){
 	//Poco::Mutex::ScopedLock scopelock(_Mutex);
 	if (_pItemCache_Item == NULL || !_pItemCache_Item->Damageable) {
 		std::cout<<"ItemSlot::IncrementUsage Not a tool!"<<"\n";
-		throw FCRuntimeException("Not a tool");
+		throw FCException("Not a tool");
 	}
 	short iMaxUsage = _pItemCache_Item->Durability;
 
@@ -212,7 +212,7 @@ void ItemSlot::readFromNetwork(NetworkIn& rNetwork) {
 				//Check registration state
 				if (!_pItemInfoProvider->isRegistered(_Item)) {
 					clear();
-					throw FCRuntimeException("BlockID not registered");
+					throw FCException("BlockID not registered");
 				}
 
 				//Rewrite Item/BlockEntry cache
@@ -228,7 +228,7 @@ void ItemSlot::readFromNetwork(NetworkIn& rNetwork) {
 					//Check registration state
 					if(!_pItemInfoProvider->isRegistered(iItemID)) { 
 						clear();
-						throw FCRuntimeException("ItemID not registered");
+						throw FCException("ItemID not registered");
 					}
 
 					ItemEntry* pItem = _pItemInfoProvider->getItem(iItemID);
@@ -237,7 +237,7 @@ void ItemSlot::readFromNetwork(NetworkIn& rNetwork) {
 							short iEnchPayload = rNetwork.readShort();
 							if (iEnchPayload != -1) {
 								std::cout<<"Enchantment payload:"<<iEnchPayload<<"\n";
-								throw FCRuntimeException("Enchantments not supported yet");
+								throw FCException("Enchantments not supported yet");
 							}
 						}
 
@@ -251,7 +251,7 @@ void ItemSlot::readFromNetwork(NetworkIn& rNetwork) {
 						//Check registration state
 						if(!_pItemInfoProvider->isRegistered(_Item)) {
 							clear();
-							throw FCRuntimeException("ItemID not registered");
+							throw FCException("ItemID not registered");
 						}
 
 						//Rewrite item cache
@@ -276,7 +276,7 @@ void ItemSlot::readFromNetwork(NetworkIn& rNetwork) {
 			if (_iUsage < 0) {_iUsage=0;}
 			if (_iUsage > _pItemCache_Item->Durability) {_iUsage = _pItemCache_Item->Durability;}
 		}
-	}catch (FCRuntimeException) {
+	}catch (FCException) {
 		std::cout<<"ItemSlot::ItemSlot(fetch) Item wasn't found.\n";
 		clear();
 		return;
@@ -301,7 +301,7 @@ void ItemSlot::writeToNetwork(NetworkOut& Out) {
 				Out.addShort(-1);
 			}
 		}
-	}catch(FCRuntimeException& ex) {
+	}catch(FCException& ex) {
 		ex.rethrow();
 	}
 }

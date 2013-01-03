@@ -67,7 +67,7 @@ public:
 
 	/*
 	* Read functions
-	* Throw FCRuntimeException if 
+	* Throw FCException if 
 	   - connection aborts
 	   - client isn't connected
 	*/

@@ -51,7 +51,7 @@ public:
 
 	/*
 	* Returns type of liviing entity
-	* Throws FCRuntimeException if entity isn't alive
+	* Throws FCException if entity isn't alive
 	*/
 	char getType();
 

@@ -32,8 +32,8 @@ class EntityPlayer : public EntityLiving {
 public:
 	/*
 	* Constructor
-	* Throws FCRuntimeException if held array size is invalid
-	* Throws FCRuntimeException if username is empty
+	* Throws FCException if held array size is invalid
+	* Throws FCException if username is empty
 
 	Parameter:
 	@1 : a valid MinecraftServer instance

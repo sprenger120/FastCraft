@@ -34,7 +34,6 @@ private:
 	string* _pNetworkBuffer;
 
 	NetworkOutRoot* _pMaster;
-	CryptoPP::StreamTransformationFilter* _cfbEncryptor;
 public:
 	/* 
 	* Constructor
@@ -68,7 +67,7 @@ public:
 
 	/*
 	* Write functions
-	* All functions throw FCRuntimeException if client isn't connected
+	* All functions throw FCException if client isn't connected
 	*/
 	void addByte(unsigned char);
 	void addBool(bool);

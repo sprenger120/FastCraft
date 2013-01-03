@@ -13,7 +13,7 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 */
 #include "Constants.h"
-#include "FCRuntimeException.h"
+#include "FCException.h"
 #include <iostream>
 
 std::map<std::string,char> Constants::_Map;
@@ -120,7 +120,7 @@ char Constants::get(std::string str) {
 
 	if (it == _Map.end()) {
 		std::cout<<"Constants::get "<<str<<" not found!\n";
-		throw FCRuntimeException("Key not found!");
+		throw FCException("Key not found!");
 	}
 	return it->second;
 }

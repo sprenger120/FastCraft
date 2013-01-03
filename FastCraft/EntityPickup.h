@@ -27,7 +27,7 @@ class EntityPickup : public Entity {
 public:
 	/*
 	* Constructor
-	* Throws FCRuntimeException if item doesn't exists
+	* Throws FCException if item doesn't exists
 
 	Parameter:
 	@1 : a valid MinecraftServer instance

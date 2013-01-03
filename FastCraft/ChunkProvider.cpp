@@ -14,9 +14,9 @@ GNU General Public License for more details.
 */
 
 #include "ChunkProvider.h"
-#include "FCRuntimeException.h"
+#include "FCException.h"
 #include <Poco/DeflatingStream.h>
-#include "FCRuntimeException.h"
+#include "FCException.h"
 #include "Structs.h"
 #include "NetworkOutRoot.h"
 #include "NetworkOut.h"
@@ -91,7 +91,7 @@ void ChunkProvider::run() {
 			}
 
 			NextChunks();
-		}catch(FCRuntimeException) {
+		}catch(FCException) {
 			continue;
 		}
 
@@ -124,7 +124,7 @@ void ChunkProvider::CheckChunkList(vector<ChunkCoordinates>& rVec,bool fShouldDe
 		if(fDespawn) {
 			try {
 				if (fShouldDespawn) {despawnChunk(rVec[x]);}
-			}catch(FCRuntimeException& ex) {
+			}catch(FCException& ex) {
 				ex.rethrow();
 			}
 			rVec.erase(rVec.begin()+x);
@@ -144,7 +144,7 @@ void ChunkProvider::despawnChunk(ChunkCoordinates& coords) {
 		Out.addInt(coords.Z);
 		Out.getStr().append(_sDespawnCode,sizeof(_sDespawnCode));
 		Out.Finalize(FC_QUEUE_LOW);		
-	}catch(FCRuntimeException& ex) {
+	}catch(FCException& ex) {
 		ex.rethrow();
 	}
 }
@@ -276,7 +276,7 @@ void ChunkProvider::NextChunks() {
 
 	/*	time.stop();
 		cout<<"transferred "<<iTransferredChunks<<" chunks in "<<(time.elapsed()/1000)<<"ms\n";*/
-	}catch(FCRuntimeException& ex) {
+	}catch(FCException& ex) {
 		ex.rethrow();
 	}
 }

@@ -18,7 +18,7 @@ GNU General Public License for more details.
 #include <iostream>
 #include <Poco/Mutex.h>
 #include <Poco/ScopedLock.h>
-#include "FCRuntimeException.h"
+#include "FCException.h"
 using std::string;
 
 
@@ -65,7 +65,7 @@ public:
 		/*
 		* Access operator
 		* Returns last element if Iterator reaches the end
-		* Throws FCRuntimeException if heap doesn't contains any elements
+		* Throws FCException if heap doesn't contains any elements
 		*/
 		tDataType operator->();
 
@@ -73,7 +73,7 @@ public:
 		/*
 		* Returns pointer of actual element
 		* Returns last element if Iterator reaches the end
-		* Throws FCRuntimeException if heap doesn't contains any elements
+		* Throws FCException if heap doesn't contains any elements
 		*/
 		tDataType getPtr();
 
@@ -99,7 +99,7 @@ public:
 
 	/*
 	* Adds a new element to heap
-	* Throws FCRuntimeException if element already exists
+	* Throws FCException if element already exists
 
 	Parameter:
 	@1 : ID of element 
@@ -129,7 +129,7 @@ public:
 
 	/*
 	* Removes an element
-	* Throws FCRuntimeException if element doesn't exists
+	* Throws FCException if element doesn't exists
 
 	Parameter:
 	@1 : ID of element
@@ -260,7 +260,7 @@ void Heap<tDataType,tAdressType>::add(tAdressType ID,tDataType pElement) {
 		if (fEnd) {
 			if (p->pElement != NULL) {
 				delete pElement;
-				throw FCRuntimeException("Already existing");
+				throw FCException("Already existing");
 			}
 			p->pElement = pElement; 
 
@@ -328,7 +328,7 @@ bool Heap<tDataType,tAdressType>::has(tAdressType ID) {
 template<typename tDataType,typename tAdressType>
 void Heap<tDataType,tAdressType>::erase(tAdressType ID) {
 	HeapElement* p = getElement(ID);
-	if (p == NULL || p->pElement == NULL) {throw FCRuntimeException("Element doesn't exists");}
+	if (p == NULL || p->pElement == NULL) {throw FCException("Element doesn't exists");}
 	
 	Poco::ScopedLock<Poco::Mutex> sLock(_Mutex);
 
@@ -448,7 +448,7 @@ void Heap<tDataType,tAdressType>::HeapIterator::operator++() {
 
 template<typename tDataType,typename tAdressType>
 tDataType Heap<tDataType,tAdressType>::HeapIterator::operator->() {
-	if (_pActual == NULL) {throw FCRuntimeException("Doesn't contain any elements");} /* constructor moves to a valid element; keeps NULL if heap is empty */
+	if (_pActual == NULL) {throw FCException("Doesn't contain any elements");} /* constructor moves to a valid element; keeps NULL if heap is empty */
 	return _pActual->pElement;
 }
 
@@ -459,7 +459,7 @@ bool Heap<tDataType,tAdressType>::HeapIterator::isEndReached() {
 
 template<typename tDataType,typename tAdressType>
 tDataType Heap<tDataType,tAdressType>::HeapIterator::getPtr() {
-	if (_pActual == NULL) {throw FCRuntimeException("Doesn't contain any elements");} 
+	if (_pActual == NULL) {throw FCException("Doesn't contain any elements");} 
 	return _pActual->pElement;
 }
 #endif

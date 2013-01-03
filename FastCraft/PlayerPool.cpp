@@ -19,7 +19,7 @@ GNU General Public License for more details.
 #include "MathHelper.h"
 #include "EntityCoordinates.h"
 #include <Poco/Thread.h>
-#include "FCRuntimeException.h"
+#include "FCException.h"
 #include <iostream>
 #include <cmath>
 #include <Poco/String.h>
@@ -75,7 +75,7 @@ void PlayerPool::run() {
 			p->Execute(_vPlayerThreads,this);
 			delete p;
 			_qEvents.pop();
-		} catch(FCRuntimeException& ex) {
+		} catch(FCException& ex) {
 			cout<<"PlayerPool::run exception:"<<ex.getMessage()<<"\n";
 			_qEvents.pop();
 		}

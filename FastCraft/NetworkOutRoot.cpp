@@ -15,7 +15,7 @@ GNU General Public License for more details.
 #include "NetworkOutRoot.h"
 #include "Constants.h"
 #include <iostream>
-#include "FCRuntimeException.h"
+#include "FCException.h"
 #include "MinecraftServer.h"
 #include "PlayerThread.h"
 #include <cstring>
@@ -50,7 +50,7 @@ void NetworkOutRoot::Add(char iType,string* pData) {
 		_highQueue.push(pData);
 		break;
 	default:
-		throw FCRuntimeException("Unknown queue type");
+		throw FCException("Unknown queue type");
 	}
 }
 

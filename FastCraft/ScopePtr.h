@@ -15,7 +15,7 @@ GNU General Public License for more details.
 
 #ifndef _FASTCRAFTHEADER_SCOPEPTR	
 #define _FASTCRAFTHEADER_SCOPEPTR
-#include "FCRuntimeException.h"
+#include "FCException.h"
 
 template <typename type>
 class ScopePtr {
@@ -24,7 +24,7 @@ public:
 	/*
 	* Constructor
 	* "Takes care" of the given pointer (deletes it on destruction)
-	* Throws FCRuntimeException if pointer is NULL
+	* Throws FCException if pointer is NULL
 
 	Parameter:
 	@1 : Pointer
@@ -56,13 +56,13 @@ public:
 
 template <typename type>
 ScopePtr<type>::ScopePtr(type* pData) {
-	if (pData == NULL) {throw FCRuntimeException("Nullpointer");}
+	if (pData == NULL) {throw FCException("Nullpointer");}
 	_pPtr = pData;
 }
 
 template <typename type>
 ScopePtr<type>::ScopePtr() {
-	if (pData == NULL) {throw FCRuntimeException("Nullpointer");}
+	if (pData == NULL) {throw FCException("Nullpointer");}
 	_pPtr = new type;
 }
 

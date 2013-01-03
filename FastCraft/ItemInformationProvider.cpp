@@ -14,7 +14,7 @@ GNU General Public License for more details.
 */
 
 #include "ItemInformationProvider.h"
-#include "FCRuntimeException.h"
+#include "FCException.h"
 #include <Poco/String.h>
 #include <Poco/Path.h>
 #include <Poco/File.h>
@@ -364,7 +364,7 @@ _vItems(0),
 				isValid(_vItems[x]);
 			}
 		}
-	}catch(FCRuntimeException) {
+	}catch(FCException) {
 		if (!fBlocksDone) {
 			cout<<"Block #"<<int(_vBlocks[x].ID)<<":"<<int(_vBlocks[x].SubID)<<" is invalid\n";
 		}else{
@@ -453,7 +453,7 @@ string ItemInformationProvider::getName(ItemID ID) {
 			}
 		}
 	}
-	throw FCRuntimeException("Not found!");
+	throw FCException("Not found!");
 }
 
 
@@ -480,7 +480,7 @@ string ItemInformationProvider::getName(short ID) {
 		}
 	}
 
-	throw FCRuntimeException("Not found!");
+	throw FCException("Not found!");
 }
 
 
@@ -528,7 +528,7 @@ ItemID ItemInformationProvider::getIDbyName(string Name) {
 		}
 	}
 
-	throw FCRuntimeException("Not found!");
+	throw FCException("Not found!");
 }
 
 bool ItemInformationProvider::isBlock(ItemID ID) {
@@ -557,48 +557,48 @@ bool ItemInformationProvider::isBlock(short iID) {
 
 
 BlockEntry* ItemInformationProvider::getBlock(ItemID ID) {
-	if (_vBlocks.empty()) { throw FCRuntimeException("Not found!"); }
-	if (!isBlock(ID)) { throw FCRuntimeException("Not a block!"); }
+	if (_vBlocks.empty()) { throw FCException("Not found!"); }
+	if (!isBlock(ID)) { throw FCException("Not a block!"); }
 
 	int index = search(_vBlocks,ID);
 	if (index == -1) {
-		throw FCRuntimeException("Not found!");
+		throw FCException("Not found!");
 	}
 
 	return &_vBlocks[index];	
 }
 
 BlockEntry* ItemInformationProvider::getBlock(short iID) {
-	if (_vBlocks.empty()) { throw FCRuntimeException("Not found!"); }
-	if (!isBlock(iID)) { throw FCRuntimeException("Not a block!"); }
+	if (_vBlocks.empty()) { throw FCException("Not found!"); }
+	if (!isBlock(iID)) { throw FCException("Not a block!"); }
 
 	int index = search(_vBlocks, ItemID(iID,0));
 	if (index == -1) {
-		throw FCRuntimeException("Not found!");
+		throw FCException("Not found!");
 	}
 
 	return &_vBlocks[index];	
 }
 
 ItemEntry* ItemInformationProvider::getItem(ItemID ID) {
-	if (_vItems.empty()) { throw FCRuntimeException("Not found!"); }
-	if (isBlock(ID)) { throw FCRuntimeException("Not a item!"); }
+	if (_vItems.empty()) { throw FCException("Not found!"); }
+	if (isBlock(ID)) { throw FCException("Not a item!"); }
 
 	int index = search(_vItems, ID);
 	if (index == -1) {
-		throw FCRuntimeException("Not found!");
+		throw FCException("Not found!");
 	}
 
 	return &_vItems[index];	
 }
 
 ItemEntry* ItemInformationProvider::getItem(short iID) {
-	if (_vItems.empty()) { throw FCRuntimeException("Not found!"); }
-	if (isBlock(iID)) { throw FCRuntimeException("Not a item!"); }
+	if (_vItems.empty()) { throw FCException("Not found!"); }
+	if (isBlock(iID)) { throw FCException("Not a item!"); }
 
 	int index = search(_vItems, ItemID(iID,0));
 	if (index == -1) {
-		throw FCRuntimeException("Not found!");
+		throw FCException("Not found!");
 	}
 
 	return &_vItems[index];	
@@ -614,112 +614,112 @@ int ItemInformationProvider::getBlocksInCache() {
 
 void ItemInformationProvider::isValid(ItemEntry Entry) {
 	if (Entry.Enchantable && !Entry.Damageable) {
-		throw FCRuntimeException("Enchantable but undestroyable");
+		throw FCException("Enchantable but undestroyable");
 	}
 
 	if (Entry.Durability < -1 || Entry.Durability == 0) {
-		throw FCRuntimeException("Illegal durability");
+		throw FCException("Illegal durability");
 	}
 
 	if (Entry.Damageable && Entry.Durability==-1) {
-		throw FCRuntimeException("Destroyable but no durability");
+		throw FCException("Destroyable but no durability");
 	}
 
 	if (Entry.MaxStackSize <= 0) {
-		throw FCRuntimeException("Illegal stack size");
+		throw FCException("Illegal stack size");
 	}
 
 	if (Entry.Damageable && Entry.MaxStackSize != 1) {
-		throw FCRuntimeException("Destroyable but MaxStackSize > 1");
+		throw FCException("Destroyable but MaxStackSize > 1");
 	}
 
 	if (Entry.Damageable && Entry.Eatable) {
-		throw FCRuntimeException("Cou can't make tools eatable");
+		throw FCException("Cou can't make tools eatable");
 	}
 
 	if (Entry.Weapon && !Entry.Damageable) {
-		throw FCRuntimeException("Indestructible weapon");
+		throw FCException("Indestructible weapon");
 	}
 
 	if (Entry.SubID > 15 || Entry.SubID < 0) {
-		throw FCRuntimeException("Illegal SubID");
+		throw FCException("Illegal SubID");
 	}
 
 	if (Entry.ID > 4096 || Entry.ID < 0) {
-		throw FCRuntimeException("Illegal ID");
+		throw FCException("Illegal ID");
 	}
 
 	if (Entry.Name.compare("") == 0) {
-		throw FCRuntimeException("Name is empty");
+		throw FCException("Name is empty");
 	}
 
 	if (Entry.Damage <= 0) {
-		throw FCRuntimeException("Illegal damage");
+		throw FCException("Illegal damage");
 	}
 
 	if (Entry.FoodValue < 0) { 
-		throw FCRuntimeException("Invalid food value");
+		throw FCException("Invalid food value");
 	}
 
 	if (!Entry.Eatable && Entry.FoodValue != 0) {
-		throw FCRuntimeException("Non eatable things can't have food value");
+		throw FCException("Non eatable things can't have food value");
 	}
 
 	if(Entry.ConnectedBlock.first != -1 && Entry.ConnectedBlock.second != -1) {
 		if (search(_vBlocks,Entry.ConnectedBlock) == -1) {
-			throw FCRuntimeException("Connected block doesn't exist");
+			throw FCException("Connected block doesn't exist");
 		}
 	}
 }
 
 void ItemInformationProvider::isValid(BlockEntry Entry) {
 	if (Entry.SubID > 15 || Entry.SubID < 0) {
-		throw FCRuntimeException("Illegal SubID");
+		throw FCException("Illegal SubID");
 	}
 
 	if (Entry.Name.compare("") == 0) {
-		throw FCRuntimeException("Name is empty");
+		throw FCException("Name is empty");
 	}
 
 	if (Entry.MaxStackSize <= 0) {
-		throw FCRuntimeException("Illegal stack size");
+		throw FCException("Illegal stack size");
 	}
 
 	if (Entry.SelfLightLevel > 17 || Entry.SelfLightLevel < 0) {
-		throw FCRuntimeException("Illegal SelfLightLevel");
+		throw FCException("Illegal SelfLightLevel");
 	}
 
 	if (Entry.Thickness < 0.0F || Entry.Thickness > 1.0F) {
-		throw FCRuntimeException("Illegal thickness");
+		throw FCException("Illegal thickness");
 	}
 
 	if (Entry.ID > 4096 || Entry.ID < 0) {
-		throw FCRuntimeException("Illegal ID");
+		throw FCException("Illegal ID");
 	}
 
 	if (Entry.Height < 0.0F || Entry.Height > 1.0F) {
-		throw FCRuntimeException("Illegal height");
+		throw FCException("Illegal height");
 	}
 
 	if (Entry.Fluid) {
 		int index;
 		
-		if (Entry.Speed  < 0) { throw FCRuntimeException("Speed is below 0");}
-		if (Entry.Spread < 0) {throw FCRuntimeException("Spread is below 0");}
-		if (!isBlock(Entry.SpreadBlock)) {throw FCRuntimeException("SpreadBlock not registered/not a block");}
+		if (Entry.Speed  < 0) { throw FCException("Speed is below 0");}
+		if (Entry.Spread < 0) {throw FCException("Spread is below 0");}
+		if (!isBlock(Entry.SpreadBlock)) {throw FCException("SpreadBlock not registered/not a block");}
 		
 		index = search(_vBlocks,ItemID(Entry.SpreadBlock,0));
-		if (_vBlocks[index].Fluid) {throw FCRuntimeException("Spread blocks can't be fluids");}
+		if (_vBlocks[index].Fluid) {throw FCException("Spread blocks can't be fluids");}
 	}
 
 	if (Entry.noLoot) {
 		if (Entry.ConnectedItem.first != 0) {
-			throw FCRuntimeException("noLoot flag set, connected item not null 0");
+			throw FCException("noLoot flag set, connected item not null 0");
 		}
 	}else{
 		if (Entry.ConnectedItem.first != -1 && Entry.ConnectedItem.second != -1) {
 			if (search(_vItems,Entry.ConnectedItem) == -1) {
-				throw FCRuntimeException("Connected item doesn't exist");
+				throw FCException("Connected item doesn't exist");
 			}
 		}
 	}

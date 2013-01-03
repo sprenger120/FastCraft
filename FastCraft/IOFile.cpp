@@ -14,18 +14,18 @@ GNU General Public License for more details.
 */
 #include "IOFile.h"
 #include <Poco\File.h>
-#include "FCRuntimeException.h"
+#include "FCException.h"
 #include <Poco\ScopedLock.h>
 
 IOFile::IOFile(Poco::File& rFile){
 	if(rFile.exists()) {
-		if (!rFile.canRead()) {throw FCRuntimeException("Permission denied (read)");}
-		if (!rFile.canWrite()) {throw FCRuntimeException("Permission denied (write)");}
+		if (!rFile.canRead()) {throw FCException("Permission denied (read)");}
+		if (!rFile.canWrite()) {throw FCException("Permission denied (write)");}
 	}
 	_stream.open(rFile.path(),fstream::in | fstream::out | fstream::ate | fstream::binary);
 	if (_stream.fail()) {
 		_stream.open(rFile.path(),fstream::in | fstream::out | fstream::trunc | fstream::binary);
-		if (_stream.fail()) {throw FCRuntimeException("Unable to open file");}
+		if (_stream.fail()) {throw FCException("Unable to open file");}
 	}
 
 	_iSize = (int)_stream.tellg();
@@ -39,8 +39,8 @@ IOFile::~IOFile() {
 }
 
 void IOFile::write(char* pData,int iSize) {
-	if (iSize <= 0) {throw FCRuntimeException("Illegal size");}
-	if (pData == NULL) {throw FCRuntimeException("Nullpointer");}
+	if (iSize <= 0) {throw FCException("Illegal size");}
+	if (pData == NULL) {throw FCException("Nullpointer");}
 
 	_iSize += iSize;
 	_stream.write(pData,iSize);
@@ -48,8 +48,8 @@ void IOFile::write(char* pData,int iSize) {
 }
 
 bool IOFile::read(char* pData,int iSize) {
-	if (iSize <= 0) {throw FCRuntimeException("Illegal size");}
-	if (pData == NULL) {throw FCRuntimeException("Nullpointer");}
+	if (iSize <= 0) {throw FCException("Illegal size");}
+	if (pData == NULL) {throw FCException("Nullpointer");}
 	
 	_stream.read(pData,iSize);
 
@@ -75,6 +75,6 @@ void IOFile::createDir(Poco::Path& path) {
 		Poco::File fileInstance(path);
 		if (!fileInstance.exists()) {fileInstance.createDirectories();}
 	}catch(...) {
-		throw FCRuntimeException("Unable to create directory");
+		throw FCException("Unable to create directory");
 	}
 }

@@ -19,17 +19,17 @@ GNU General Public License for more details.
 #include "ItemSlot.h"
 #include <bitset>
 #include <cmath>
-#include "FCRuntimeException.h"
+#include "FCException.h"
 #include "PlayerThread.h"
 
 EntityPlayer::EntityPlayer(MinecraftServer* pServer,World* pWorld,string sName) try :
 	EntityLiving		(Constants::get("/Entity/Alive/TypeID/Player"),pServer,pWorld),
 	_sName				("")
 {
-	if (sName.compare("") == 0) {throw FCRuntimeException("Illegal name");}
+	if (sName.compare("") == 0) {throw FCException("Illegal name");}
 	_sName.assign(sName);
 	_iHealth = 20;
-}catch(FCRuntimeException & ex) {
+}catch(FCException & ex) {
 	ex.rethrow();
 }
 
@@ -47,7 +47,7 @@ EntityPlayer::EntityPlayer(PlayerThread* pPlayer) try :
 	for (char x=1;x<=4;x++) {
 		setEquipment(x, pPlayer->getInventory()[4+x]->getItem());
 	}
-}catch(FCRuntimeException & ex) {
+}catch(FCException & ex) {
 	ex.rethrow();
 }
 
@@ -82,7 +82,7 @@ void EntityPlayer::spawn(NetworkOut& rOut) {
 
 		sendEquipment(rOut);
 		
-	}catch(FCRuntimeException& ex) {
+	}catch(FCException& ex) {
 		ex.rethrow();
 	}
 }
@@ -104,7 +104,7 @@ void EntityPlayer::appendMetadata(NetworkOut& rOut) {
 
 		rOut.addByte((unsigned char)bitFlags.to_ulong());
 		rOut.addByte(127);
-	}catch(FCRuntimeException& ex) {
+	}catch(FCException& ex) {
 		ex.rethrow();
 	}
 }

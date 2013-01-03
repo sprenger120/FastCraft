@@ -80,7 +80,7 @@ public:
 	/*
 	* Returns value of given key
 	* For all valid pathes, look into Constants.cpp
-	* Throws FCRuntimeException if key doesn't exists
+	* Throws FCException if key doesn't exists
 
 	Parameter:
 	@1 : Key name

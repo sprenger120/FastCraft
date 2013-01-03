@@ -13,7 +13,7 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 */
 #include "MapChunk.h"
-#include "FCRuntimeException.h"
+#include "FCException.h"
 #include <Poco\ScopedLock.h>
 #include "ChunkMath.h"
 #include "NetworkOut.h"
@@ -59,8 +59,8 @@ time_t MapChunk::getLastAccess() {
 }
 
 void MapChunk::setBlock(ItemID& item,char X,short Y,char Z) {
-	if (!isLoaded()) {throw FCRuntimeException("Not loaded");}
-	if (X < 0 || Z < 0 || X > 15 || Z > 15 || Y < 0 || Y > 255) {throw FCRuntimeException("Illegal coordinates");}
+	if (!isLoaded()) {throw FCException("Not loaded");}
+	if (X < 0 || Z < 0 || X > 15 || Z > 15 || Y < 0 || Y > 255) {throw FCException("Illegal coordinates");}
 
 	Mutex::ScopedLock scopelock(_Mutex);
 	_iLastAccess = _timestamp.epochTime();
@@ -73,8 +73,8 @@ void MapChunk::setBlock(ItemID& item,char X,short Y,char Z) {
 }
 
 ItemID MapChunk::getBlock(char X,short Y,char Z) {
-	if (!isLoaded()) {throw FCRuntimeException("Not loaded");}
-	if (X < 0 || Z < 0 || X > 15 || Z > 15 || Y < 0 || Y > 255) {throw FCRuntimeException("Illegal coordinates");}
+	if (!isLoaded()) {throw FCException("Not loaded");}
+	if (X < 0 || Z < 0 || X > 15 || Z > 15 || Y < 0 || Y > 255) {throw FCException("Illegal coordinates");}
 	
 	_iLastAccess = _timestamp.epochTime();
 
@@ -85,8 +85,8 @@ ItemID MapChunk::getBlock(char X,short Y,char Z) {
 }
 
 void MapChunk::setBlockLight(char iLvl,char X,short Y,char Z) {
-	if (!isLoaded()) {throw FCRuntimeException("Not loaded");}
-	if (X < 0 || Z < 0 || X > 15 || Z > 15 || Y < 0 || Y > 255) {throw FCRuntimeException("Illegal coordinates");}
+	if (!isLoaded()) {throw FCException("Not loaded");}
+	if (X < 0 || Z < 0 || X > 15 || Z > 15 || Y < 0 || Y > 255) {throw FCException("Illegal coordinates");}
 
 	Mutex::ScopedLock scopelock(_Mutex);
 	_iLastAccess = _timestamp.epochTime();
@@ -98,8 +98,8 @@ void MapChunk::setBlockLight(char iLvl,char X,short Y,char Z) {
 }
 
 char MapChunk::getBlockLight(char X,short Y,char Z) {
-	if (!isLoaded()) {throw FCRuntimeException("Not loaded");}
-	if (X < 0 || Z < 0 || X > 15 || Z > 15 || Y < 0 || Y > 255) {throw FCRuntimeException("Illegal coordinates");}
+	if (!isLoaded()) {throw FCException("Not loaded");}
+	if (X < 0 || Z < 0 || X > 15 || Z > 15 || Y < 0 || Y > 255) {throw FCException("Illegal coordinates");}
 	
 	_iLastAccess = _timestamp.epochTime();
 
@@ -110,8 +110,8 @@ char MapChunk::getBlockLight(char X,short Y,char Z) {
 }
 
 void MapChunk::setSkyLight(char iLvl,char X,short Y,char Z) {
-	if (!isLoaded()) {throw FCRuntimeException("Not loaded");}
-	if (X < 0 || Z < 0 || X > 15 || Z > 15 || Y < 0 || Y > 255) {throw FCRuntimeException("Illegal coordinates");}
+	if (!isLoaded()) {throw FCException("Not loaded");}
+	if (X < 0 || Z < 0 || X > 15 || Z > 15 || Y < 0 || Y > 255) {throw FCException("Illegal coordinates");}
 
 	Mutex::ScopedLock scopelock(_Mutex);
 	_iLastAccess = _timestamp.epochTime();
@@ -123,8 +123,8 @@ void MapChunk::setSkyLight(char iLvl,char X,short Y,char Z) {
 }
 
 char MapChunk::getSkyLight(char X,short Y,char Z) {
-	if (!isLoaded()) {throw FCRuntimeException("Not loaded");}
-	if (X < 0 || Z < 0 || X > 15 || Z > 15 || Y < 0 || Y > 255) {throw FCRuntimeException("Illegal coordinates");}
+	if (!isLoaded()) {throw FCException("Not loaded");}
+	if (X < 0 || Z < 0 || X > 15 || Z > 15 || Y < 0 || Y > 255) {throw FCException("Illegal coordinates");}
 	
 	_iLastAccess = _timestamp.epochTime();
 
@@ -135,7 +135,7 @@ char MapChunk::getSkyLight(char X,short Y,char Z) {
 }
 
 void MapChunk::setNibble(int iBlockOffset,char iNewData,char* apArray) {
-	if (iBlockOffset < 0) {throw FCRuntimeException("Illegal block offset");}
+	if (iBlockOffset < 0) {throw FCException("Illegal block offset");}
 	int iNibbleOffset = iBlockOffset/2;
 
 	if (iBlockOffset&1) { //Higher 4-bits   &1 is the same as %2
@@ -146,7 +146,7 @@ void MapChunk::setNibble(int iBlockOffset,char iNewData,char* apArray) {
 }
 
 char MapChunk::getNibble(int iBlockOffset,char* apArray) {
-	if (iBlockOffset < 0) {throw FCRuntimeException("Illegal block offset");}
+	if (iBlockOffset < 0) {throw FCException("Illegal block offset");}
 	int iNibbleOffset = iBlockOffset/2;
 
 	if (iBlockOffset&1) { //Higher 4-bits
@@ -157,7 +157,7 @@ char MapChunk::getNibble(int iBlockOffset,char* apArray) {
 }
 
 void MapChunk::send(NetworkOut& Out) {
-	if (!isLoaded()) {throw FCRuntimeException("Not loaded");}
+	if (!isLoaded()) {throw FCException("Not loaded");}
 
 	try {
 		char iSize = _vpBlocks.size();
@@ -183,13 +183,13 @@ void MapChunk::send(NetworkOut& Out) {
 		Out.getStr().append(_stringStrm.str());
 
 		Out.Finalize(FC_QUEUE_LOW);
-	}catch(FCRuntimeException& ex) {
+	}catch(FCException& ex) {
 		ex.rethrow();
 	}
 }
 
 short MapChunk::packData(Poco::DeflatingOutputStream& rStrm) {
-	if (!isLoaded()) {throw FCRuntimeException("Not loaded");}
+	if (!isLoaded()) {throw FCException("Not loaded");}
 	char iSize = _vpBlocks.size();
 	if (iSize == 0) {return 0;}
 
@@ -215,11 +215,11 @@ short MapChunk::packData(Poco::DeflatingOutputStream& rStrm) {
 }
 
 void MapChunk::unload(WorldFileHandler* p) {
-	throw FCRuntimeException("not implemented");
+	throw FCException("not implemented");
 }
 
 void MapChunk::save(WorldFileHandler* p) {
-	throw FCRuntimeException("not implemented");
+	throw FCException("not implemented");
 }
 
 void MapChunk::alloc() {

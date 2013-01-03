@@ -13,7 +13,7 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 */
 #include "NetworkIn.h"
-#include "FCRuntimeException.h"
+#include "FCException.h"
 #include <Poco/Net/NetException.h>
 #include "MinecraftServer.h"
 #include "PlayerThread.h"
@@ -42,7 +42,7 @@ char NetworkIn::readByte() {
 	try {
 		read(1,_sReadBuffer);
 		if (_fCryptMode) {AESdecrypt(_sReadBuffer,1);}
-	} catch(FCRuntimeException& ex) {
+	} catch(FCException& ex) {
 		ex.rethrow();
 	}
 
@@ -54,7 +54,7 @@ bool NetworkIn::readBool() {
 
 	try {
 		iByte = readByte();
-	} catch(FCRuntimeException& ex) {
+	} catch(FCException& ex) {
 		ex.rethrow();
 	}
 
@@ -70,7 +70,7 @@ short NetworkIn::readShort() {
 	try {
 		read(2,_sReadBuffer);
 		if (_fCryptMode) {AESdecrypt(_sReadBuffer,2);}
-	} catch(FCRuntimeException& ex) {
+	} catch(FCException& ex) {
 		ex.rethrow();
 	}
 
@@ -82,7 +82,7 @@ int NetworkIn::readInt() {
 	try {
 		read(4,_sReadBuffer);
 		if (_fCryptMode) {AESdecrypt(_sReadBuffer,4);}
-	} catch(FCRuntimeException& ex) {
+	} catch(FCException& ex) {
 		ex.rethrow();
 	}
 
@@ -97,7 +97,7 @@ long long NetworkIn::readInt64() {
 	try {
 		read(8,_sReadBuffer);
 		if (_fCryptMode) {AESdecrypt(_sReadBuffer,8);}
-	} catch(FCRuntimeException& ex) {
+	} catch(FCException& ex) {
 		ex.rethrow();
 	}
 
@@ -116,7 +116,7 @@ long long NetworkIn::readInt64() {
 float NetworkIn::readFloat() {
 	try {
 		_ItF.i = readInt();
-	} catch(FCRuntimeException& ex) {
+	} catch(FCException& ex) {
 		ex.rethrow();
 	}
 
@@ -127,7 +127,7 @@ float NetworkIn::readFloat() {
 double NetworkIn::readDouble() {
 	try {
 		_ItD.i = readInt64();
-	} catch(FCRuntimeException& ex) {
+	} catch(FCException& ex) {
 		ex.rethrow();
 	}
 	return _ItD.d;
@@ -139,13 +139,13 @@ string NetworkIn::readString() {
 
 	try {
 		iDataLenght = readShort();
-		if (iDataLenght < 0) {throw FCRuntimeException("Illegal length field");}
+		if (iDataLenght < 0) {throw FCException("Illegal length field");}
 
 		for(short x = 0;x<=iDataLenght-1;x++) {
 			readByte();
 			sOutput.append(1,readByte());
 		}
-	} catch(FCRuntimeException& ex) {
+	} catch(FCException& ex) {
 		ex.rethrow();
 	}
 
@@ -155,7 +155,7 @@ string NetworkIn::readString() {
 std::pair<char*,short> NetworkIn::readByteArray(bool fDecrypt) {
 	try {
 		short iLen = readShort();
-		if (iLen <= 0) {throw FCRuntimeException("Illegal length field");}
+		if (iLen <= 0) {throw FCException("Illegal length field");}
 
 		char* pStr = new char[iLen];
 		read(iLen,pStr);
@@ -186,7 +186,7 @@ std::pair<char*,short> NetworkIn::readByteArray(bool fDecrypt) {
 		}
 		return std::make_pair(pStr,iLen);
 	}catch(...) {
-		throw FCRuntimeException("Unable to read packet");
+		throw FCException("Unable to read packet");
 	}
 	return std::make_pair<char*,short>(NULL,0);
 }
@@ -197,7 +197,7 @@ void NetworkIn::read(int iLenght,char* pBuffer) {
 	int iUnderflowCount=0;
 	bool fUnderflow = false;
 
-	if (!_pPlayer->isAssigned()) {throw FCRuntimeException("Not connected",false);}
+	if (!_pPlayer->isAssigned()) {throw FCException("Not connected",false);}
 
 	while ( iReadedLenght < iLenght) {
 		try {
@@ -210,20 +210,20 @@ void NetworkIn::read(int iLenght,char* pBuffer) {
 				break;
 			}
 		}catch(Poco::Net::ConnectionAbortedException) {
-			throw FCRuntimeException("Connection aborted",false);
+			throw FCException("Connection aborted",false);
 		}catch(Poco::Net::InvalidSocketException) {
-			throw FCRuntimeException("Invalid socket",false);
+			throw FCException("Invalid socket",false);
 		}catch(Poco::TimeoutException) {
-			throw FCRuntimeException("Timeout",false);
+			throw FCException("Timeout",false);
 		}catch(Poco::Net::ConnectionResetException) {
-			throw FCRuntimeException("Connection reset",false);
+			throw FCException("Connection reset",false);
 		}catch(Poco::IOException) {
-			throw FCRuntimeException("I/O Error",false);
+			throw FCException("I/O Error",false);
 		}
 		if (iReadedLenght != iLenght) {
 			iUnderflowCount++;
 			if (iUnderflowCount > 10) {
-				throw FCRuntimeException("Timeout",false);
+				throw FCException("Timeout",false);
 			}
 			fUnderflow = true;
 		}
@@ -254,6 +254,6 @@ void NetworkIn::AESdecrypt(char* pSrc,int iLen) {
 
 		memcpy(pSrc,_sDecryptOutput.c_str(),iLen);
 	}catch(...) {
-		throw FCRuntimeException("Unable to decrypt");
+		throw FCException("Unable to decrypt");
 	}
 }

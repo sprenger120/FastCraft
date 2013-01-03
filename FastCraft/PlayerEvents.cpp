@@ -14,14 +14,14 @@ GNU General Public License for more details.
 */
 #include "PlayerEvents.h"
 #include "Constants.h"
-#include "FCRuntimeException.h"
+#include "FCException.h"
 #include <iostream>
 #include "PlayerThread.h"
 #include "PlayerPool.h"
 #include "EntityPlayer.h"
 #include "MathHelper.h"
 #include "ChunkMath.h"
-#include "FCRuntimeException.h"
+#include "FCException.h"
 #include "World.h"
 
 /*
@@ -66,7 +66,7 @@ PlayerEventBase(pThread),
 	_sName(sUsername)
 {
 	if(_iEntityID <= 100) {
-		throw FCRuntimeException("invalid EID");
+		throw FCException("invalid EID");
 	}
 }
 

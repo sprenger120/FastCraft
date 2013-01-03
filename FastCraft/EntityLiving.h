@@ -42,7 +42,7 @@ protected:
 public:
 	/*
 	* Constructor
-	* Throws FCRuntimeException if typeID is invalid
+	* Throws FCException if typeID is invalid
 	
 	Parameter:
 	@1 : type of entity (/Entity/Alive/TypeID/)
@@ -125,7 +125,7 @@ public:
 
 	/*
 	* Sends update equip packages if actual and given is different
-	* Throws FCRuntimeException if array hasn't the coorect size
+	* Throws FCException if array hasn't the coorect size
 
 	Parameter:
 	@1 : a NetworkOut instance
@@ -136,7 +136,7 @@ public:
 
 	/*
 	* Sets the equipment
-	* Throws FCRuntimeException if index is out of bound
+	* Throws FCException if index is out of bound
 	* Rethrows all ItemSlot exception
 
 	Parameter:
@@ -148,7 +148,7 @@ public:
 
 	/*
 	* Returns the slot's itemID
-	* Throws FCRuntimeException if index is out of bound
+	* Throws FCException if index is out of bound
 	* Returns FC_EMPTYITEMID if slot is empty
 
 	Parameter:

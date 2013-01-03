@@ -49,8 +49,8 @@ public:
 
 	/*
 	* Adds a new job
-	* Throws FCRuntimeException if calling interval is below zero
-	* Throws FCRuntimeException if function pointer is NULL
+	* Throws FCException if calling interval is below zero
+	* Throws FCException if function pointer is NULL
 
 	Parameter:
 	@1 : Function pointer of the target
@@ -79,8 +79,8 @@ TimeJobServer<ptrClass>::~TimeJobServer() {
 
 template<typename ptrClass>
 void TimeJobServer<ptrClass>::addJob(void (ptrClass::* pFuncPtr)(void),int iInterval) {
-	if (pFuncPtr == NULL) { throw FCRuntimeException("Invalid function pointer"); }
-	if (iInterval < 0) {throw FCRuntimeException("Illegal interval");}
+	if (pFuncPtr == NULL) { throw FCException("Invalid function pointer"); }
+	if (iInterval < 0) {throw FCException("Illegal interval");}
 
 	ListEntry entry;
 	entry.callInterval = iInterval;

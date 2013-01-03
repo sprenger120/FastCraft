@@ -29,7 +29,7 @@ public:
 	/*
 	* Constructor
 	* get and put pointers are set to 0
-	* Throws FCRuntimeException if is 
+	* Throws FCException if is 
 	    - unable to read file (permission)
 		- unable to write file (permissions)
 		- unable to find file
@@ -49,7 +49,7 @@ public:
 
 	/*
 	* Writes content to stream
-	* Throws FCRuntimeException if
+	* Throws FCException if
 	   - Size is invalid (<= 0)
 	   - Data pointer is 0
 	Parameter:
@@ -88,7 +88,7 @@ public:
 
 	/*
 	* Creates an directory if it doesn't exist
-	* Throws FCRuntimeException if an error occurs
+	* Throws FCException if an error occurs
 	*/
 	static void createDir(Poco::Path&);
 };

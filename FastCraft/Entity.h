@@ -34,7 +34,7 @@ protected:
 public:
 	/*
 	* Constructor
-	* Throws FCRuntimeException if EntityID/pointers/entity type is invalid
+	* Throws FCException if EntityID/pointers/entity type is invalid
 
 	Parameter:
 	@1 : a valid MinecraftServer instance
@@ -110,7 +110,7 @@ public:
 
 	/*
 	* Sends spawn packet to given client
-	* Throws FCRuntimeException if client isn't connected
+	* Throws FCException if client isn't connected
 	*/
 	virtual void spawn(NetworkOut&);
 
