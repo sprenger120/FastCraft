@@ -19,40 +19,50 @@ GNU General Public License for more details.
     #include <cstring>  
     #include <cstdlib>
 #endif
+using std::string;
 
 FCException::FCException(string sDesc, bool fStackTrace) :
-_sMessage(sDesc) {
-    if (fStackTrace) {
-        printStacktrace();
-    }
+_sDesc(sDesc) 
+{
+    if (fStackTrace) {printStacktrace();}
     _iCode = 0;
 }
 
 FCException::FCException(string sDesc, int i, bool fStackTrace) :
-_sMessage(sDesc) {
-    if (fStackTrace) {
-        printStacktrace();
-    }
+_sDesc(sDesc) 
+{
+    if (fStackTrace) {printStacktrace();}
     _iCode = i;
+}
+
+FCException::FCException(const char* sDesc,bool fStackTrace) : 
+    _sDesc(sDesc)
+{
+    if (fStackTrace) {printStacktrace();}
+    _iCode = 0;
 }
 
 FCException::~FCException() {
 }
 
 char* FCException::what() {
-    return (char*) _sMessage.c_str();
+    return (char*) _sDesc.c_str();
 }
 
 string FCException::getMessage() {
-    return _sMessage;
+    return _sDesc;
 }
 
 int FCException::getErrorCode() {
     return _iCode;
 }
 
+const char* FCException::name() {
+    return "FCException";
+}
+
 void FCException::printStacktrace() {
-    std::cout << "\nException threw: " << _sMessage << "\n";
+    std::cout << "\nException threw: " << _sDesc << "\n";
 #if defined(_WIN32)
     short iCapuredFrames;
     void* stack[15];
@@ -121,9 +131,19 @@ void FCException::printStacktrace() {
 }
 
 void FCException::rethrow() {
-    throw *(this);
+    throw *this;
 }
 
+//FastCraft
+FC_IMPLEMENT_EXCEPTION(NBTIncompatibleTypeException,"Incompatible type")
+FC_IMPLEMENT_EXCEPTION(NBTNotFoundException,"Not found")
+FC_IMPLEMENT_EXCEPTION(NBTIllegalFormatException,"Illegal format");
+FC_IMPLEMENT_EXCEPTION(NBTOverflowException,"Noo much elements");
+FC_IMPLEMENT_EXCEPTION(NBTIllegalCompressionTypeException,"Illegal compression type");
 
-FC_IMPLEMENT_EXCEPTION(NBTIncompatibleTypeException)
-FC_IMPLEMENT_EXCEPTION(NBTNotFoundException)
+
+
+FC_IMPLEMENT_EXCEPTION(FileNotFoundException,"File not found");
+FC_IMPLEMENT_EXCEPTION(EndOfFileException,"File stream ended unexpected");
+FC_IMPLEMENT_EXCEPTION(FileIOException,"File not read-/writeable")
+FC_IMPLEMENT_EXCEPTION(NullpointerException,"Nullpointer");

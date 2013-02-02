@@ -25,12 +25,9 @@ GNU General Public License for more details.
 #include <execinfo.h>
 #endif
 
-
-using std::string;
-
 class FCException {
 private:
-	string _sMessage;
+	std::string _sDesc;
 	int _iCode;
 public:
 	/*
@@ -41,13 +38,18 @@ public:
 	@1 : Description of the occurred error
 	@2 : See above 
 
+    Parameter:
+	@1 : Description of the occurred error
+	@2 : See above 
+
 	Parameter:
 	@1 : Description of the occurred error
 	@2 : Error-Code
 	@3 : See above
 	*/
-	FCException(string,bool = true);
-	FCException(string,int,bool = true);
+    FCException(const char*,bool = true);
+	FCException(std::string,bool = true);
+	FCException(std::string,int,bool = true);
 
 
 	/*
@@ -60,7 +62,12 @@ public:
 	* Returns the description of the occurred error
 	*/
 	char* what();
-	string getMessage();
+	std::string getMessage();
+
+    /*
+    * Returns a static string describing the exception.
+    */
+    virtual const char* name();
 
 
 	/*
@@ -79,30 +86,46 @@ private:
 
 
 
-#define FC_DECLARE_EXCEPTION(NAME)		\
-class NAME : public FCException	{		\
-public:									\
-	NAME(bool = true);					\
-	NAME(string,bool = true);			\
-	virtual ~NAME();					\
+#define FC_DECLARE_EXCEPTION(NAME)      \
+class NAME : public FCException  {      \
+public:                                 \
+	NAME(bool = true);                  \
+	NAME(std::string,bool = true);      \
+    NAME(const char*,bool = true);      \
+    const char* name();                 \
+    virtual ~NAME();                    \
 };													 
 
-#define FC_IMPLEMENT_EXCEPTION(NAME)               \
-NAME::NAME(std::string str,bool fPrintStacktrace) :\
-	FCException(str,fPrintStacktrace)              \
-{                                                  \
-}                                                  \
-NAME::NAME(bool fPrintStacktrace) :                \
-FCException(std::string(""),fPrintStacktrace)	   \
-{                                                  \
-}                                                  \
-NAME::~NAME()									   \
-{                                                  \
+#define FC_IMPLEMENT_EXCEPTION(NAME,MSG)                \
+NAME::NAME(std::string str,bool fPrintStacktrace) :     \
+	FCException(str,fPrintStacktrace)                   \
+{                                                       \
+}                                                       \
+NAME::NAME(bool fPrintStacktrace) :                     \
+FCException(string(""),fPrintStacktrace)	            \
+{                                                       \
+}                                                       \
+NAME::NAME(const char* pStr,bool fPrintStacktrace) :    \
+FCException(pStr,fPrintStacktrace)                      \
+{                                                       \
+}                                                       \
+const char* NAME::name() {                              \
+    return MSG;                                         \
+}                                                       \
+NAME::~NAME()					                        \
+{                                                       \
 }
 
 
 FC_DECLARE_EXCEPTION(NBTIncompatibleTypeException)
 FC_DECLARE_EXCEPTION(NBTNotFoundException)
+FC_DECLARE_EXCEPTION(NBTIllegalFormatException)
+FC_DECLARE_EXCEPTION(NBTOverflowException)
+FC_DECLARE_EXCEPTION(NBTIllegalCompressionTypeException)
 
 
+FC_DECLARE_EXCEPTION(FileNotFoundException)
+FC_DECLARE_EXCEPTION(FileIOException)
+FC_DECLARE_EXCEPTION(EndOfFileException)
+FC_DECLARE_EXCEPTION(NullpointerException)
 #endif
