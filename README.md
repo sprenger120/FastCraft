@@ -1,7 +1,7 @@
 ![logo](http://host-it.tk/uploads/4fff1e606f9c6-FCLogo.png)
 
 
-FastCraft is a SMP Minecraft Server, written in C++.  The current version is not stable!
+FastCraft is a Minecraft Multiplayer Server written in C++ and compatible to Windows and Linux.  The main branch ist not buildable at the moment!
 
 **Current Version: 0.0.3 Alpha - Goldwave (Compatible to Minecraft 1.3.2)**
 
