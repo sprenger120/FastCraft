@@ -17,8 +17,8 @@ GNU General Public License for more details.
 #include "FCException.h"
 #include "NBTTagCompound.h"
 
-NBTTagByte::NBTTagByte(string sName) : 
-NBTBase(sName,FC_NBT_TYPE_BYTE)
+NBTTagByte::NBTTagByte(string _sName) : 
+NBTBase(_sName,FC_NBT_TYPE_BYTE)
 {
 	Data = 0;
 }

@@ -31,7 +31,7 @@ public:
 	@1 : Name
 	@2 : Target type
 	*/
-	NBTTagList(string);
+	NBTTagList(ConstString&);
 
 
 	/*

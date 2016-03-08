@@ -28,7 +28,7 @@ public:
 	Parameter:
 	@1 : Name
 	*/
-	NBTTagIntArray(string);
+	NBTTagIntArray(ConstString&);
 
 
 	/*

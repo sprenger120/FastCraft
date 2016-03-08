@@ -1,0 +1,385 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Headerdateien">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hpp;hxx;hm;inl;inc;xsd</Extensions>
+    </Filter>
+    <Filter Include="Ressourcendateien">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="Quelldateien">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Headerdateien\World">
+      <UniqueIdentifier>{6bf7ecb7-ed64-4756-aee6-12cd9985ca93}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Headerdateien\World\Chunk">
+      <UniqueIdentifier>{c2d980ee-0fb7-4b68-a843-86167793d641}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Headerdateien\Entity">
+      <UniqueIdentifier>{ae561dec-054f-4e47-84e3-20b282780434}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Headerdateien\Player">
+      <UniqueIdentifier>{5c32116c-33f2-45d7-a76c-44a3f3348b38}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Quelldateien\Entity">
+      <UniqueIdentifier>{b1597f79-4cd0-49f7-9b50-69440c1732e4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Quelldateien\Network">
+      <UniqueIdentifier>{4e736185-b102-4fce-9798-2f6de07a9f73}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Quelldateien\Player">
+      <UniqueIdentifier>{dca76834-1b7a-4f91-b832-eb9107d9f372}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Quelldateien\World">
+      <UniqueIdentifier>{8f20228b-b69b-4277-86db-ab1f3854faee}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Quelldateien\World\Chunk">
+      <UniqueIdentifier>{e82b12eb-696d-4342-9997-72d740a3c186}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Headerdateien\NBT">
+      <UniqueIdentifier>{73cbee8c-5d9c-4e58-aa6a-20a936214b31}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Quelldateien\NBT">
+      <UniqueIdentifier>{e738c9cc-b4c7-422b-a1e5-b7b814394fc7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Quelldateien\Item/Inventory">
+      <UniqueIdentifier>{cbd31706-db72-4f07-b254-c442ded02588}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Headerdateien\Item/Inventory">
+      <UniqueIdentifier>{8a1b5464-8c2b-4607-9361-556c3f5eb5a1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Headerdateien\Network">
+      <UniqueIdentifier>{979bfbdc-3600-4f94-aaa7-8abc996557b8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Headerdateien\Templates">
+      <UniqueIdentifier>{c607ec82-13e9-4d07-9d6d-3de00c191af2}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="main.cpp">
+      <Filter>Quelldateien</Filter>
+    </ClCompile>
+    <ClCompile Include="MathHelper.cpp">
+      <Filter>Quelldateien</Filter>
+    </ClCompile>
+    <ClCompile Include="EntityFlags.cpp">
+      <Filter>Quelldateien\Entity</Filter>
+    </ClCompile>
+    <ClCompile Include="EntityCoordinates.cpp">
+      <Filter>Quelldateien\Entity</Filter>
+    </ClCompile>
+    <ClCompile Include="ItemSlot.cpp">
+      <Filter>Quelldateien\Item/Inventory</Filter>
+    </ClCompile>
+    <ClCompile Include="AcceptThread.cpp">
+      <Filter>Quelldateien\Network</Filter>
+    </ClCompile>
+    <ClCompile Include="NetworkIn.cpp">
+      <Filter>Quelldateien\Network</Filter>
+    </ClCompile>
+    <ClCompile Include="NetworkOut.cpp">
+      <Filter>Quelldateien\Network</Filter>
+    </ClCompile>
+    <ClCompile Include="NetworkOutRoot.cpp">
+      <Filter>Quelldateien\Network</Filter>
+    </ClCompile>
+    <ClCompile Include="NetworkWriter.cpp">
+      <Filter>Quelldateien\Network</Filter>
+    </ClCompile>
+    <ClCompile Include="PlayerThread.cpp">
+      <Filter>Quelldateien\Player</Filter>
+    </ClCompile>
+    <ClCompile Include="PlayerPool.cpp">
+      <Filter>Quelldateien\Player</Filter>
+    </ClCompile>
+    <ClCompile Include="PlayerEvents.cpp">
+      <Filter>Quelldateien\Player</Filter>
+    </ClCompile>
+    <ClCompile Include="PlayerEventBase.cpp">
+      <Filter>Quelldateien\Player</Filter>
+    </ClCompile>
+    <ClCompile Include="World.cpp">
+      <Filter>Quelldateien\World</Filter>
+    </ClCompile>
+    <ClCompile Include="ChunkProvider.cpp">
+      <Filter>Quelldateien\World\Chunk</Filter>
+    </ClCompile>
+    <ClCompile Include="ChunkMath.cpp">
+      <Filter>Quelldateien\World\Chunk</Filter>
+    </ClCompile>
+    <ClCompile Include="NBTTagBase.cpp">
+      <Filter>Quelldateien\NBT</Filter>
+    </ClCompile>
+    <ClCompile Include="NBTTagCompound.cpp">
+      <Filter>Quelldateien\NBT</Filter>
+    </ClCompile>
+    <ClCompile Include="NBTTagByte.cpp">
+      <Filter>Quelldateien\NBT</Filter>
+    </ClCompile>
+    <ClCompile Include="NBTTagDouble.cpp">
+      <Filter>Quelldateien\NBT</Filter>
+    </ClCompile>
+    <ClCompile Include="NBTTagFloat.cpp">
+      <Filter>Quelldateien\NBT</Filter>
+    </ClCompile>
+    <ClCompile Include="NBTTagInt.cpp">
+      <Filter>Quelldateien\NBT</Filter>
+    </ClCompile>
+    <ClCompile Include="NBTTagInt64.cpp">
+      <Filter>Quelldateien\NBT</Filter>
+    </ClCompile>
+    <ClCompile Include="NBTTagShort.cpp">
+      <Filter>Quelldateien\NBT</Filter>
+    </ClCompile>
+    <ClCompile Include="NBTTagString.cpp">
+      <Filter>Quelldateien\NBT</Filter>
+    </ClCompile>
+    <ClCompile Include="NBTTagByteArray.cpp">
+      <Filter>Quelldateien\NBT</Filter>
+    </ClCompile>
+    <ClCompile Include="NBTTagList.cpp">
+      <Filter>Quelldateien\NBT</Filter>
+    </ClCompile>
+    <ClCompile Include="NBTBinaryParser.cpp">
+      <Filter>Quelldateien\NBT</Filter>
+    </ClCompile>
+    <ClCompile Include="MinecraftServer.cpp">
+      <Filter>Quelldateien</Filter>
+    </ClCompile>
+    <ClCompile Include="ServerThreadBase.cpp">
+      <Filter>Quelldateien</Filter>
+    </ClCompile>
+    <ClCompile Include="ItemInformationProvider.cpp">
+      <Filter>Quelldateien\Item/Inventory</Filter>
+    </ClCompile>
+    <ClCompile Include="Entity.cpp">
+      <Filter>Quelldateien\Entity</Filter>
+    </ClCompile>
+    <ClCompile Include="Constants.cpp">
+      <Filter>Quelldateien</Filter>
+    </ClCompile>
+    <ClCompile Include="EntityLiving.cpp">
+      <Filter>Quelldateien\Entity</Filter>
+    </ClCompile>
+    <ClCompile Include="EntityPlayer.cpp">
+      <Filter>Quelldateien\Entity</Filter>
+    </ClCompile>
+    <ClCompile Include="FCRuntimeException.cpp">
+      <Filter>Quelldateien</Filter>
+    </ClCompile>
+    <ClCompile Include="EntityPickup.cpp">
+      <Filter>Quelldateien\Entity</Filter>
+    </ClCompile>
+    <ClCompile Include="EntityListEntry.cpp">
+      <Filter>Quelldateien\Entity</Filter>
+    </ClCompile>
+    <ClCompile Include="ItemContainer.cpp">
+      <Filter>Quelldateien\Item/Inventory</Filter>
+    </ClCompile>
+    <ClCompile Include=".\InventoryPlayer.cpp">
+      <Filter>Quelldateien\Item/Inventory</Filter>
+    </ClCompile>
+    <ClCompile Include="ItemID.cpp">
+      <Filter>Quelldateien\Item/Inventory</Filter>
+    </ClCompile>
+    <ClCompile Include="WorldFileHandler.cpp">
+      <Filter>Quelldateien\World</Filter>
+    </ClCompile>
+    <ClCompile Include="MapChunk.cpp">
+      <Filter>Quelldateien\World\Chunk</Filter>
+    </ClCompile>
+    <ClCompile Include="NBTTagIntArray.cpp">
+      <Filter>Quelldateien\NBT</Filter>
+    </ClCompile>
+    <ClCompile Include=".\IOFile.cpp">
+      <Filter>Quelldateien</Filter>
+    </ClCompile>
+    <ClCompile Include="WorldInfo.cpp">
+      <Filter>Quelldateien\World</Filter>
+    </ClCompile>
+    <ClCompile Include="Util.cpp">
+      <Filter>Quelldateien</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Structs.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
+    <ClInclude Include="Constants.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
+    <ClInclude Include="MathHelper.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
+    <ClInclude Include="ChunkMath.h">
+      <Filter>Headerdateien\World\Chunk</Filter>
+    </ClInclude>
+    <ClInclude Include="ChunkProvider.h">
+      <Filter>Headerdateien\World\Chunk</Filter>
+    </ClInclude>
+    <ClInclude Include="World.h">
+      <Filter>Headerdateien\World</Filter>
+    </ClInclude>
+    <ClInclude Include="EntityCoordinates.h">
+      <Filter>Headerdateien\Entity</Filter>
+    </ClInclude>
+    <ClInclude Include="EntityFlags.h">
+      <Filter>Headerdateien\Entity</Filter>
+    </ClInclude>
+    <ClInclude Include="EntityPlayer.h">
+      <Filter>Headerdateien\Entity</Filter>
+    </ClInclude>
+    <ClInclude Include="ItemSlot.h">
+      <Filter>Headerdateien\Item/Inventory</Filter>
+    </ClInclude>
+    <ClInclude Include="PlayerThread.h">
+      <Filter>Headerdateien\Player</Filter>
+    </ClInclude>
+    <ClInclude Include="PlayerPool.h">
+      <Filter>Headerdateien\Player</Filter>
+    </ClInclude>
+    <ClInclude Include="PlayerEvents.h">
+      <Filter>Headerdateien\Player</Filter>
+    </ClInclude>
+    <ClInclude Include="PlayerEventBase.h">
+      <Filter>Headerdateien\Player</Filter>
+    </ClInclude>
+    <ClInclude Include="NetworkWriter.h">
+      <Filter>Headerdateien\Network</Filter>
+    </ClInclude>
+    <ClInclude Include="NetworkOutRoot.h">
+      <Filter>Headerdateien\Network</Filter>
+    </ClInclude>
+    <ClInclude Include="NetworkOut.h">
+      <Filter>Headerdateien\Network</Filter>
+    </ClInclude>
+    <ClInclude Include="NetworkIn.h">
+      <Filter>Headerdateien\Network</Filter>
+    </ClInclude>
+    <ClInclude Include="AcceptThread.h">
+      <Filter>Headerdateien\Network</Filter>
+    </ClInclude>
+    <ClInclude Include="NBTTagBase.h">
+      <Filter>Headerdateien\NBT</Filter>
+    </ClInclude>
+    <ClInclude Include="NBTConstants.h">
+      <Filter>Headerdateien\NBT</Filter>
+    </ClInclude>
+    <ClInclude Include="NBTTagCompound.h">
+      <Filter>Headerdateien\NBT</Filter>
+    </ClInclude>
+    <ClInclude Include="NBTTagFloat.h">
+      <Filter>Headerdateien\NBT</Filter>
+    </ClInclude>
+    <ClInclude Include="NBTTagDouble.h">
+      <Filter>Headerdateien\NBT</Filter>
+    </ClInclude>
+    <ClInclude Include="NBTTagByte.h">
+      <Filter>Headerdateien\NBT</Filter>
+    </ClInclude>
+    <ClInclude Include="NBTTagShort.h">
+      <Filter>Headerdateien\NBT</Filter>
+    </ClInclude>
+    <ClInclude Include="NBTTagInt.h">
+      <Filter>Headerdateien\NBT</Filter>
+    </ClInclude>
+    <ClInclude Include="NBTTagInt64.h">
+      <Filter>Headerdateien\NBT</Filter>
+    </ClInclude>
+    <ClInclude Include="NBTTagString.h">
+      <Filter>Headerdateien\NBT</Filter>
+    </ClInclude>
+    <ClInclude Include="NBTTagList.h">
+      <Filter>Headerdateien\NBT</Filter>
+    </ClInclude>
+    <ClInclude Include="NBTAll.h">
+      <Filter>Headerdateien\NBT</Filter>
+    </ClInclude>
+    <ClInclude Include="NBTTagByteArray.h">
+      <Filter>Headerdateien\NBT</Filter>
+    </ClInclude>
+    <ClInclude Include="MinecraftServer.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
+    <ClInclude Include="ServerThreadBase.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
+    <ClInclude Include="ItemInformationProvider.h">
+      <Filter>Headerdateien\Item/Inventory</Filter>
+    </ClInclude>
+    <ClInclude Include="Entity.h">
+      <Filter>Headerdateien\Entity</Filter>
+    </ClInclude>
+    <ClInclude Include="EntityLiving.h">
+      <Filter>Headerdateien\Entity</Filter>
+    </ClInclude>
+    <ClInclude Include="FCRuntimeException.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
+    <ClInclude Include="EntityPickup.h">
+      <Filter>Headerdateien\Entity</Filter>
+    </ClInclude>
+    <ClInclude Include="EntityListEntry.h">
+      <Filter>Headerdateien\Entity</Filter>
+    </ClInclude>
+    <ClInclude Include="TimeJobServer.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
+    <ClInclude Include="ItemContainer.h">
+      <Filter>Headerdateien\Item/Inventory</Filter>
+    </ClInclude>
+    <ClInclude Include=".\InventoryPlayer.h">
+      <Filter>Headerdateien\Item/Inventory</Filter>
+    </ClInclude>
+    <ClInclude Include="ItemID.h">
+      <Filter>Headerdateien\Item/Inventory</Filter>
+    </ClInclude>
+    <ClInclude Include="MapChunk.h">
+      <Filter>Headerdateien\World\Chunk</Filter>
+    </ClInclude>
+    <ClInclude Include=".\WorldFileHandler.h">
+      <Filter>Headerdateien\World</Filter>
+    </ClInclude>
+    <ClInclude Include="NBTTagIntArray.h">
+      <Filter>Headerdateien\NBT</Filter>
+    </ClInclude>
+    <ClInclude Include="Heap.h">
+      <Filter>Headerdateien\Templates</Filter>
+    </ClInclude>
+    <ClInclude Include=".\ThreadSafeQueue.h">
+      <Filter>Headerdateien\Templates</Filter>
+    </ClInclude>
+    <ClInclude Include=".\ScopePtrArray.h">
+      <Filter>Headerdateien\Templates</Filter>
+    </ClInclude>
+    <ClInclude Include="ScopePtr.h">
+      <Filter>Headerdateien\Templates</Filter>
+    </ClInclude>
+    <ClInclude Include=".\IOFile.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
+    <ClInclude Include="Types.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
+    <ClInclude Include="NBTHelper.h">
+      <Filter>Headerdateien\NBT</Filter>
+    </ClInclude>
+    <ClInclude Include="WorldServer.h">
+      <Filter>Headerdateien\World</Filter>
+    </ClInclude>
+    <ClInclude Include="WorldInfo.h">
+      <Filter>Headerdateien\World</Filter>
+    </ClInclude>
+    <ClInclude Include="Util.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\Build\Server\main\settings.xml" />
+    <None Include="Begriffe.txt" />
+  </ItemGroup>
+</Project>

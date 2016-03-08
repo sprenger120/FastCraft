@@ -1,0 +1,249 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="BASS Mod|Win32">
+      <Configuration>BASS Mod</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{5B41C90E-2927-4E87-9995-6FBDD215B12F}</ProjectGuid>
+    <Keyword>Win32Proj</Keyword>
+    <RootNamespace>FastCraft</RootNamespace>
+    <VCTargetsPath Condition="'$(VCTargetsPath11)' != '' and '$(VSVersion)' == '' and $(VisualStudioVersion) == ''">$(VCTargetsPath11)</VCTargetsPath>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v110</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='BASS Mod|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v110</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v100</PlatformToolset>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='BASS Mod|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <LinkIncremental>true</LinkIncremental>
+    <IntDir>$(Configuration)\</IntDir>
+    <OutDir>$(SolutionDir)Build\</OutDir>
+    <GenerateManifest>true</GenerateManifest>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='BASS Mod|Win32'">
+    <LinkIncremental>true</LinkIncremental>
+    <IntDir>$(Configuration)\</IntDir>
+    <OutDir>$(SolutionDir)Build\</OutDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <LinkIncremental>false</LinkIncremental>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>C:\C++\poco-1.4.5-all\Data\SQLite\include;C:\C++\poco-1.4.5-all\Foundation\include;C:\C++\poco-1.4.5-all\Net\include;C:\C++\poco-1.4.5-all\XML\include;C:\C++\cryptopp561;C:\C++\poco-1.4.5-all\Data\include;C:\Program Files %28x86%29\Visual Leak Detector\include</AdditionalIncludeDirectories>
+      <MultiProcessorCompilation>false</MultiProcessorCompilation>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <AdditionalOptions>/EHsc %(AdditionalOptions)</AdditionalOptions>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <TreatWarningAsError>false</TreatWarningAsError>
+      <MinimalRebuild>true</MinimalRebuild>
+      <EnableParallelCodeGeneration>false</EnableParallelCodeGeneration>
+      <OpenMPSupport>true</OpenMPSupport>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalLibraryDirectories>C:\C++\poco-1.4.5-all\lib;C:\Program Files %28x86%29\Visual Leak Detector\lib\Win32;C:\C++\cryptopp561\Win32\Output\Debug</AdditionalLibraryDirectories>
+      <AdditionalDependencies>Dbghelp.lib;PocoFoundationd.lib;PocoXMLd.lib;PocoNetd.lib;PocoDatad.lib;PocoDataSQLited.lib;cryptlib.lib</AdditionalDependencies>
+      <GenerateMapFile>false</GenerateMapFile>
+      <MapExports>false</MapExports>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='BASS Mod|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>C:\C++\poco-1.4.5-all\Data\SQLite\include;C:\C++\poco-1.4.5-all\Foundation\include;C:\C++\poco-1.4.5-all\Net\include;C:\C++\poco-1.4.5-all\XML\include;C:\C++\cryptopp561;C:\C++\poco-1.4.5-all\Data\include;</AdditionalIncludeDirectories>
+      <MultiProcessorCompilation>false</MultiProcessorCompilation>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <AdditionalOptions>/EHsc %(AdditionalOptions)</AdditionalOptions>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalLibraryDirectories>C:\C++\poco-1.4.5-all\lib;C:\Program Files %28x86%29\Visual Leak Detector\lib\Win32</AdditionalLibraryDirectories>
+      <AdditionalDependencies>Dbghelp.lib</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>C:\C++\poco-1.4.5-all\Data\SQLite\include;C:\C++\poco-1.4.5-all\Foundation\include;C:\C++\poco-1.4.5-all\Net\include;C:\C++\poco-1.4.5-all\XML\include;C:\C++\cryptopp561;C:\C++\poco-1.4.5-all\Data\include;</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <AdditionalLibraryDirectories>C:\C++\poco-1.4.5-all\lib;C:\Program Files %28x86%29\Visual Leak Detector\lib\Win32;C:\C++\cryptopp561\Win32\Output\Release</AdditionalLibraryDirectories>
+      <AdditionalDependencies>Dbghelp.lib;PocoFoundation.lib;PocoXML.lib;PocoNet.lib;PocoData.lib;PocoDataSQLite.lib;cryptlib.lib</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include=".\IOFile.cpp" />
+    <ClCompile Include="ChunkMath.cpp" />
+    <ClCompile Include="ChunkProvider.cpp" />
+    <ClCompile Include="Constants.cpp" />
+    <ClCompile Include="Entity.cpp" />
+    <ClCompile Include="EntityCoordinates.cpp" />
+    <ClCompile Include="EntityFlags.cpp" />
+    <ClCompile Include="EntityListEntry.cpp" />
+    <ClCompile Include="EntityLiving.cpp" />
+    <ClCompile Include="EntityPickup.cpp" />
+    <ClCompile Include="EntityPlayer.cpp" />
+    <ClCompile Include="ItemContainer.cpp" />
+    <ClCompile Include=".\InventoryPlayer.cpp" />
+    <ClCompile Include="ItemID.cpp" />
+    <ClCompile Include="ItemInformationProvider.cpp" />
+    <ClCompile Include="ItemSlot.cpp" />
+    <ClCompile Include="MapChunk.cpp" />
+    <ClCompile Include="MathHelper.cpp" />
+    <ClCompile Include="MinecraftServer.cpp" />
+    <ClCompile Include="NBTBinaryParser.cpp" />
+    <ClCompile Include="NBTTagBase.cpp" />
+    <ClCompile Include="NBTTagByte.cpp" />
+    <ClCompile Include="NBTTagByteArray.cpp" />
+    <ClCompile Include="NBTTagCompound.cpp" />
+    <ClCompile Include="NBTTagDouble.cpp" />
+    <ClCompile Include="NBTTagFloat.cpp" />
+    <ClCompile Include="NBTTagInt.cpp" />
+    <ClCompile Include="NBTTagInt64.cpp" />
+    <ClCompile Include="NBTTagIntArray.cpp" />
+    <ClCompile Include="NBTTagList.cpp" />
+    <ClCompile Include="NBTTagShort.cpp" />
+    <ClCompile Include="NBTTagString.cpp" />
+    <ClCompile Include="NetworkIn.cpp" />
+    <ClCompile Include="NetworkOut.cpp" />
+    <ClCompile Include="NetworkOutRoot.cpp" />
+    <ClCompile Include="NetworkWriter.cpp" />
+    <ClCompile Include="main.cpp" />
+    <ClCompile Include="AcceptThread.cpp" />
+    <ClCompile Include="PlayerEvents.cpp" />
+    <ClCompile Include="PlayerEventBase.cpp" />
+    <ClCompile Include="PlayerThread.cpp" />
+    <ClCompile Include="PlayerPool.cpp" />
+    <ClCompile Include="FCRuntimeException.cpp" />
+    <ClCompile Include="ServerThreadBase.cpp" />
+    <ClCompile Include="Util.cpp" />
+    <ClCompile Include="World.cpp" />
+    <ClCompile Include="WorldFileHandler.cpp" />
+    <ClCompile Include="WorldInfo.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include=".\IOFile.h" />
+    <ClInclude Include="ChunkMath.h" />
+    <ClInclude Include="ChunkProvider.h" />
+    <ClInclude Include="Constants.h" />
+    <ClInclude Include="Entity.h" />
+    <ClInclude Include="EntityCoordinates.h" />
+    <ClInclude Include="EntityFlags.h" />
+    <ClInclude Include="EntityListEntry.h" />
+    <ClInclude Include="EntityLiving.h" />
+    <ClInclude Include="EntityPickup.h" />
+    <ClInclude Include="EntityPlayer.h" />
+    <ClInclude Include="Heap.h" />
+    <ClInclude Include="FCRuntimeException.h" />
+    <ClInclude Include="ItemContainer.h" />
+    <ClInclude Include=".\InventoryPlayer.h" />
+    <ClInclude Include="ItemID.h" />
+    <ClInclude Include="MapChunk.h" />
+    <ClInclude Include="NBTHelper.h" />
+    <ClInclude Include="NBTTagIntArray.h" />
+    <ClInclude Include=".\ScopePtrArray.h" />
+    <ClInclude Include="ScopePtr.h" />
+    <ClInclude Include="ServerThreadBase.h" />
+    <ClInclude Include="ItemInformationProvider.h" />
+    <ClInclude Include="ItemSlot.h" />
+    <ClInclude Include="MathHelper.h" />
+    <ClInclude Include="MinecraftServer.h" />
+    <ClInclude Include="NBTAll.h" />
+    <ClInclude Include="NBTConstants.h" />
+    <ClInclude Include="NBTTagBase.h" />
+    <ClInclude Include="NBTTagByte.h" />
+    <ClInclude Include="NBTTagByteArray.h" />
+    <ClInclude Include="NBTTagCompound.h" />
+    <ClInclude Include="NBTTagDouble.h" />
+    <ClInclude Include="NBTTagFloat.h" />
+    <ClInclude Include="NBTTagInt.h" />
+    <ClInclude Include="NBTTagInt64.h" />
+    <ClInclude Include="NBTTagList.h" />
+    <ClInclude Include="NBTTagShort.h" />
+    <ClInclude Include="NBTTagString.h" />
+    <ClInclude Include="NetworkIn.h" />
+    <ClInclude Include="NetworkOut.h" />
+    <ClInclude Include="NetworkOutRoot.h" />
+    <ClInclude Include="NetworkWriter.h" />
+    <ClInclude Include="AcceptThread.h" />
+    <ClInclude Include="PlayerPool.h" />
+    <ClInclude Include="PlayerEvents.h" />
+    <ClInclude Include="PlayerEventBase.h" />
+    <ClInclude Include="PlayerThread.h" />
+    <ClInclude Include="Structs.h" />
+    <ClInclude Include=".\ThreadSafeQueue.h" />
+    <ClInclude Include="TimeJobServer.h" />
+    <ClInclude Include="Types.h" />
+    <ClInclude Include="Util.h" />
+    <ClInclude Include="World.h" />
+    <ClInclude Include=".\WorldFileHandler.h" />
+    <ClInclude Include="WorldInfo.h" />
+    <ClInclude Include="WorldServer.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\Build\Server\main\settings.xml">
+      <SubType>Designer</SubType>
+    </None>
+    <None Include="Begriffe.txt" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

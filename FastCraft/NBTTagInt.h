@@ -24,7 +24,7 @@ public:
 	Parameter:
 	@1 : Name
 	*/
-	NBTTagInt(string);
+	NBTTagInt(ConstString&);
 
 
 	/*

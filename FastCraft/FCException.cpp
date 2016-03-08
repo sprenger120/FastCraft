@@ -147,3 +147,4 @@ FC_IMPLEMENT_EXCEPTION(FileNotFoundException,"File not found");
 FC_IMPLEMENT_EXCEPTION(EndOfFileException,"File stream ended unexpected");
 FC_IMPLEMENT_EXCEPTION(FileIOException,"File not read-/writeable")
 FC_IMPLEMENT_EXCEPTION(NullpointerException,"Nullpointer");
+FC_IMPLEMENT_EXCEPTION(IllegalLengthException,"Illegal length passed")

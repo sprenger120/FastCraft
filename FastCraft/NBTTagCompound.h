@@ -34,7 +34,7 @@ class NBTTagList;
 
 class NBTTagCompound : public NBTBase {
 private:
-	map<string,NBTBase*> _tagMap;
+	map<ConstString,NBTBase*> _tagMap;
 public:
 	/*
 	* Constructor
@@ -42,7 +42,7 @@ public:
 	Parameter:
 	@1 : Name
 	*/
-	NBTTagCompound(string);
+	NBTTagCompound(ConstString&);
 
 
 	/*
@@ -80,17 +80,17 @@ public:
 	@1 : Name
 	@2 : Set to true to create a new element if it not exists
 	*/
-	NBTTagCompound*  getCompound	(string);
-	NBTTagByte*		 getByte		(string);
-	NBTTagDouble*	 getDouble		(string);
-	NBTTagFloat*	 getFloat		(string); 
-	NBTTagInt*		 getInt			(string);
-	NBTTagInt64*	 getInt64		(string);
-	NBTTagShort*	 getShort		(string);
-	NBTTagString*	 getString		(string);
-	NBTTagByteArray* getByteArray	(string);
-	NBTTagIntArray*  getIntArray	(string);
-	NBTTagList*	     getList		(string);
+	NBTTagCompound*  getCompound	(ConstString&);
+	NBTTagByte*		 getByte		(ConstString&);
+	NBTTagDouble*	 getDouble		(ConstString&);
+	NBTTagFloat*	 getFloat		(ConstString&); 
+	NBTTagInt*		 getInt			(ConstString&);
+	NBTTagInt64*	 getInt64		(ConstString&);
+	NBTTagShort*	 getShort		(ConstString&);
+	NBTTagString*	 getString		(ConstString&);
+	NBTTagByteArray* getByteArray	(ConstString&);
+	NBTTagIntArray*  getIntArray	(ConstString&);
+	NBTTagList*	     getList		(ConstString&);
 
 
 	/*
@@ -134,7 +134,7 @@ public:
 	@1 : Name
 	@2 : Needed type (FC_NBT_TYPE_ @ NBTConstants.h)
 	*/
-	bool has(string,char);
+	bool has(ConstString&,char);
 
 
 	/* 
@@ -144,7 +144,7 @@ public:
 	void load(istream&,bool = true);
 
 	static short readShort(istream&);
-	static string readString(istream&);
+	//static string readString(istream&);
 	static int readInt(istream&);
 	
 	static void writeShort(ostream&);

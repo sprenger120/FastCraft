@@ -128,4 +128,5 @@ FC_DECLARE_EXCEPTION(FileNotFoundException)
 FC_DECLARE_EXCEPTION(FileIOException)
 FC_DECLARE_EXCEPTION(EndOfFileException)
 FC_DECLARE_EXCEPTION(NullpointerException)
+FC_DECLARE_EXCEPTION(IllegalLengthException)
 #endif

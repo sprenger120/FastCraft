@@ -16,7 +16,7 @@ GNU General Public License for more details.
 #include "NBTAll.h"
 #include "FCException.h"
 
-NBTBase::NBTBase(string str,int id) : 
+NBTBase::NBTBase(ConstString& str,int id) : 
 _sName(str)
 {
 	if (id < 1 || id > 11) {throw FCException("Unknown tag type");}
@@ -27,7 +27,7 @@ NBTBase::~NBTBase() {
 }
 
 
-NBTBase* NBTBase::newTag(int tag,string& sStr) {
+NBTBase* NBTBase::newTag(int tag,ConstString& sStr) {
 	switch (tag) {
 	case FC_NBT_TYPE_BYTE:
 		return new NBTTagByte(sStr);
@@ -58,13 +58,10 @@ NBTBase* NBTBase::newTag(int tag,string& sStr) {
 	return NULL;
 }
 
-string NBTBase::getName() {
+ConstString& NBTBase::getName() {
 	return _sName;
 }
 
-void NBTBase::setName(string sName) {
-	_sName = sName;
-}
 void NBTBase::load(istream&,bool) { 
 }
 

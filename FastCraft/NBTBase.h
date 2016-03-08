@@ -16,18 +16,17 @@ GNU General Public License for more details.
 
 #ifndef _FASTCRAFTHEADER_NBTBASE
 #define _FASTCRAFTHEADER_NBTBASE
-#include <string>
 #include <istream>
 #include <ostream>
-using std::string;
+#include <string>
+#include "ConstString.h"
 using std::istream;
 using std::ostream;
 
 class NBTBase {
 protected: 
-	string _sName;
+	ConstString _sName;
 	char _iTagID;
-
 
 	/*
 	* Constructor
@@ -37,7 +36,7 @@ protected:
 	@1 : Name of tag
 	@2 : Tag ID
 	*/
-	NBTBase(string,int);
+	NBTBase(ConstString&,int);
 public:
 	/*
 	* Destructor
@@ -46,10 +45,9 @@ public:
 
 
 	/*
-	* sets/getsName
+	* Returns name
 	*/
-	void setName(string);
-	string getName();
+	ConstString& getName();
 
 
 	/*
@@ -60,7 +58,7 @@ public:
 	@1 : One of the FC_NBT_TYPE_ constants
 	@2 : Name
 	*/ 
-	static NBTBase* newTag(int,string&);
+	static NBTBase* newTag(int,ConstString&);
 
 
 	/*
